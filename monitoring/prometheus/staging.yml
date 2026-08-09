@@ -1,0 +1,49 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    environment: 'staging'
+    project: 'invmis'
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  # 🚧 Staging API Monitoring
+  - job_name: 'invmis-api-staging'
+    static_configs:
+      - targets: ['invmis-api-staging:5001']
+    metrics_path: '/api/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    
+  # 🌐 Nginx Staging Monitoring
+  - job_name: 'nginx-staging'
+    static_configs:
+      - targets: ['invmis-web-staging:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 30s
+    
+  # 📊 Prometheus Self-Monitoring
+  - job_name: 'prometheus-staging'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # 🐳 Docker Container Monitoring (if available)
+  - job_name: 'docker-staging'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# 🚧 Staging-specific settings
+storage:
+  tsdb:
+    retention.time: 7d
+    retention.size: 1GB

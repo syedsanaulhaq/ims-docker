@@ -1,0 +1,11 @@
+item_code,item_name,vendor_id,vendor_name,unit_price,specifications,remarks
+ITM-001,,,ABC Traders,15000,Dell Laptop with Intel i7 processor and 16GB RAM,Preferred brand for admin staff
+ITM-002,,,XYZ Suppliers,25000,HP Desktop Computer with 32GB RAM and 1TB SSD,For administrative office use
+,Office Chair,,Tech Solutions,8500,Office Chair - Ergonomic design with lumbar support,Black color preferred
+,Conference Table,,ABC Traders,45000,Conference Table - 12 seater with cable management system,Wooden finish required
+ITM-005,,,XYZ Suppliers,12000,Network Printer - Color laser with duplex printing,HP or Canon brand acceptable
+,Wireless Keyboard Set,,Tech Solutions,3500,Wireless Keyboard and Mouse Combo,Logitech preferred
+ITM-007,27-inch Monitor,,ABC Traders,35000,27-inch LED Monitor - Full HD resolution,Dell or Samsung brand
+ITM-008,Network Server,,XYZ Suppliers,85000,Network Server - Rack mount with 64GB RAM,For data center deployment
+,Managed Switch,,Tech Solutions,15000,24-port Managed Network Switch with VLAN support,Cisco or D-Link acceptable
+,Enterprise Router,,ABC Traders,8000,Wireless Router - Enterprise grade with dual band support,For main office building

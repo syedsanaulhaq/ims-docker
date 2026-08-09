@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Approval Workflow Design</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #bdc3c7;
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+        
+        h3 {
+            color: #7f8c8d;
+            margin-top: 25px;
+        }
+        
+        .diagram-container {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .flow-box {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .flow-box.start {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        
+        .flow-box.decision {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
+            clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+            padding: 20px 30px;
+        }
+        
+        .flow-box.phase {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #0d47a1;
+        }
+        
+        .flow-box.end {
+            background: #fce4ec;
+            border-color: #e91e63;
+            color: #880e4f;
+        }
+        
+        .flow-box.process {
+            background: #f3e5f5;
+            border-color: #9c27b0;
+            color: #4a148c;
+        }
+        
+        .arrow {
+            text-align: center;
+            font-size: 24px;
+            color: #3498db;
+            margin: 5px 0;
+        }
+        
+        .arrow-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            font-style: italic;
+            margin: -5px 0 5px 0;
+        }
+        
+        .two-column {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .column {
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .legend {
+            background: #ecf0f1;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .legend-box {
+            width: 40px;
+            height: 30px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid;
+        }
+        
+        .note {
+            background: #fffacd;
+            border-left: 4px solid #ffd700;
+            padding: 12px;
+            margin: 15px 0;
+            font-style: italic;
+            page-break-inside: avoid;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .phase-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Hybrid Approval Workflow Design</h1>
+    <p><strong>Project:</strong> Inventory Management System (IMS)</p>
+    <p><strong>Date:</strong> October 17, 2025</p>
+    <p><strong>Database:</strong> InventoryManagementDB</p>
+
+    <div class="legend">
+        <h3 style="margin-top: 0;">Legend</h3>
+        <div class="legend-item">
+            <div class="legend-box" style="background: #e8f5e9; border-color: #4caf50;"></div>
+            <span>Start/End Point</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: #fff3e0; border-color: #ff9800;"></div>
+            <span>Decision Point</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: #e3f2fd; border-color: #2196f3;"></div>
+            <span>Approval Phase</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: #f3e5f5; border-color: #9c27b0;"></div>
+            <span>Process Step</span>
+        </div>
+    </div>
+
+    <h2>Overview</h2>
+    <p>This document outlines the hybrid approval workflow system that combines <strong>employee hierarchy-based approvals</strong> (Phase 1) with <strong>fixed workflow chain approvals</strong> (Phase 2).</p>
+
+    <div class="note">
+        <strong>Key Concept:</strong> Individual requests flow through the employee's management chain first, then proceed to the administrative workflow. Department requests skip the hierarchy and go directly to the administrative workflow.
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>Scenario 1: Individual Request Flow</h2>
+    <p>When an employee submits an individual request (e.g., personal stock issuance):</p>
+
+    <div class="diagram-container">
+        <div class="flow-box start">
+            Employee Submits Individual Request
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="phase-label">PHASE 1: Hierarchy-Based Approval</div>
+        
+        <div class="flow-box phase">
+            System looks up vw_users_hierarcy
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box process">
+            Find Employee's Immediate Boss (via BossID)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box phase">
+            Assign to Immediate Boss for Approval
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Boss Decision?
+        </div>
+        
+        <div class="two-column">
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #c62828;">REJECTED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box end">Request Rejected<br>Process Ends</div>
+            </div>
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #2e7d32;">APPROVED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box process">Check if Boss has Boss (BossID exists?)</div>
+            </div>
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Does Boss have a Boss?
+        </div>
+        
+        <div class="two-column">
+            <div class="column">
+                <div style="text-align: center; font-weight: 600;">NO (Top of Hierarchy)</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box phase">Phase 1 Complete<br>Move to Phase 2</div>
+            </div>
+            <div class="column">
+                <div style="text-align: center; font-weight: 600;">YES</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box process">Assign to Next Level Boss</div>
+                <div class="arrow">↓</div>
+                <div class="arrow-text">Loop until top of hierarchy</div>
+            </div>
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="phase-label">PHASE 2: Fixed Workflow Approval</div>
+        
+        <div class="flow-box phase">
+            Step 1: Assign to DD Admin (Deputy Director Admin)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            DD Admin Decision?
+        </div>
+        
+        <div class="arrow-text">If Rejected → Process Ends</div>
+        <div class="arrow-text">If Approved ↓</div>
+        
+        <div class="flow-box phase">
+            Step 2: Assign to Direct Admin (Director Admin)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Direct Admin Decision?
+        </div>
+        
+        <div class="arrow-text">If Rejected → Process Ends</div>
+        <div class="arrow-text">If Approved ↓</div>
+        
+        <div class="flow-box phase">
+            Step 3: Assign to Chief (Final Approver)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Chief Decision?
+        </div>
+        
+        <div class="two-column">
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #c62828;">REJECTED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box end">Request Rejected</div>
+            </div>
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #2e7d32;">APPROVED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box end" style="background: #e8f5e9; border-color: #4caf50; color: #2e7d32;">
+                    Request Fully Approved<br>Ready for Processing
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>Scenario 2: Department Request Flow</h2>
+    <p>When a department head submits a department-level request (e.g., bulk stock issuance):</p>
+
+    <div class="diagram-container">
+        <div class="flow-box start">
+            Department Head Submits Department Request
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="note">
+            <strong>Phase 1 Skipped:</strong> Department requests bypass the employee hierarchy and proceed directly to the administrative workflow.
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="phase-label">PHASE 2: Fixed Workflow Approval (Only)</div>
+        
+        <div class="flow-box phase">
+            Step 1: Assign to DD Admin (Deputy Director Admin)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            DD Admin Decision?
+        </div>
+        
+        <div class="arrow-text">If Rejected → Process Ends</div>
+        <div class="arrow-text">If Approved ↓</div>
+        
+        <div class="flow-box phase">
+            Step 2: Assign to Direct Admin (Director Admin)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Direct Admin Decision?
+        </div>
+        
+        <div class="arrow-text">If Rejected → Process Ends</div>
+        <div class="arrow-text">If Approved ↓</div>
+        
+        <div class="flow-box phase">
+            Step 3: Assign to Chief (Final Approver)
+        </div>
+        
+        <div class="arrow">↓</div>
+        
+        <div class="flow-box decision">
+            Chief Decision?
+        </div>
+        
+        <div class="two-column">
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #c62828;">REJECTED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box end">Request Rejected</div>
+            </div>
+            <div class="column">
+                <div style="text-align: center; font-weight: 600; color: #2e7d32;">APPROVED</div>
+                <div class="arrow">↓</div>
+                <div class="flow-box end" style="background: #e8f5e9; border-color: #4caf50; color: #2e7d32;">
+                    Request Fully Approved<br>Ready for Processing
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>Database Structure Requirements</h2>
+
+    <h3>Required Table Modifications</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Table</th>
+                <th>New Column</th>
+                <th>Data Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>request_approvals</td>
+                <td>approval_phase</td>
+                <td>VARCHAR(20)</td>
+                <td>Values: 'HIERARCHY' or 'WORKFLOW'</td>
+            </tr>
+            <tr>
+                <td>request_approvals</td>
+                <td>hierarchy_level</td>
+                <td>INT</td>
+                <td>Tracks level in hierarchy (1 = immediate boss, 2 = boss's boss, etc.)</td>
+            </tr>
+            <tr>
+                <td>request_approvals</td>
+                <td>workflow_step</td>
+                <td>INT</td>
+                <td>Tracks step in workflow (1 = DD Admin, 2 = Direct Admin, 3 = Chief)</td>
+            </tr>
+            <tr>
+                <td>request_approvals</td>
+                <td>request_source</td>
+                <td>VARCHAR(20)</td>
+                <td>Values: 'INDIVIDUAL' or 'DEPARTMENT'</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>New Table: approval_workflow_steps</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Column</th>
+                <th>Data Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>id</td>
+                <td>UNIQUEIDENTIFIER</td>
+                <td>Primary Key</td>
+            </tr>
+            <tr>
+                <td>workflow_id</td>
+                <td>UNIQUEIDENTIFIER</td>
+                <td>References approval_workflows</td>
+            </tr>
+            <tr>
+                <td>step_number</td>
+                <td>INT</td>
+                <td>1, 2, 3 (DD Admin, Direct Admin, Chief)</td>
+            </tr>
+            <tr>
+                <td>role_name</td>
+                <td>VARCHAR(100)</td>
+                <td>DD Admin, Direct Admin, Chief</td>
+            </tr>
+            <tr>
+                <td>user_id</td>
+                <td>UNIQUEIDENTIFIER</td>
+                <td>References vw_users_hierarcy.Id</td>
+            </tr>
+            <tr>
+                <td>is_active</td>
+                <td>BIT</td>
+                <td>Enable/disable step</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>Key Decision Points</h2>
+
+    <div class="diagram-container">
+        <h3 style="margin-top: 0;">Questions to Confirm</h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Question</th>
+                    <th>Options/Considerations</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>1. Hierarchy Depth Limit</strong></td>
+                    <td>
+                        • Should there be a maximum number of hierarchy levels?<br>
+                        • Or continue until BossID is NULL (top of organization)?<br>
+                        • Consider: Some organizations have 5-10+ levels
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>2. Workflow Step Configuration</strong></td>
+                    <td>
+                        • Confirm sequence: DD Admin → Direct Admin → Chief<br>
+                        • Are these three steps always required?<br>
+                        • Can any step be skipped based on request type?<br>
+                        • Should step assignment be dynamic or fixed per role?
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>3. Request Source Identification</strong></td>
+                    <td>
+                        • How to identify INDIVIDUAL vs DEPARTMENT request?<br>
+                        • Option A: User selects at submission time<br>
+                        • Option B: Based on requester's role/position<br>
+                        • Option C: Based on item quantity or total value
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>4. Rejection Handling</strong></td>
+                    <td>
+                        • If rejected in Phase 1 (hierarchy), request ends immediately?<br>
+                        • If rejected in Phase 2 (workflow), request ends immediately?<br>
+                        • Should rejected requests be resubmittable?<br>
+                        • Notification to original requester on rejection?
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>5. Forwarding Capability</strong></td>
+                    <td>
+                        • Can hierarchy-level approvers forward to peers?<br>
+                        • Can workflow approvers forward?<br>
+                        • If forwarded, does it stay at same level or skip?<br>
+                        • Track forwarding chain in approval_history?
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Implementation Summary</h2>
+
+    <div class="two-column">
+        <div class="column">
+            <h3>Phase 1: Hierarchy Approval</h3>
+            <ul>
+                <li>Query <code>vw_users_hierarcy</code></li>
+                <li>Start with requester's BossID</li>
+                <li>Create approval record with phase='HIERARCHY'</li>
+                <li>On approval, check next BossID</li>
+                <li>Loop until BossID is NULL</li>
+                <li>Transition to Phase 2</li>
+            </ul>
+        </div>
+        <div class="column">
+            <h3>Phase 2: Workflow Approval</h3>
+            <ul>
+                <li>Query <code>approval_workflow_steps</code></li>
+                <li>Start with step_number = 1 (DD Admin)</li>
+                <li>Create approval record with phase='WORKFLOW'</li>
+                <li>On approval, increment workflow_step</li>
+                <li>Continue through steps 2 and 3</li>
+                <li>Final approval → request ready</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>Next Steps:</strong> Once business rules are confirmed, the backend approval logic in <code>backend-server.cjs</code> (lines 1010-1050) will be updated to implement this two-phase hybrid system.
+    </div>
+
+</body>
+</html>

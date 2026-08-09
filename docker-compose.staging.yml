@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # 🚧 InvMIS API Server (Staging)
+  invmis-api-staging:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: invmis-api-staging
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=staging
+    env_file:
+      - .env.staging
+    volumes:
+      - ./uploads/staging:/app/uploads
+      - ./logs/staging:/app/logs
+    depends_on:
+      - prometheus-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - invmis-staging-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # 🌐 Nginx Web Server (Staging)
+  invmis-web-staging:
+    image: nginx:alpine
+    container_name: invmis-web-staging
+    ports:
+      - "8081:80"
+      - "4431:443"  # Staging HTTPS port
+    volumes:
+      - ./dist:/usr/share/nginx/html
+      - ./nginx/staging.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx/staging:/var/log/nginx
+    depends_on:
+      - invmis-api-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - invmis-staging-network
+
+  # 📈 Prometheus (Staging)
+  prometheus-staging:
+    image: prom/prometheus:latest
+    container_name: prometheus-staging
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus/staging.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-staging-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - invmis-staging-network
+
+  # 📊 Grafana (Staging)
+  grafana-staging:
+    image: grafana/grafana:latest
+    container_name: grafana-staging
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=staging123
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SERVER_DOMAIN=localhost:3001
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - grafana-staging-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus-staging
+    restart: unless-stopped
+    networks:
+      - invmis-staging-network
+
+  # 🔍 Log Aggregation (Staging - Optional)
+  loki-staging:
+    image: grafana/loki:latest
+    container_name: loki-staging
+    ports:
+      - "3101:3100"
+    volumes:
+      - loki-staging-data:/loki
+      - ./monitoring/loki/staging-config.yml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - invmis-staging-network
+
+  # 📋 Staging Database Admin (Optional)
+  adminer-staging:
+    image: adminer
+    container_name: adminer-staging
+    ports:
+      - "8082:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=host.docker.internal
+    restart: unless-stopped
+    networks:
+      - invmis-staging-network
+
+volumes:
+  prometheus-staging-data:
+    driver: local
+    name: prometheus-staging-data
+  grafana-staging-data:
+    driver: local
+    name: grafana-staging-data
+  loki-staging-data:
+    driver: local
+    name: loki-staging-data
+
+networks:
+  invmis-staging-network:
+    driver: bridge
+    name: invmis-staging-network

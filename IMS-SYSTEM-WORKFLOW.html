@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System - Complete Workflow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        section {
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .workflow-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .step {
+            background: #fff;
+            border: 2px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .step:before {
+            content: attr(data-step);
+            position: absolute;
+            left: 10px;
+            top: 15px;
+            background: #667eea;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .arrow {
+            text-align: center;
+            color: #667eea;
+            font-size: 24px;
+            margin: 5px 0;
+        }
+        
+        .role-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 2px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin: 5px 5px 5px 0;
+        }
+        
+        .badge-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: black;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .status-flow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        footer {
+            background: #f8f9ff;
+            padding: 20px;
+            text-align: center;
+            border-top: 2px solid #667eea;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Inventory Management System</h1>
+            <p>Complete Workflow Documentation</p>
+        </header>
+        
+        <div class="content">
+            <!-- SYSTEM OVERVIEW -->
+            <section>
+                <h2>System Overview</h2>
+                <p>The Inventory Management System (IMS) is designed to streamline the procurement process through structured workflows for tender management, vendor selection, and inventory tracking.</p>
+                <div class="workflow-box">
+                    <strong>Core Purpose:</strong> Automate and track the complete lifecycle of procurement tenders, from creation through vendor selection, approval, and finalization into inventory.
+                </div>
+            </section>
+            
+            <!-- USER ROLES & PERMISSIONS -->
+            <section>
+                <h2>User Roles & Permissions</h2>
+                
+                <h3>1. IMS Super Admin</h3>
+                <div class="role-box">
+                    <p><strong>Access Level:</strong> Full system access across all offices and wings</p>
+                    <p><strong>Permissions:</strong></p>
+                    <ul class="feature-list">
+                        <li>Create, edit, delete tenders</li>
+                        <li>View all tenders from all wings</li>
+                        <li>Manage vendors (add, edit, view)</li>
+                        <li>Manage users and permissions</li>
+                        <li>Access reports and analytics</li>
+                        <li>Finalize tenders to stock acquisition system</li>
+                    </ul>
+                </div>
+                
+                <h3>2. IMS Admin</h3>
+                <div class="role-box">
+                    <p><strong>Access Level:</strong> Office-scoped access</p>
+                    <p><strong>Permissions:</strong></p>
+                    <ul class="feature-list">
+                        <li>Create and manage tenders for assigned office</li>
+                        <li>View vendors and manage bidders</li>
+                        <li>Edit tender status and details</li>
+                        <li>Finalize tenders</li>
+                        <li>View office-specific reports</li>
+                    </ul>
+                </div>
+                
+                <h3>3. Wing Supervisor</h3>
+                <div class="role-box">
+                    <p><strong>Access Level:</strong> Wing-scoped access</p>
+                    <p><strong>Permissions:</strong></p>
+                    <ul class="feature-list">
+                        <li>View tenders for their wing</li>
+                        <li>Manage inventory within their wing</li>
+                        <li>Track tender status</li>
+                        <li>Access wing-specific reports</li>
+                    </ul>
+                </div>
+                
+                <h3>4. General User</h3>
+                <div class="role-box">
+                    <p><strong>Access Level:</strong> Read-only or limited access</p>
+                    <p><strong>Permissions:</strong></p>
+                    <ul class="feature-list">
+                        <li>View assigned tenders</li>
+                        <li>Track inventory items</li>
+                        <li>Generate reports (read-only)</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- MAIN WORKFLOW -->
+            <section>
+                <h2>Main Tender Workflow</h2>
+                
+                <h3>Step-by-Step Process</h3>
+                
+                <div class="step" data-step="1">
+                    <strong>Create Tender</strong>
+                    <p>Admin creates a new tender with:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Tender title, description, and reference number</li>
+                        <li>Tender type: Contract Tender or Spot Purchase</li>
+                        <li>Dates: Publish, submission deadline, opening date</li>
+                        <li>Associated office, wings, and DECs</li>
+                        <li>Estimated value</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="2">
+                    <strong>Add Tender Items</strong>
+                    <p>Add items to be procured:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Select items from item master catalog</li>
+                        <li>Specify quantity, unit price, and total amount</li>
+                        <li>Add specifications and remarks</li>
+                        <li>System calculates total tender value</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="3">
+                    <strong>Upload Documents</strong>
+                    <p>Attach required procurement documents:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>For Contract Tenders:</strong> Contract, LOI, RFP, PO files</li>
+                        <li><strong>For Spot Purchases:</strong> Noting file, PO file</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="4">
+                    <strong>Add Participating Bidders</strong>
+                    <p>Invite vendors to bid:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Select vendors from vendor list</li>
+                        <li>Mark bidders with proposal status (Pending/Submitted)</li>
+                        <li>Mark one bidder as "Successful"</li>
+                        <li>Successful bidder auto-populated as primary vendor</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="5">
+                    <strong>Publish Tender</strong>
+                    <p>Change status to "Published":</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Tender becomes visible to assigned wings</li>
+                        <li>Bidders can submit proposals</li>
+                        <li>Status: Draft → Published</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="6">
+                    <strong>Close Tender</strong>
+                    <p>Close bidding and prepare for finalization:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Set status to "Closed"</li>
+                        <li>Stop accepting new bids</li>
+                        <li>Prepare award decision</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">↓</div>
+                
+                <div class="step" data-step="7">
+                    <strong>Finalize Tender</strong>
+                    <p>Complete the tender and add to inventory system:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Verify all details are correct</li>
+                        <li>Click "Finalize" button</li>
+                        <li>All items added to stock acquisition system</li>
+                        <li>Status: Awarded → Finalized</li>
+                        <li>Tender becomes read-only</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- TENDER STATUS FLOW -->
+            <section>
+                <h2>Tender Status Flow</h2>
+                <div style="margin: 20px 0; padding: 20px; background: #f8f9ff; border-radius: 5px;">
+                    <div class="status-flow">
+                        <span class="status-item" style="background: #e7e7ff; color: #667eea;">📝 Draft</span>
+                        <span style="font-size: 24px; color: #667eea;">→</span>
+                        <span class="status-item" style="background: #e7f1ff; color: #0066ff;">🚀 Published</span>
+                        <span style="font-size: 24px; color: #667eea;">→</span>
+                        <span class="status-item" style="background: #f0e7ff; color: #764ba2;">🔒 Closed</span>
+                        <span style="font-size: 24px; color: #667eea;">→</span>
+                        <span class="status-item" style="background: #e7ffe7; color: #28a745;">✓ Awarded</span>
+                        <span style="font-size: 24px; color: #667eea;">→</span>
+                        <span class="status-item" style="background: #d4edda; color: #155724;">🎯 Finalized</span>
+                    </div>
+                </div>
+                <table>
+                    <tr>
+                        <th>Status</th>
+                        <th>Description</th>
+                        <th>Actions Available</th>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-primary">Draft</span></td>
+                        <td>Tender is being prepared</td>
+                        <td>Edit, Add Items, Add Bidders, Publish, Delete</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-info">Published</span></td>
+                        <td>Tender is live for bidding</td>
+                        <td>View, Edit, Close</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-warning">Closed</span></td>
+                        <td>Bidding period ended</td>
+                        <td>View, Finalize</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">Awarded</span></td>
+                        <td>Winner selected</td>
+                        <td>View, Finalize</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-success">Finalized</span></td>
+                        <td>Added to inventory system</td>
+                        <td>View Only, Print, Export</td>
+                    </tr>
+                </table>
+            </section>
+            
+            <!-- KEY FEATURES -->
+            <section>
+                <h2>Key Features</h2>
+                
+                <h3>🔐 Role-Based Access Control</h3>
+                <ul class="feature-list">
+                    <li>Different permission levels for different user roles</li>
+                    <li>Office and wing-scoped data filtering</li>
+                    <li>Action buttons appear based on user permissions</li>
+                    <li>Finalized tenders become read-only</li>
+                </ul>
+                
+                <h3>📊 Bidder Management</h3>
+                <ul class="feature-list">
+                    <li>Add multiple vendors as participating bidders</li>
+                    <li>Track proposal status for each bidder</li>
+                    <li>Mark successful bidder (auto-populates as vendor)</li>
+                    <li>View bidder list in tender details</li>
+                </ul>
+                
+                <h3>📄 Document Management</h3>
+                <ul class="feature-list">
+                    <li>Upload tender documents (PDF, DOC, XLSX)</li>
+                    <li>Different documents for contract vs spot purchase</li>
+                    <li>Download documents from tender view</li>
+                    <li>Max 10MB per file, accepted formats specified</li>
+                </ul>
+                
+                <h3>💰 Cost Tracking</h3>
+                <ul class="feature-list">
+                    <li>Auto-calculate item total amounts</li>
+                    <li>Display tender total value</li>
+                    <li>Track estimated vs actual prices</li>
+                    <li>Price validation on form submission</li>
+                </ul>
+                
+                <h3>🔗 Organizational Structure</h3>
+                <ul class="feature-list">
+                    <li>Link tenders to offices, wings, and DECs</li>
+                    <li>Cascade filtering: Office → Wings → DECs</li>
+                    <li>Users can only see data for their assigned office/wing</li>
+                </ul>
+                
+                <h3>📋 Reporting & Export</h3>
+                <ul class="feature-list">
+                    <li>Print tender details with browser print function</li>
+                    <li>Export tender data to CSV file</li>
+                    <li>Download includes all items and details</li>
+                    <li>File naming includes tender reference and date</li>
+                </ul>
+                
+                <h3>🛡️ Data Validation</h3>
+                <ul class="feature-list">
+                    <li>Required field validation</li>
+                    <li>Date range validation</li>
+                    <li>Price validation (must be positive)</li>
+                    <li>Quantity validation (must be > 0)</li>
+                </ul>
+            </section>
+            
+            <!-- TENDER TYPES -->
+            <section>
+                <h2>Tender Types</h2>
+                
+                <div class="grid-2">
+                    <div class="workflow-box">
+                        <h3>📑 Contract Tender</h3>
+                        <p>For formal procurement of goods/services</p>
+                        <p><strong>Required Documents:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Contract file</li>
+                            <li>LOI (Letter of Intent)</li>
+                            <li>RFP (Request for Proposal)</li>
+                            <li>PO (Purchase Order)</li>
+                        </ul>
+                        <p><strong>Use Cases:</strong> Major purchases, equipment, bulk orders</p>
+                    </div>
+                    
+                    <div class="workflow-box">
+                        <h3>🛒 Spot Purchase</h3>
+                        <p>For quick procurement of standard items</p>
+                        <p><strong>Required Documents:</strong></p>
+                        <ul style="margin-left: 20px;">
+                            <li>Noting file</li>
+                            <li>PO (Purchase Order)</li>
+                        </ul>
+                        <p><strong>Use Cases:</strong> Urgent needs, routine supplies, small orders</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- WORKFLOW DIAGRAMS -->
+            <section>
+                <h2>Visual Workflow Diagram</h2>
+                
+                <h3>Complete Tender Lifecycle</h3>
+                <div style="background: #f8f9ff; padding: 20px; border-radius: 5px; overflow-x: auto;">
+                    <pre style="font-family: monospace; color: #667eea; white-space: pre-wrap; word-wrap: break-word;">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        TENDER CREATION & SETUP                          │
+│  ┌──────────┐  ┌─────────────┐  ┌──────────┐  ┌──────────────────┐    │
+│  │  Create  │→ │  Add Items  │→ │ Upload   │→ │ Add Bidders &   │    │
+│  │  Tender  │  │  & Pricing  │  │ Documents│  │ Mark Successful │    │
+│  └──────────┘  └─────────────┘  └──────────┘  └──────────────────┘    │
+│      ↓              ↓                ↓                  ↓               │
+│    Draft         Draft             Draft             Draft             │
+└─────────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      TENDER PUBLICATION & BIDDING                       │
+│  ┌──────────────┐  ┌────────────┐  ┌────────────────┐                 │
+│  │ Publish      │→ │  Bidding   │→ │  Close &       │                 │
+│  │ Tender       │  │  Period    │  │  Verify        │                 │
+│  └──────────────┘  └────────────┘  └────────────────┘                 │
+│      ↓                  ↓                    ↓                         │
+│  Published         Published           Closed/Awarded                 │
+└─────────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    TENDER FINALIZATION                                  │
+│  ┌──────────────────────────────────┐                                  │
+│  │  Finalize Tender                 │                                  │
+│  │  - Verify all details            │                                  │
+│  │  - Confirm selected vendor       │                                  │
+│  │  - Add to stock acquisition      │                                  │
+│  └──────────────────────────────────┘                                  │
+│            ↓                                                            │
+│  ┌──────────────────────────────────┐                                  │
+│  │  Finalized (Read-Only)           │                                  │
+│  │  - Print & Export                │                                  │
+│  │  - View all details              │                                  │
+│  │  - Cannot edit or delete         │                                  │
+│  └──────────────────────────────────┘                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                    </pre>
+                </div>
+            </section>
+            
+            <!-- DATA RELATIONSHIPS -->
+            <section>
+                <h2>System Data Structure</h2>
+                
+                <h3>Core Tables & Relationships</h3>
+                <table>
+                    <tr>
+                        <th>Table</th>
+                        <th>Purpose</th>
+                        <th>Key Fields</th>
+                    </tr>
+                    <tr>
+                        <td><strong>tenders</strong></td>
+                        <td>Main tender records</td>
+                        <td>id, title, status, vendor_id, estimated_value, created_by</td>
+                    </tr>
+                    <tr>
+                        <td><strong>tender_items</strong></td>
+                        <td>Items within a tender</td>
+                        <td>id, tender_id, item_master_id, quantity, unit_price, total_amount</td>
+                    </tr>
+                    <tr>
+                        <td><strong>tender_vendors</strong></td>
+                        <td>Bidders for a tender</td>
+                        <td>id, tender_id, vendor_id, quoted_amount, remarks</td>
+                    </tr>
+                    <tr>
+                        <td><strong>vendors</strong></td>
+                        <td>Vendor/bidder information</td>
+                        <td>id, vendor_code, vendor_name, contact_person, contact_email</td>
+                    </tr>
+                    <tr>
+                        <td><strong>item_masters</strong></td>
+                        <td>Catalog of available items</td>
+                        <td>id, nomenclature, category, sub_category, status</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ims_user_roles</strong></td>
+                        <td>User-to-role assignments</td>
+                        <td>user_id, role_id, office_id, wing_id</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ims_role_permissions</strong></td>
+                        <td>Role-based permissions</td>
+                        <td>role_id, permission_id</td>
+                    </tr>
+                </table>
+            </section>
+            
+            <!-- COMMON TASKS -->
+            <section>
+                <h2>Common User Tasks</h2>
+                
+                <h3>For Admin/Super Admin</h3>
+                <ul class="feature-list">
+                    <li>Create new tenders from scratch</li>
+                    <li>Add items and set pricing</li>
+                    <li>Upload required documents</li>
+                    <li>Add vendors as bidders</li>
+                    <li>Change tender status through lifecycle</li>
+                    <li>Finalize tenders to inventory system</li>
+                    <li>Manage vendor database</li>
+                </ul>
+                
+                <h3>For Wing Supervisor</h3>
+                <ul class="feature-list">
+                    <li>View tenders for their wing</li>
+                    <li>Track tender status and progress</li>
+                    <li>Access tender details and items</li>
+                    <li>Download tender documents</li>
+                    <li>Print or export tender information</li>
+                </ul>
+                
+                <h3>For General Users</h3>
+                <ul class="feature-list">
+                    <li>View assigned tenders</li>
+                    <li>Access tender details and documents</li>
+                    <li>Generate reports (read-only)</li>
+                    <li>Track inventory status</li>
+                </ul>
+            </section>
+            
+            <!-- IMPORTANT NOTES -->
+            <section>
+                <h2>Important System Notes</h2>
+                
+                <div class="highlight">
+                    <h4>🔒 Finalized Tenders</h4>
+                    <p>Once a tender is finalized, it becomes read-only. Users can only view, print, and export the data. No edits or deletions are allowed. This ensures audit trail and data integrity.</p>
+                </div>
+                
+                <div class="highlight">
+                    <h4>🧑‍🤝‍🧑 Bidder Selection</h4>
+                    <p>When you mark a bidder as "Successful", that vendor is automatically selected as the primary vendor (vendor_id) for the tender. This bidder then becomes the awarded vendor.</p>
+                </div>
+                
+                <div class="highlight">
+                    <h4>🏢 Office & Wing Filtering</h4>
+                    <p>Users only see data for their assigned office and wing. When creating a tender, you must select the target office(s). The system automatically filters based on user permissions.</p>
+                </div>
+                
+                <div class="highlight">
+                    <h4>📝 Document Management</h4>
+                    <p>Different tender types require different documents. Contract Tenders need Contract, LOI, RFP, and PO. Spot Purchases need Noting and PO files. Files must be under 10MB in PDF, DOC, DOCX, XLS, or XLSX format.</p>
+                </div>
+                
+                <div class="highlight">
+                    <h4>💾 Stock Acquisition System</h4>
+                    <p>When a tender is finalized, all its items are automatically added to the stock acquisition system. This creates the inventory records for tracking received goods.</p>
+                </div>
+            </section>
+            
+            <!-- QUICK REFERENCE -->
+            <section>
+                <h2>Quick Reference Guide</h2>
+                
+                <h3>User Permissions Matrix</h3>
+                <table>
+                    <tr>
+                        <th>Action</th>
+                        <th>Super Admin</th>
+                        <th>Admin</th>
+                        <th>Wing Supervisor</th>
+                        <th>General User</th>
+                    </tr>
+                    <tr>
+                        <td>Create Tender</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Edit Tender</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Delete Tender</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                    <tr>
+                        <td>View All Tenders</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓ (Office)</td>
+                        <td style="background: #d4edda;">✓ (Wing)</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Finalize Tender</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Print/Export</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #d4edda;">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Manage Users</td>
+                        <td style="background: #d4edda;">✓</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                        <td style="background: #f8d7da;">✗</td>
+                    </tr>
+                </table>
+            </section>
+            
+            <!-- SUPPORT -->
+            <section>
+                <h2>Support & Troubleshooting</h2>
+                
+                <h3>Common Issues & Solutions</h3>
+                
+                <div class="workflow-box">
+                    <strong>❓ Can't see tenders from other wings?</strong>
+                    <p>This is by design. Users are restricted to their assigned office and wing. Contact the Super Admin to grant cross-office access if needed.</p>
+                </div>
+                
+                <div class="workflow-box">
+                    <strong>❓ Can't edit a tender?</strong>
+                    <p>Finalized tenders cannot be edited. If it's not finalized, check your permissions. You may need Admin or Super Admin role.</p>
+                </div>
+                
+                <div class="workflow-box">
+                    <strong>❓ Items not showing in bidders dropdown?</strong>
+                    <p>Vendors must be created in the vendor master first. Contact Admin to add vendors to the system.</p>
+                </div>
+                
+                <div class="workflow-box">
+                    <strong>❓ Can't finalize tender?</strong>
+                    <p>Verify all required information is filled: title, items, vendor, status. You may also need appropriate permissions.</p>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <p>📋 Inventory Management System - Complete Workflow Documentation</p>
+            <p>Generated: January 6, 2026 | For Internal Use Only</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Branch Request Workflow Diagram</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --page: #eef3f8;
+      --border: #c8d3e1;
+      --header: #102a4c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: Aptos, "Segoe UI", sans-serif;
+    }
+
+    main {
+      max-width: 1320px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 24px;
+      background: #fff;
+    }
+
+    header {
+      border-bottom: 3px solid #24426f;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--header);
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .diagram-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fbfcff;
+      padding: 18px;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      min-width: 1120px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .simple-flow {
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f7f9fc;
+      padding: 16px;
+    }
+
+    .simple-flow h2 {
+      margin: 0 0 10px;
+      color: #183b63;
+      font-size: 18px;
+    }
+
+    .simple-flow pre {
+      margin: 0;
+      white-space: pre-wrap;
+      color: #253858;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .note {
+      margin-top: 14px;
+      border-left: 5px solid #f79009;
+      background: #fff8eb;
+      color: #4b320f;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      main { padding: 14px; }
+      h1 { font-size: 24px; }
+      .mermaid { min-width: 900px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      main { max-width: none; padding: 0; }
+      .diagram-wrap, .simple-flow, .note { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Branch Request to Tender and Final Allotment Workflow</h1>
+      <p class="subtitle">Simple diagram of the branch request flow from employee request to storekeeper check, supervisor approval, tender demand, procurement, and final allotment.</p>
+    </header>
+
+    <section class="diagram-wrap" aria-label="Branch request workflow diagram">
+      <pre class="mermaid">
+flowchart TD
+    A[Branch Employee creates request] --> B[Branch Storekeeper receives request]
+
+    B --> C[Storekeeper checks branch stock]
+    C --> D{Item available?}
+
+    D -->|Yes / Full or partial available| E[Storekeeper marks available quantity]
+    E --> F[Forward to Branch Supervisor]
+    F --> G{Branch Supervisor decision}
+
+    G -->|Approved| H[Branch Storekeeper allots available item to employee]
+    G -->|Rejected / Returned| Z[Request rejected or returned with comments]
+
+    H --> I[Stock deducted from branch/store inventory]
+    I --> J[Item added to employee inventory]
+    J --> K[Request completed]
+
+    D -->|No / Short quantity| L[Storekeeper marks shortage quantity]
+    L --> F
+
+    G -->|Approved but item not available| M[Shortage becomes Required Item / Demand]
+    M --> N[Admin workflow starts by item group]
+
+    N --> O[DD Admin review]
+    O --> P[AD Admin review]
+    P --> Q{Admin approved?}
+
+    Q -->|No| Z
+    Q -->|Yes| R[Demand goes to Tender Module]
+
+    R --> S[Required Items Queue]
+    S --> T[Procurement groups similar demands]
+    T --> U[Assign demand to new or existing tender]
+    U --> V[Tender items prepared]
+    V --> W[Vendor / PO / Delivery / Stock Acquisition]
+
+    W --> X[Stock received by Admin / Central Store]
+    X --> Y[Admin allots approved stock to Branch Supervisor]
+    Y --> AA[Branch Supervisor hands stock to Branch Storekeeper]
+    AA --> AB[Branch Storekeeper enters item into branch store]
+    AB --> AC[Branch Storekeeper issues item to requested employee]
+    AC --> I
+
+    classDef employee fill:#e8f6ef,stroke:#21845a,stroke-width:2px,color:#172033;
+    classDef store fill:#edf7ff,stroke:#087ea4,stroke-width:2px,color:#172033;
+    classDef supervisor fill:#fff3df,stroke:#b95f13,stroke-width:2px,color:#172033;
+    classDef admin fill:#e9efff,stroke:#3157c9,stroke-width:2px,color:#172033;
+    classDef tender fill:#fff7ed,stroke:#9a3412,stroke-width:2px,color:#172033;
+    classDef inventory fill:#f1ecff,stroke:#6941c6,stroke-width:2px,color:#172033;
+    classDef reject fill:#fff0f0,stroke:#b42318,stroke-width:2px,color:#172033;
+
+    class A employee;
+    class B,C,E,L,H,AB,AC store;
+    class F,G,AA supervisor;
+    class M,N,O,P,Q,Y admin;
+    class R,S,T,U,V,W,X tender;
+    class I,J,K inventory;
+    class Z reject;
+      </pre>
+    </section>
+
+    <section class="simple-flow">
+      <h2>Simple Flow</h2>
+      <pre>Employee Request
+   ↓
+Branch Storekeeper checks stock
+   ↓
+Branch Supervisor approves / rejects
+   ↓
+If available:
+   Branch Storekeeper allots item to employee
+   ↓
+   Inventory updated
+
+If not available:
+   Required Item / Demand created
+   ↓
+   Admin workflow by item group
+   ↓
+   Tender module receives demand
+   ↓
+   Tender / PO / Delivery / Stock Acquisition
+   ↓
+  Admin / Central Store receives stock
+  ↓
+  Admin allots stock to Branch Supervisor
+  ↓
+  Branch Supervisor gives stock to Branch Storekeeper
+  ↓
+  Branch Storekeeper enters item into branch store
+  ↓
+  Branch Storekeeper issues item to requested employee
+   ↓
+   Inventory updated</pre>
+    </section>
+
+    <div class="note">
+      <strong>Main idea:</strong> Branch Storekeeper checks availability first. Branch Supervisor approves the need. Available items are issued directly from branch store. Unavailable items become tender demand; after procurement, Admin allots stock to the Branch Supervisor, the Branch Supervisor gives it to the Branch Storekeeper, and the Branch Storekeeper issues it to the requested employee.
+    </div>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      flowchart: {
+        curve: 'basis',
+        nodeSpacing: 42,
+        rankSpacing: 58,
+        padding: 12
+      },
+      themeVariables: {
+        fontFamily: 'Aptos, Segoe UI, sans-serif',
+        primaryColor: '#edf7ff',
+        primaryTextColor: '#172033',
+        primaryBorderColor: '#087ea4',
+        lineColor: '#49627f',
+        tertiaryColor: '#f7f9fc'
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+{
+	"info": {
+		"_postman_id": "ims-ds-auth-test",
+		"name": "IMS - DS Authentication Testing",
+		"description": "Test collection for IMS DS-style authentication endpoint",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Test DS Authentication (Production Server)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"UserName\": \"3740560772543\",\n    \"Password\": \"P@ssword@1\"\n}"
+				},
+				"url": {
+					"raw": "http://172.20.150.34:3001/api/auth/ds-authenticate",
+					"protocol": "http",
+					"host": [
+						"172",
+						"20",
+						"150",
+						"34"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"auth",
+						"ds-authenticate"
+					]
+				},
+				"description": "Test DS authentication with username 3740560772543"
+			},
+			"response": []
+		},
+		{
+			"name": "2. Test DS Authentication (Localhost)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"UserName\": \"3740560772543\",\n    \"Password\": \"P@ssword@1\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/api/auth/ds-authenticate",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"auth",
+						"ds-authenticate"
+					]
+				},
+				"description": "Test DS authentication on localhost"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Verify SSO Login (with Token)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer YOUR_TOKEN_HERE",
+						"type": "text",
+						"description": "Replace YOUR_TOKEN_HERE with token from authentication response"
+					}
+				],
+				"url": {
+					"raw": "http://172.20.150.34:3001/api/auth/verify-sso-token",
+					"protocol": "http",
+					"host": [
+						"172",
+						"20",
+						"150",
+						"34"
+					],
+					"port": "3001",
+					"path": [
+						"api",
+						"auth",
+						"verify-sso-token"
+					]
+				},
+				"description": "Verify the JWT token received from authentication"
+			},
+			"response": []
+		},
+		{
+			"name": "4. Check Backend Health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://172.20.150.34:3001/health",
+					"protocol": "http",
+					"host": [
+						"172",
+						"20",
+						"150",
+						"34"
+					],
+					"port": "3001",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if backend server is running and healthy"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://172.20.150.34:3001",
+			"type": "string"
+		},
+		{
+			"key": "username",
+			"value": "3740560772543",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "P@ssword@1",
+			"type": "string"
+		}
+	]
+}

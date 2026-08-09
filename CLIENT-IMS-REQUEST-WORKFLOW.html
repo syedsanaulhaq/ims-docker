@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IMS Request to Issuance Workflow</title>
+  <style>
+    @page { size: A4; margin: 16mm; }
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --line: #c8d3e1;
+      --panel: #f7f9fc;
+      --employee: #e8f6ef;
+      --supervisor: #fff3df;
+      --admin: #e9efff;
+      --store: #edf7ff;
+      --demand: #fff7ed;
+      --inventory: #f1ecff;
+      --danger: #fff0f0;
+      --green: #21845a;
+      --orange: #b95f13;
+      --blue: #3157c9;
+      --cyan: #087ea4;
+      --violet: #6941c6;
+      --red: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #e9eef5;
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+      background: white;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 3px solid #24426f;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1, h2, h3 { margin: 0; }
+    h1 { font-size: 32px; letter-spacing: 0; color: #102a4c; }
+    h2 { font-size: 22px; color: #183b63; margin: 28px 0 14px; }
+    h3 { font-size: 16px; color: #253858; margin-bottom: 8px; }
+    p { margin: 8px 0; }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      margin-top: 8px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0 24px;
+    }
+
+    .summary-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 13px;
+      color: #344054;
+      margin-bottom: 6px;
+    }
+
+    .summary-card span {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #f5f7fb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 18px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #344054;
+    }
+
+    .dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 2px solid currentColor;
+      display: inline-block;
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr 44px 1fr;
+      gap: 10px;
+      align-items: stretch;
+      margin: 18px 0;
+    }
+
+    .workflow.branch-flow {
+      grid-template-columns: 1fr 36px 1fr 36px 1fr 36px 1fr 36px 1fr;
+    }
+
+    .lane {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: white;
+      min-height: 100%;
+    }
+
+    .lane-title {
+      padding: 12px 14px;
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .employee .lane-title { background: var(--green); }
+    .supervisor .lane-title { background: var(--orange); }
+    .admin .lane-title { background: var(--blue); }
+    .store .lane-title { background: var(--cyan); }
+    .inventory .lane-title { background: var(--violet); }
+    .demand .lane-title { background: #9a3412; }
+
+    .lane-body { padding: 12px; display: grid; gap: 10px; }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: white;
+      min-height: 82px;
+    }
+
+    .employee .step { background: var(--employee); }
+    .supervisor .step { background: var(--supervisor); }
+    .admin .step { background: var(--admin); }
+    .store .step { background: var(--store); }
+    .inventory .step { background: var(--inventory); }
+    .demand .step { background: var(--demand); }
+    .step.reject { background: var(--danger); border-color: #f3b7b7; }
+
+    .step-number {
+      display: inline-flex;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      background: #344054;
+      font-weight: 700;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
+    .step-title {
+      font-weight: 700;
+      display: inline;
+      color: #182230;
+    }
+
+    .step p, .step ul {
+      margin: 8px 0 0;
+      color: #344054;
+      font-size: 13px;
+    }
+
+    ul { padding-left: 18px; }
+    li { margin: 4px 0; }
+
+    .arrow-col {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #49627f;
+  font-weight: 700;
+      font-size: 28px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0 18px;
+    }
+
+    .path {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 14px;
+  background: #fbfcff;
+    }
+
+    .path.available { border-left: 6px solid var(--green); }
+    .path.not-available { border-left: 6px solid var(--blue); }
+
+    .flow-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: white;
+      color: #253858;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .chev { color: #667085; font-weight: 800; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 13px;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #24426f;
+      color: white;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    .note {
+      border-left: 5px solid #f79009;
+      background: #fff8eb;
+      padding: 12px 14px;
+      border-radius: 6px;
+      color: #4b320f;
+      margin: 16px 0;
+    }
+
+    .section-band {
+      background: #f7f9fc;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      margin: 14px 0;
+    }
+
+    .inventory-movement {
+      display: grid;
+      grid-template-columns: 1fr 40px 1fr 40px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .move-box {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 14px;
+      min-height: 110px;
+      background: white;
+    }
+
+    .move-box h3 { margin-bottom: 8px; }
+    .minus { color: var(--red); font-weight: 800; }
+    .plus { color: var(--green); font-weight: 800; }
+
+    footer {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .summary, .decision-grid, .workflow, .workflow.branch-flow, .inventory-movement { grid-template-columns: 1fr; }
+      .arrow-col { transform: rotate(90deg); min-height: 28px; }
+    }
+
+    @media print {
+      body { background: white; }
+      .page { padding: 0; max-width: none; }
+      .section-band, .lane, .path, table, .inventory-movement { break-inside: avoid; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Inventory Request to Final Issuance Workflow</h1>
+      <p class="subtitle">Simple client-facing view of how IMS handles branch requests, branch storekeeper checking, branch supervisor approval, admin workflow, final allotment, and tender demand planning.</p>
+    </header>
+
+    <section class="summary">
+      <div class="summary-card"><strong>Starting Point</strong><span>Branch employee creates a request for required item(s).</span></div>
+      <div class="summary-card"><strong>First Review</strong><span>Branch storekeeper checks what is available and what is short.</span></div>
+      <div class="summary-card"><strong>Approval Route</strong><span>Branch supervisor approves, disapproves, or forwards shortage to admin workflow.</span></div>
+      <div class="summary-card"><strong>Tender Assignment</strong><span>Tender module groups required demands and assigns them to procurement files.</span></div>
+    </section>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background: var(--employee); color: var(--green);"></span>Employee</div>
+      <div class="legend-item"><span class="dot" style="background: var(--supervisor); color: var(--orange);"></span>Supervisor</div>
+      <div class="legend-item"><span class="dot" style="background: var(--admin); color: var(--blue);"></span>Admin Workflow</div>
+      <div class="legend-item"><span class="dot" style="background: var(--store); color: var(--cyan);"></span>Storekeeper</div>
+      <div class="legend-item"><span class="dot" style="background: var(--demand); color: #9a3412;"></span>Required Items / Tender Demand</div>
+      <div class="legend-item"><span class="dot" style="background: var(--inventory); color: var(--violet);"></span>Inventory Movement</div>
+    </div>
+
+    <h2>1. Branch Request Workflow at a Glance</h2>
+    <section class="workflow branch-flow">
+      <div class="lane employee">
+        <div class="lane-title">Employee / Requester</div>
+        <div class="lane-body">
+          <div class="step">
+            <span class="step-number">1</span><span class="step-title">Creates Request</span>
+            <p>Branch employee selects item(s), enters required quantity, purpose, and submits the request.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span><span class="step-title">Request is Logged</span>
+            <p>IMS stores request number, requester, branch, item list, quantity, purpose, and status.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-col">→</div>
+
+      <div class="lane store">
+        <div class="lane-title">Branch Storekeeper</div>
+        <div class="lane-body">
+          <div class="step">
+            <span class="step-number">3</span><span class="step-title">Checks Availability</span>
+            <p>Branch storekeeper checks branch stock and marks which quantity is available and which quantity is short.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">4</span><span class="step-title">Forwards for Approval</span>
+            <p>Branch storekeeper forwards the request with availability remarks to the branch supervisor.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-col">→</div>
+
+      <div class="lane supervisor">
+        <div class="lane-title">Branch Supervisor</div>
+        <div class="lane-body">
+          <div class="step">
+            <span class="step-number">5</span><span class="step-title">Approves or Disapproves</span>
+            <p>Branch supervisor reviews the request, storekeeper remarks, quantity, purpose, and availability.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">6</span><span class="step-title">Chooses Path</span>
+            <p>If stock is available, supervisor approves for branch storekeeper allotment. If not available, supervisor forwards to admin workflow.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-col">→</div>
+
+      <div class="lane admin">
+        <div class="lane-title">Admin Workflow</div>
+        <div class="lane-body">
+          <div class="step">
+            <span class="step-number">7</span><span class="step-title">Group-Wise Approval</span>
+            <p>Unavailable items move to DD Admin / AD Admin workflow according to the requested item group.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">8</span><span class="step-title">Procurement Demand</span>
+            <p>Short items are also recorded as required demand so tender planning can use actual branch requests.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-col">→</div>
+
+      <div class="lane inventory">
+        <div class="lane-title">Final Allotment</div>
+        <div class="lane-body">
+          <div class="step">
+            <span class="step-number">9</span><span class="step-title">Allot to Employee</span>
+            <p>After supervisor approval or final admin approval, storekeeper allots the approved quantity to the employee.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">10</span><span class="step-title">Inventory Updated</span>
+            <p>IMS deducts issuing stock, writes ledger history, and adds the item to employee inventory/issued items.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <h2>2. Branch Storekeeper and Supervisor Decision Point</h2>
+    <section class="decision-grid">
+      <div class="path available">
+        <h3>Path A: Item Available in Branch Stock</h3>
+        <p>The branch storekeeper confirms availability and forwards the request to the branch supervisor. After supervisor approval, the branch storekeeper allots the approved item to the employee.</p>
+        <div class="flow-line">
+          <span class="pill">Employee Request</span><span class="chev">→</span>
+          <span class="pill">Branch Storekeeper Checks</span><span class="chev">→</span>
+          <span class="pill">Branch Supervisor Approves</span><span class="chev">→</span>
+          <span class="pill">Branch Storekeeper Allots</span><span class="chev">→</span>
+          <span class="pill">Employee Inventory Updated</span>
+        </div>
+      </div>
+
+      <div class="path not-available">
+        <h3>Path B: Item Not Available in Branch Stock</h3>
+        <p>The branch storekeeper marks the shortage and forwards to the branch supervisor. If supervisor approves the need, unavailable items move to admin workflow and become required demand for tender planning.</p>
+        <div class="flow-line">
+          <span class="pill">Employee Request</span><span class="chev">→</span>
+          <span class="pill">Branch Storekeeper Marks Shortage</span><span class="chev">→</span>
+          <span class="pill">Branch Supervisor Approves Need</span><span class="chev">→</span>
+          <span class="pill">DD Admin</span><span class="chev">→</span>
+          <span class="pill">AD Admin</span><span class="chev">→</span>
+          <span class="pill">Storekeeper Allots After Approval</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="note">
+      <strong>Important:</strong> Branch storekeeper should record available quantity and shortage quantity. At every approval stage, the approver should be able to change the approved quantity and add comments. The system should preserve requested quantity, available quantity, shortage quantity, approved quantity, actor name, date/time, and comments for audit/history.
+    </div>
+
+    <h2>3. Group-Wise Admin Workflow</h2>
+    <section class="section-band">
+      <p>When branch stock is not available, the request is routed according to the group of the requested item. Each group can have its own approval path. A common client-friendly example is:</p>
+      <div class="flow-line">
+        <span class="pill">Branch Supervisor Forward</span><span class="chev">→</span>
+        <span class="pill">DD Admin</span><span class="chev">→</span>
+        <span class="pill">AD Admin-I / AD Admin-II</span><span class="chev">→</span>
+        <span class="pill">Storekeeper</span><span class="chev">→</span>
+        <span class="pill">Allot Item</span>
+      </div>
+    </section>
+
+    <h2>4. Required Items and Tender Demand</h2>
+    <section class="section-band demand">
+      <p>When the branch does not have an item, IMS should not lose that demand. The shortage quantity becomes a required item entry. The tender module receives these pending required items, groups them by item/category, and allows procurement staff to assign them to a new or existing tender.</p>
+      <div class="flow-line">
+        <span class="pill">Branch Shortage Marked</span><span class="chev">→</span>
+        <span class="pill">Required Item Created</span><span class="chev">→</span>
+        <span class="pill">Grouped by Item / Category</span><span class="chev">→</span>
+        <span class="pill">Assigned to Tender</span><span class="chev">→</span>
+        <span class="pill">Procured Stock Allotted</span>
+      </div>
+    </section>
+
+    <h2>5. Tender Module Assignment Workflow</h2>
+    <section class="section-band demand">
+      <p>The tender module should act as the procurement receiver for approved shortages. It should not require procurement staff to re-enter the same requested items manually. Instead, it should pull pending required items from branch/wing requests and assign them to tender records.</p>
+      <div class="flow-line">
+        <span class="pill">Required Items Queue</span><span class="chev">→</span>
+        <span class="pill">Review Demand Summary</span><span class="chev">→</span>
+        <span class="pill">Select Items</span><span class="chev">→</span>
+        <span class="pill">Create / Link Tender</span><span class="chev">→</span>
+        <span class="pill">Tender Items Prepared</span><span class="chev">→</span>
+        <span class="pill">Vendor / PO / Procurement</span>
+      </div>
+    </section>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tender Step</th>
+          <th>Who Acts</th>
+          <th>What Should Happen</th>
+          <th>System Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Receive Demand</td>
+          <td>Tender Module</td>
+          <td>Read approved shortages from required items / demand list.</td>
+          <td>Pending demand appears without duplicate manual entry.</td>
+        </tr>
+        <tr>
+          <td>Demand Grouping</td>
+          <td>Procurement / Admin</td>
+          <td>Group demands by item, category, branch/wing, urgency, and source request.</td>
+          <td>Consolidated quantity needed for tender planning.</td>
+        </tr>
+        <tr>
+          <td>Tender Assignment</td>
+          <td>Procurement / Admin</td>
+          <td>Select required items and assign them to an existing tender or create a new tender.</td>
+          <td>Required item status becomes In Tender and stores tender reference.</td>
+        </tr>
+        <tr>
+          <td>Tender Item Creation</td>
+          <td>System / Procurement</td>
+          <td>Create tender item lines from selected demands with quantity and item details.</td>
+          <td>Tender contains demand-backed item quantities.</td>
+        </tr>
+        <tr>
+          <td>Procurement Completion</td>
+          <td>Procurement / Storekeeper</td>
+          <td>After vendor, PO, delivery, and stock acquisition, received stock becomes available for issue.</td>
+          <td>Required item can be marked Procured and linked requests can be fulfilled.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Who Acts</th>
+          <th>What They Can Do</th>
+          <th>System Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Request Submission</td>
+          <td>Employee</td>
+          <td>Select item, enter quantity, write purpose/justification.</td>
+          <td>Request number generated and request status becomes Submitted/Pending.</td>
+        </tr>
+        <tr>
+          <td>Availability Check</td>
+          <td>Branch Storekeeper</td>
+          <td>Check branch stock, mark available quantity, mark shortage quantity, write remarks.</td>
+          <td>Request is forwarded to branch supervisor with availability details.</td>
+        </tr>
+        <tr>
+          <td>Branch Approval</td>
+          <td>Branch Supervisor</td>
+          <td>Approve, disapprove, change quantity, write comments, or forward shortage to admin workflow.</td>
+          <td>Available items go to branch storekeeper for allotment; unavailable items go to admin workflow.</td>
+        </tr>
+        <tr>
+          <td>Admin Group Workflow</td>
+          <td>DD Admin / AD Admin</td>
+          <td>Review item group, change approved quantity, approve/reject/forward, write comments.</td>
+          <td>Approval history is updated and request moves to next admin step.</td>
+        </tr>
+        <tr>
+          <td>Demand Capture</td>
+          <td>System / Procurement</td>
+          <td>Record unavailable requested items as pending required items.</td>
+          <td>Tender module receives the demand list for tender assignment.</td>
+        </tr>
+        <tr>
+          <td>Tender Assignment</td>
+          <td>Procurement / Tender Module</td>
+          <td>Group required items, select demand rows, and assign them to a new or existing tender.</td>
+          <td>Required items are linked to tender reference and tender items can be prepared from real demand.</td>
+        </tr>
+        <tr>
+          <td>Allotment / Issuance</td>
+          <td>Storekeeper</td>
+          <td>Verify final approved item and quantity, allot stock to employee.</td>
+          <td>Stock is deducted from store inventory and added to employee inventory/issued items.</td>
+        </tr>
+        <tr>
+          <td>Completion</td>
+          <td>System</td>
+          <td>Record final issued quantity, issuer, issue date, and inventory ledger movement.</td>
+          <td>Request status becomes Issued/Completed and appears in history/reports.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Final Inventory Movement</h2>
+    <section class="inventory-movement">
+      <div class="move-box">
+        <h3>Store Inventory</h3>
+        <p><span class="minus">Deduct:</span> Final issued quantity is subtracted from the issuing storekeeper's stock.</p>
+        <p>Example: 20 available - 3 issued = 17 remaining.</p>
+      </div>
+      <div class="arrow-col">→</div>
+      <div class="move-box">
+        <h3>Stock Ledger</h3>
+        <p>The system records a transaction with request number, item, quantity, issuer, receiver, date, and remarks.</p>
+      </div>
+      <div class="arrow-col">→</div>
+      <div class="move-box">
+        <h3>Employee Inventory</h3>
+        <p><span class="plus">Add:</span> The issued item is added to the employee's personal inventory or branch possession list.</p>
+        <p>The requester can later see it in My Inventory / Issued Items.</p>
+      </div>
+    </section>
+
+    <h2>7. End-to-End Example</h2>
+    <section class="section-band">
+      <ol>
+        <li>Employee of a branch requests 5 laptops.</li>
+        <li>Branch storekeeper receives the request first and checks local branch stock.</li>
+        <li>If 3 laptops are available, branch storekeeper records 3 available and 2 short, then forwards to the branch supervisor.</li>
+        <li>Branch supervisor approves or disapproves the request and can adjust approved quantity with comments.</li>
+        <li>For the available 3 laptops, branch storekeeper allots them to the employee after supervisor approval.</li>
+        <li>For the 2 short laptops, IMS records required demand and forwards the shortage to admin workflow based on the laptop item group.</li>
+        <li>The tender module receives those 2 laptops as pending required demand, groups them with similar requests, and assigns them to a new or existing tender.</li>
+        <li>DD Admin and AD Admin review the shortage request, can adjust quantity, and record comments.</li>
+        <li>After tender, PO, delivery, and stock acquisition, storekeeper allots the approved/procured quantity to the employee.</li>
+        <li>IMS deducts the issued quantity from store inventory, writes stock transaction history, updates employee inventory, and keeps the shortage demand available for tender planning until fulfilled.</li>
+      </ol>
+    </section>
+
+    <h2>8. Statuses the Client Will See</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Submitted / Pending Branch Storekeeper Review</td><td>Request has been created and is waiting for branch storekeeper availability check.</td></tr>
+        <tr><td>Forwarded to Branch Supervisor</td><td>Branch storekeeper checked availability and forwarded the request with remarks.</td></tr>
+        <tr><td>Approved by Branch Supervisor</td><td>Branch supervisor approved available quantity for allotment.</td></tr>
+        <tr><td>Required Item / Demand Recorded</td><td>Unavailable quantity has been captured for tender/procurement planning.</td></tr>
+        <tr><td>Assigned to Tender</td><td>Procurement selected the required item and linked it to a tender file.</td></tr>
+        <tr><td>In Tender / Procurement</td><td>The demand is part of tender, vendor, PO, delivery, or acquisition process.</td></tr>
+        <tr><td>Forwarded to Admin Workflow</td><td>Branch supervisor approved the need but local stock was unavailable, so it moved to group-wise admin approval.</td></tr>
+        <tr><td>Pending DD Admin / AD Admin</td><td>Request is moving through item-group admin workflow.</td></tr>
+        <tr><td>Approved for Allotment</td><td>Final approver approved the quantity and storekeeper can allot it.</td></tr>
+        <tr><td>Issued / Completed</td><td>Item has been allotted, inventory deducted, and employee inventory updated.</td></tr>
+        <tr><td>Rejected / Returned</td><td>Approver rejected or returned the request with comments.</td></tr>
+      </tbody>
+    </table>
+
+    <footer>
+      IMS workflow explanation prepared for client discussion. This document describes the intended business process from first request to final inventory allocation.
+    </footer>
+  </main>
+</body>
+</html>

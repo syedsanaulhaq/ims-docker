@@ -1,0 +1,262 @@
+// Utility to setup office hierarchy tables and data in Supabase
+import { supabase } from '@/integrations/supabase/client';
+
+export interface SetupResult {
+  success: boolean;
+  message: string;
+  details?: any;
+  error?: string;
+}
+
+export const officeHierarchySetup = {
+  async checkTablesExist(): Promise<SetupResult> {
+    try {
+
+      // Try to query each table to see if it exists
+      const { count: officesCount, error: officesError } = await supabase
+        .from('tblOffices')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: wingsCount, error: wingsError } = await supabase
+        .from('WingsInformation')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: decsCount, error: decsError } = await supabase
+        .from('DEC_MST')
+        .select('*', { count: 'exact', head: true });
+
+      const result = {
+        offices: {
+          exists: !officesError,
+          error: officesError?.message,
+          count: officesCount || 0
+        },
+        wings: {
+          exists: !wingsError,
+          error: wingsError?.message,
+          count: wingsCount || 0
+        },
+        decs: {
+          exists: !decsError,
+          error: decsError?.message,
+          count: decsCount || 0
+        }
+      };
+
+      return {
+        success: true,
+        message: 'Tables check completed',
+        details: result
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        message: 'Failed to check tables',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+
+  async createSampleData(): Promise<SetupResult> {
+    try {
+
+      // First, try to insert sample tblOffices
+      const { data: officesData, error: officesError } = await supabase
+        .from('tblOffices')
+        .upsert([
+          {
+            id: 1,
+            name: 'Pakistan Air Force Headquarters',
+            description: 'Main headquarters of Pakistan Air Force',
+            office_code: 'PAF-HQ',
+            is_active: true,
+            is_deleted: false
+          },
+          {
+            id: 2,
+            name: 'Combat Command PAF',
+            description: 'Combat operations command',
+            office_code: 'CC-PAF',
+            is_active: true,
+            is_deleted: false
+          },
+          {
+            id: 3,
+            name: 'Training Command PAF',
+            description: 'Training and education command',
+            office_code: 'TC-PAF',
+            is_active: true,
+            is_deleted: false
+          }
+        ], { onConflict: 'intOfficeID' })
+        .select();
+
+      if (officesError) {
+        
+        return {
+          success: false,
+          message: 'Failed to create offices',
+          error: officesError.message
+        };
+      }
+
+      // Next, create sample WingsInformation
+      const { data: wingsData, error: wingsError } = await supabase
+        .from('WingsInformation')
+        .upsert([
+          {
+            id: 1,
+            name: 'Operations Wing',
+            short_name: 'Ops Wing',
+            office_id: 1,
+            is_act: true,
+            wing_code: 1001
+          },
+          {
+            id: 2,
+            name: 'Intelligence Wing',
+            short_name: 'Int Wing',
+            office_id: 1,
+            is_act: true,
+            wing_code: 1002
+          },
+          {
+            id: 3,
+            name: 'Administration Wing',
+            short_name: 'Admin Wing',
+            office_id: 1,
+            is_act: true,
+            wing_code: 1003
+          },
+          {
+            id: 4,
+            name: 'Logistics Wing',
+            short_name: 'Log Wing',
+            office_id: 2,
+            is_act: true,
+            wing_code: 2001
+          }
+        ], { onConflict: 'intOfficeID' })
+        .select();
+
+      if (wingsError) {
+        
+        return {
+          success: false,
+          message: 'Failed to create wings',
+          error: wingsError.message
+        };
+      }
+
+      // Finally, create sample DECs
+      const { data: decsData, error: decsError } = await supabase
+        .from('DEC_MST')
+        .upsert([
+          {
+            int_auto_id: 1,
+            dec_name: 'Operations Planning DEC',
+            dec_acronym: 'Ops Plan',
+            wing_id: 1,
+            is_act: true,
+            dec_code: 100101
+          },
+          {
+            int_auto_id: 2,
+            dec_name: 'Flight Operations DEC',
+            dec_acronym: 'Flt Ops',
+            wing_id: 1,
+            is_act: true,
+            dec_code: 100102
+          },
+          {
+            int_auto_id: 3,
+            dec_name: 'Intelligence Analysis DEC',
+            dec_acronym: 'Int Anal',
+            wing_id: 2,
+            is_act: true,
+            dec_code: 100201
+          },
+          {
+            int_auto_id: 4,
+            dec_name: 'Human Resources DEC',
+            dec_acronym: 'HR',
+            wing_id: 3,
+            is_act: true,
+            dec_code: 100301
+          }
+        ], { onConflict: 'int_auto_id' })
+        .select();
+
+      if (decsError) {
+        
+        return {
+          success: false,
+          message: 'Failed to create DECs',
+          error: decsError.message
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Sample data created successfully',
+        details: {
+          offices: officesData?.length || 0,
+          wings: wingsData?.length || 0,
+          decs: decsData?.length || 0
+        }
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        message: 'Failed to create sample data',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+
+  async runFullSetup(): Promise<SetupResult> {
+    try {
+
+      // First check if tables exist
+      const checkResult = await this.checkTablesExist();
+
+      // If tables exist but are empty, create sample data
+      if (checkResult.success && checkResult.details) {
+        const { offices, wings, decs } = checkResult.details;
+        
+        if (offices.exists && wings.exists && decs.exists) {
+          // Tables exist, check if they have data
+          if (offices.count === 0 || wings.count === 0 || decs.count === 0) {
+            
+            return await this.createSampleData();
+          } else {
+            return {
+              success: true,
+              message: 'Tables already exist with data',
+              details: checkResult.details
+            };
+          }
+        } else {
+          // Some tables don't exist
+          return {
+            success: false,
+            message: 'Some office hierarchy tables do not exist',
+            details: checkResult.details,
+            error: 'Please create the tables using the SQL script first'
+          };
+        }
+      }
+
+      return checkResult;
+    } catch (error) {
+      
+      return {
+        success: false,
+        message: 'Failed to run full setup',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+};

@@ -1,0 +1,5 @@
+item_code,nomenclature,manufacturer,unit,specifications,description,category_name,sub_category_name,status,minimum_stock_level,maximum_stock_level,reorder_level
+IT-001,Laptop Computer,Dell,Each,Intel i7 16GB RAM 512GB SSD,Productivity laptop for office use,Electronics,Computers,Active,5,50,10
+IT-002,Desktop Monitor 24",Samsung,Each,1920x1080 LED Display,Standard office monitor,Electronics,Monitors,Active,10,100,20
+ST-001,Office Chair Executive,Steel Case,Each,Ergonomic leather high-back,Comfortable office chair,Furniture,Chairs,Active,20,200,50
+ST-002,Office Desk Standard,IKEA,Each,120x60cm wooden desk,Standard office desk,Furniture,Tables,Active,15,150,30

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    image: node:18-alpine
+    container_name: ims-backend-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=development
+      - SQL_SERVER_HOST=host.docker.internal
+      - SQL_SERVER_PORT=1433
+      - SQL_SERVER_USER=inventorymanagementuser
+      - SQL_SERVER_PASSWORD=2016Wfp61@
+      - SQL_SERVER_DATABASE=InventoryManagementDB
+      - SESSION_SECRET=inventory-management-secret-key-2025
+    command: sh -c "npm install && node server/index.cjs"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: node:18-alpine
+    container_name: ims-frontend-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "9080:9090"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - PORT=9090
+    command: sh -c "npm install && npx vite --host 0.0.0.0 --port 9090"

@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMS System Documentation</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm;
+        }
+        body {
+            font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 28pt;
+            color: #1a365d;
+            text-align: center;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 15px;
+            margin-top: 0;
+            page-break-before: always;
+        }
+        h1:first-of-type {
+            page-break-before: avoid;
+        }
+        h2 {
+            font-size: 18pt;
+            color: #2c5282;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 14pt;
+            color: #2d3748;
+            margin-top: 25px;
+            page-break-after: avoid;
+        }
+        h4 {
+            font-size: 12pt;
+            color: #4a5568;
+            margin-top: 20px;
+        }
+        .title-page {
+            text-align: center;
+            padding: 100px 0;
+            page-break-after: always;
+        }
+        .title-page h1 {
+            font-size: 36pt;
+            border: none;
+            margin-bottom: 30px;
+        }
+        .title-page .subtitle {
+            font-size: 24pt;
+            color: #4a5568;
+            margin-bottom: 50px;
+        }
+        .title-page .meta {
+            font-size: 12pt;
+            color: #718096;
+            margin-top: 100px;
+        }
+        .toc {
+            page-break-after: always;
+        }
+        .toc h2 {
+            text-align: center;
+            border: none;
+        }
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        .toc a {
+            color: #2c5282;
+            text-decoration: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        th, td {
+            border: 1px solid #cbd5e0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2c5282;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        tr:hover {
+            background-color: #edf2f7;
+        }
+        .screenshot-placeholder {
+            border: 2px dashed #a0aec0;
+            background-color: #f7fafc;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            color: #718096;
+            font-style: italic;
+        }
+        .screenshot-placeholder::before {
+            content: "📷 ";
+            font-size: 24pt;
+        }
+        .figure-caption {
+            text-align: center;
+            font-size: 10pt;
+            color: #718096;
+            font-style: italic;
+            margin-top: 8px;
+            margin-bottom: 20px;
+        }
+        pre {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 9pt;
+            page-break-inside: avoid;
+        }
+        code {
+            background-color: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 10pt;
+        }
+        .note {
+            background-color: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning {
+            background-color: #fffaf0;
+            border-left: 4px solid #ed8936;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .role-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: #fafafa;
+            page-break-inside: avoid;
+        }
+        .role-header {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #2c5282;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .permission-list {
+            column-count: 2;
+            column-gap: 20px;
+        }
+        .permission-list li {
+            margin: 5px 0;
+            font-size: 10pt;
+        }
+        .flow-diagram {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .module-header {
+            background: linear-gradient(135deg, #2c5282, #4299e1);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0 20px 0;
+        }
+        .module-header h2 {
+            color: white;
+            border: none;
+            margin: 0;
+            padding: 0;
+        }
+        footer {
+            text-align: center;
+            font-size: 9pt;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            margin-top: 40px;
+        }
+        @media print {
+            .screenshot-placeholder {
+                min-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Title Page -->
+<div class="title-page">
+    <img src="logo-placeholder.png" alt="Organization Logo" style="width: 150px; margin-bottom: 30px;">
+    <h1 style="font-size: 42pt; margin-bottom: 10px;">Inventory Management System</h1>
+    <div class="subtitle">Complete System Documentation</div>
+    <div style="font-size: 16pt; color: #4a5568; margin: 30px 0;">Version 2.0</div>
+    <hr style="width: 50%; border: 1px solid #4299e1;">
+    <div class="meta">
+        <p><strong>Document Version:</strong> 2.0</p>
+        <p><strong>Last Updated:</strong> February 25, 2026</p>
+        <p><strong>Classification:</strong> Internal Use Only</p>
+    </div>
+</div>
+
+<!-- Table of Contents -->
+<div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+        <li><a href="#executive-summary">1. Executive Summary</a></li>
+        <li><a href="#system-overview">2. System Overview</a></li>
+        <li><a href="#architecture">3. System Architecture</a></li>
+        <li><a href="#roles">4. User Roles & Permissions</a></li>
+        <li><a href="#module-ds">5. Module 1: Digital System Integration</a></li>
+        <li><a href="#module-personal">6. Module 2: Personal Dashboard</a></li>
+        <li><a href="#module-issuance">7. Module 3: Stock Issuance</a></li>
+        <li><a href="#module-wing">8. Module 4: Wing Management</a></li>
+        <li><a href="#module-inventory">9. Module 5: Inventory Management</a></li>
+        <li><a href="#module-procurement">10. Module 6: Procurement Management</a></li>
+        <li><a href="#module-approval">11. Module 7: Approval Workflow</a></li>
+        <li><a href="#module-reports">12. Module 8: Reports & Analytics</a></li>
+        <li><a href="#module-admin">13. Module 9: Administration</a></li>
+        <li><a href="#appendices">14. Appendices</a></li>
+    </ul>
+</div>
+
+<!-- Executive Summary -->
+<h1 id="executive-summary">1. Executive Summary</h1>
+
+<p>The <strong>Inventory Management System (IMS)</strong> is a comprehensive enterprise solution designed to manage the complete lifecycle of inventory within an organization. The system integrates with the existing Digital System (DS) for seamless user authentication and provides role-based access to various modules.</p>
+
+<h3>Key Capabilities</h3>
+<table>
+    <tr>
+        <th>Capability</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Stock Request & Issuance</td>
+        <td>Personal and wing-level item requisitions with multi-level approval</td>
+    </tr>
+    <tr>
+        <td>Procurement Management</td>
+        <td>Tenders, Purchase Orders, and Vendor Management</td>
+    </tr>
+    <tr>
+        <td>Inventory Control</td>
+        <td>Stock tracking, verification, and alerts</td>
+    </tr>
+    <tr>
+        <td>Approval Workflows</td>
+        <td>Multi-level approval chains with forwarding capability</td>
+    </tr>
+    <tr>
+        <td>Reporting & Analytics</td>
+        <td>Comprehensive reporting across all modules</td>
+    </tr>
+</table>
+
+<h3>Key Features</h3>
+<ul>
+    <li>Single Sign-On (SSO) integration with Digital System</li>
+    <li>Role-based access control with 7+ predefined roles</li>
+    <li>Multi-level approval workflow with forwarding</li>
+    <li>Real-time inventory tracking and alerts</li>
+    <li>Soft-delete functionality for data recovery</li>
+    <li>Custom item support for non-catalogued requests</li>
+</ul>
+
+<!-- System Overview -->
+<h1 id="system-overview">2. System Overview</h1>
+
+<h3>2.1 System Entry Points</h3>
+<p>The IMS system can be accessed through two primary entry points:</p>
+
+<table>
+    <tr>
+        <th>Entry Point</th>
+        <th>URL</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Direct Login</td>
+        <td>/login</td>
+        <td>Standalone login page for direct access</td>
+    </tr>
+    <tr>
+        <td>SSO from Digital System</td>
+        <td>/sso-login</td>
+        <td>Single Sign-On authentication from the main Digital System</td>
+    </tr>
+</table>
+
+<h3>2.2 Navigation Flow</h3>
+<div class="flow-diagram">
+Digital System (DS)
+        │
+        ▼
+   DS Landing Page ─────────────────────────────────┐
+        │                                           │
+        ├─── Personal IMS ────► Personal Dashboard  │
+        │                            │              │
+        │                            ├── My Requests│
+        │                            ├── Request Item
+        │                            └── My Issued Items
+        │                                           │
+        └─── Wing IMS ────────► Wing Dashboard     │
+                                     │              │
+                                     ├── Wing Inventory
+                                     ├── Wing Members
+                                     └── Request History
+</div>
+
+<h3>2.3 System Login Page</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Login Page<br>
+    <small>File: screenshots/01-login-page.png</small>
+</div>
+<p class="figure-caption">Figure 2.1: IMS Login Page - Standalone authentication</p>
+
+<h3>2.4 DS Landing Page</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: DS Landing Page<br>
+    <small>File: screenshots/02-ds-landing.png</small>
+</div>
+<p class="figure-caption">Figure 2.2: Digital System Landing - Entry point from DS with module selection</p>
+
+<!-- System Architecture -->
+<h1 id="architecture">3. System Architecture</h1>
+
+<h3>3.1 Technical Stack</h3>
+<table>
+    <tr>
+        <th>Component</th>
+        <th>Technology</th>
+    </tr>
+    <tr>
+        <td>Frontend</td>
+        <td>React 18 + TypeScript + Vite</td>
+    </tr>
+    <tr>
+        <td>UI Framework</td>
+        <td>Tailwind CSS + ShadCN UI</td>
+    </tr>
+    <tr>
+        <td>Backend</td>
+        <td>Node.js + Express</td>
+    </tr>
+    <tr>
+        <td>Database</td>
+        <td>SQL Server 2019+</td>
+    </tr>
+    <tr>
+        <td>Authentication</td>
+        <td>Session-based with SSO support</td>
+    </tr>
+    <tr>
+        <td>State Management</td>
+        <td>TanStack Query (React Query)</td>
+    </tr>
+</table>
+
+<h3>3.2 System Architecture Diagram</h3>
+<div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────────┐
+│                     FRONTEND (React + TypeScript)                │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐│
+│  │ Personal    │ │ Wing        │ │ Inventory   │ │ Procurement ││
+│  │ Module      │ │ Module      │ │ Module      │ │ Module      ││
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    BACKEND API (Node.js + Express)              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐            │
+│  │ Auth     │ │ Stock    │ │ Approval │ │ Reports  │            │
+│  │ Routes   │ │ Routes   │ │ Routes   │ │ Routes   │            │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DATABASE (SQL Server)                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Tables: item_masters, stock_acquisitions, categories,    │   │
+│  │ stock_issuance_requests, tenders, purchase_orders...     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+</div>
+
+<!-- User Roles & Permissions -->
+<h1 id="roles">4. User Roles & Permissions</h1>
+
+<h3>4.1 Role Hierarchy</h3>
+<table>
+    <tr>
+        <th>Role</th>
+        <th>Display Name</th>
+        <th>Permissions</th>
+        <th>Access Level</th>
+    </tr>
+    <tr>
+        <td>IMS_SUPER_ADMIN</td>
+        <td>IMS Super Administrator</td>
+        <td>50</td>
+        <td>Full System</td>
+    </tr>
+    <tr>
+        <td>IMS_ADMIN</td>
+        <td>IMS Administrator</td>
+        <td>43</td>
+        <td>Administrative</td>
+    </tr>
+    <tr>
+        <td>WING_SUPERVISOR</td>
+        <td>Wing Supervisor</td>
+        <td>20</td>
+        <td>Wing Level</td>
+    </tr>
+    <tr>
+        <td>PROCUREMENT_OFFICER</td>
+        <td>Procurement Officer</td>
+        <td>10</td>
+        <td>Procurement</td>
+    </tr>
+    <tr>
+        <td>WING_STORE_KEEPER</td>
+        <td>Wing Store Keeper</td>
+        <td>9</td>
+        <td>Store Operations</td>
+    </tr>
+    <tr>
+        <td>AUDITOR</td>
+        <td>Auditor</td>
+        <td>9</td>
+        <td>Read-Only Reports</td>
+    </tr>
+    <tr>
+        <td>GENERAL_USER</td>
+        <td>General User</td>
+        <td>8</td>
+        <td>Personal Only</td>
+    </tr>
+</table>
+
+<div class="role-box">
+    <div class="role-header">IMS_SUPER_ADMIN (50 permissions)</div>
+    <p><strong>Description:</strong> Full administrative access to all system features</p>
+    <p><strong>Key Permissions:</strong></p>
+    <ul class="permission-list">
+        <li><code>admin.super</code> - Super admin access</li>
+        <li><code>roles.manage</code> - Create and manage roles</li>
+        <li><code>users.assign_roles</code> - Assign roles to users</li>
+        <li><code>inventory.manage</code> - Full inventory management</li>
+        <li><code>procurement.manage</code> - Full procurement management</li>
+        <li><code>approval.approve</code> - Approve requests at any level</li>
+        <li><code>reports.view</code> - Access all reports</li>
+    </ul>
+    <p><strong>Accessible Menus:</strong> All menus</p>
+</div>
+
+<div class="role-box">
+    <div class="role-header">WING_SUPERVISOR (20 permissions)</div>
+    <p><strong>Description:</strong> Wing-level management with approval authority</p>
+    <p><strong>Key Permissions:</strong></p>
+    <ul>
+        <li><code>wing.supervisor</code> - Wing supervisor access</li>
+        <li><code>approval.approve</code> - Approve subordinate requests</li>
+        <li><code>inventory.view</code> - View wing inventory</li>
+        <li><code>issuance.request</code> - Request items for wing</li>
+    </ul>
+    <p><strong>Accessible Menus:</strong> Personal Menu, Wing Menu, Request History Menu</p>
+</div>
+
+<div class="role-box">
+    <div class="role-header">GENERAL_USER (8 permissions)</div>
+    <p><strong>Description:</strong> Basic user with personal request capabilities</p>
+    <p><strong>Key Permissions:</strong></p>
+    <ul>
+        <li><code>issuance.request</code> - Request items personally</li>
+        <li><code>procurement.view_own</code> - View own procurement requests</li>
+        <li><code>dashboard.view</code> - View personal dashboard</li>
+    </ul>
+    <p><strong>Accessible Menus:</strong> Personal Menu only</p>
+</div>
+
+<h3>4.2 Super Admin Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Super Admin Dashboard<br>
+    <small>File: screenshots/03-super-admin-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 4.1: Super Admin Dashboard with comprehensive statistics and navigation</p>
+
+<h3>4.3 Wing Supervisor Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Wing Supervisor Dashboard<br>
+    <small>File: screenshots/04-wing-supervisor-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 4.2: Wing Supervisor view showing wing statistics and pending approvals</p>
+
+<h3>4.4 General User Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: General User Dashboard<br>
+    <small>File: screenshots/05-general-user-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 4.3: General User view with personal request options</p>
+
+<!-- Module 1: Digital System Integration -->
+<div class="module-header">
+    <h2 id="module-ds">5. Module 1: Digital System Integration</h2>
+</div>
+
+<h3>5.1 DS Landing Page</h3>
+<p>The Digital System Landing page serves as the primary entry point for users authenticated through the main organization Digital System.</p>
+
+<table>
+    <tr>
+        <th>Property</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td>URL</td>
+        <td>/ds-landing</td>
+    </tr>
+    <tr>
+        <td>Access</td>
+        <td>Authenticated users from DS</td>
+    </tr>
+    <tr>
+        <td>Purpose</td>
+        <td>Module selection (Personal IMS / Wing IMS)</td>
+    </tr>
+</table>
+
+<h3>5.2 SSO Authentication Flow</h3>
+<div class="flow-diagram">
+User clicks IMS link in DS
+        │
+        ▼
+  SSO Token Generated
+        │
+        ▼
+   /sso-login endpoint
+        │
+        ▼
+  Token Validation
+        │
+        ├── Valid ────► Create Session ────► DS Landing
+        │
+        └── Invalid ──► Login Page
+</div>
+
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: DS Landing Full View<br>
+    <small>File: screenshots/06-ds-landing-full.png</small>
+</div>
+<p class="figure-caption">Figure 5.1: Digital System Landing Page showing module selection</p>
+
+<!-- Module 2: Personal Dashboard -->
+<div class="module-header">
+    <h2 id="module-personal">6. Module 2: Personal Dashboard</h2>
+</div>
+
+<h3>6.1 Overview</h3>
+<p>The Personal Dashboard module provides individual users with tools to manage their personal inventory needs.</p>
+
+<h3>6.2 Features</h3>
+<table>
+    <tr>
+        <th>Feature</th>
+        <th>Description</th>
+        <th>Route</th>
+    </tr>
+    <tr>
+        <td>My Dashboard</td>
+        <td>Personal statistics overview</td>
+        <td>/personal-dashboard</td>
+    </tr>
+    <tr>
+        <td>My Requests</td>
+        <td>Track submitted requests</td>
+        <td>/dashboard/my-requests</td>
+    </tr>
+    <tr>
+        <td>My Issued Items</td>
+        <td>View items assigned to user</td>
+        <td>/dashboard/my-issued-items</td>
+    </tr>
+    <tr>
+        <td>Request Item</td>
+        <td>Create new item request</td>
+        <td>/dashboard/stock-issuance-personal</td>
+    </tr>
+    <tr>
+        <td>Return Item</td>
+        <td>Return issued items</td>
+        <td>/dashboard/stock-return</td>
+    </tr>
+</table>
+
+<h3>6.3 Personal Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Personal Dashboard<br>
+    <small>File: screenshots/07-personal-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 6.1: Personal Dashboard showing request statistics and quick actions</p>
+
+<h3>6.4 My Requests Page</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: My Requests Page<br>
+    <small>File: screenshots/08-my-requests.png</small>
+</div>
+<p class="figure-caption">Figure 6.2: My Requests page with request listing and status filters</p>
+
+<h3>6.5 My Issued Items</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: My Issued Items<br>
+    <small>File: screenshots/09-my-issued-items.png</small>
+</div>
+<p class="figure-caption">Figure 6.3: My Issued Items showing currently assigned inventory</p>
+
+<!-- Module 3: Stock Issuance -->
+<div class="module-header">
+    <h2 id="module-issuance">7. Module 3: Stock Issuance</h2>
+</div>
+
+<h3>7.1 Overview</h3>
+<p>The Stock Issuance module handles the complete workflow of requesting, approving, and issuing inventory items.</p>
+
+<h3>7.2 Stock Issuance Request Form</h3>
+<table>
+    <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+    </tr>
+    <tr>
+        <td>Request Type</td>
+        <td>Select (Personal Expenditure / Returnable / Individual)</td>
+        <td>Yes</td>
+    </tr>
+    <tr>
+        <td>Category</td>
+        <td>Select</td>
+        <td>No</td>
+    </tr>
+    <tr>
+        <td>Item Selection</td>
+        <td>Search/Select</td>
+        <td>Yes</td>
+    </tr>
+    <tr>
+        <td>Quantity</td>
+        <td>Number</td>
+        <td>Yes</td>
+    </tr>
+    <tr>
+        <td>Priority</td>
+        <td>Select (Low/Normal/High/Critical)</td>
+        <td>Yes</td>
+    </tr>
+    <tr>
+        <td>Justification</td>
+        <td>Text</td>
+        <td>No</td>
+    </tr>
+</table>
+
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Issuance Form<br>
+    <small>File: screenshots/10-stock-issuance-form.png</small>
+</div>
+<p class="figure-caption">Figure 7.1: Stock Issuance Request Form with item selection</p>
+
+<h3>7.3 Custom Item Feature</h3>
+<p>When users cannot find the required item in the inventory catalog, they can add a custom item:</p>
+<div class="note">
+    <strong>Feature:</strong> Click "Can't find your item? Add a custom item" to enter items not in the catalog. Custom items follow the same approval workflow as catalogued items.
+</div>
+
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Custom Item Entry<br>
+    <small>File: screenshots/11-custom-item-entry.png</small>
+</div>
+<p class="figure-caption">Figure 7.2: Custom Item Entry form for non-catalogued items</p>
+
+<h3>7.4 Stock Issuance Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Issuance Dashboard<br>
+    <small>File: screenshots/12-stock-issuance-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 7.3: Stock Issuance Dashboard with statistics overview</p>
+
+<h3>7.5 Stock Issuance Processing</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Issuance Processing<br>
+    <small>File: screenshots/13-stock-issuance-processing.png</small>
+</div>
+<p class="figure-caption">Figure 7.4: Stock Issuance Processing queue</p>
+
+<h3>7.6 Stock Return</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Return Form<br>
+    <small>File: screenshots/14-stock-return.png</small>
+</div>
+<p class="figure-caption">Figure 7.5: Stock Return form</p>
+
+<!-- Module 4: Wing Management -->
+<div class="module-header">
+    <h2 id="module-wing">8. Module 4: Wing Management</h2>
+</div>
+
+<h3>8.1 Overview</h3>
+<p>The Wing Management module provides wing-level inventory and personnel management for Wing Supervisors.</p>
+
+<h3>8.2 Wing Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Wing Dashboard<br>
+    <small>File: screenshots/15-wing-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 8.1: Wing Dashboard with wing-level statistics</p>
+
+<h3>8.3 Wing Inventory</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Wing Inventory<br>
+    <small>File: screenshots/16-wing-inventory.png</small>
+</div>
+<p class="figure-caption">Figure 8.2: Wing Inventory listing</p>
+
+<h3>8.4 Wing Members</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Wing Members<br>
+    <small>File: screenshots/17-wing-members.png</small>
+</div>
+<p class="figure-caption">Figure 8.3: Wing Members management</p>
+
+<h3>8.5 Wing Request History</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Wing Request History<br>
+    <small>File: screenshots/18-wing-request-history.png</small>
+</div>
+<p class="figure-caption">Figure 8.4: Wing Request History</p>
+
+<!-- Module 5: Inventory Management -->
+<div class="module-header">
+    <h2 id="module-inventory">9. Module 5: Inventory Management</h2>
+</div>
+
+<h3>9.1 Overview</h3>
+<p>The Inventory Management module provides comprehensive tools for managing organizational inventory.</p>
+
+<h3>9.2 Inventory Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Inventory Dashboard<br>
+    <small>File: screenshots/20-inventory-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 9.1: Inventory Dashboard with comprehensive statistics</p>
+
+<h3>9.3 Item Master</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Item Master<br>
+    <small>File: screenshots/21-item-master.png</small>
+</div>
+<p class="figure-caption">Figure 9.2: Item Master management</p>
+
+<h3>9.4 Item Master Form</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Item Master Form<br>
+    <small>File: screenshots/22-item-master-form.png</small>
+</div>
+<p class="figure-caption">Figure 9.3: Item Master creation/edit form</p>
+
+<h3>9.5 Categories Management</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Categories<br>
+    <small>File: screenshots/23-categories.png</small>
+</div>
+<p class="figure-caption">Figure 9.4: Categories management</p>
+
+<h3>9.6 Sub-Categories Management</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Sub-Categories<br>
+    <small>File: screenshots/24-sub-categories.png</small>
+</div>
+<p class="figure-caption">Figure 9.5: Sub-Categories management</p>
+
+<h3>9.7 Stock Quantities</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Quantities<br>
+    <small>File: screenshots/25-stock-quantities.png</small>
+</div>
+<p class="figure-caption">Figure 9.6: Stock Quantities overview</p>
+
+<h3>9.8 Stock Alerts</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Stock Alerts<br>
+    <small>File: screenshots/26-stock-alerts.png</small>
+</div>
+<p class="figure-caption">Figure 9.7: Stock Alerts dashboard</p>
+
+<h3>9.9 Opening Balance Entry</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Opening Balance Entry<br>
+    <small>File: screenshots/27-opening-balance.png</small>
+</div>
+<p class="figure-caption">Figure 9.8: Opening Balance Entry form</p>
+
+<h3>9.10 Verification Pages</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Pending Verifications<br>
+    <small>File: screenshots/28-pending-verifications.png</small>
+</div>
+<p class="figure-caption">Figure 9.9: Pending Verifications queue</p>
+
+<!-- Module 6: Procurement Management -->
+<div class="module-header">
+    <h2 id="module-procurement">10. Module 6: Procurement Management</h2>
+</div>
+
+<h3>10.1 Overview</h3>
+<p>The Procurement module manages the entire procurement lifecycle from tender creation to delivery receipt.</p>
+
+<h3>10.2 Tender Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Tender Dashboard<br>
+    <small>File: screenshots/31-tender-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 10.1: Tender Dashboard</p>
+
+<h3>10.3 Create Tender</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Create Tender<br>
+    <small>File: screenshots/32-create-tender.png</small>
+</div>
+<p class="figure-caption">Figure 10.2: Create Tender form</p>
+
+<h3>10.4 Tender Details</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Tender Details<br>
+    <small>File: screenshots/33-tender-details.png</small>
+</div>
+<p class="figure-caption">Figure 10.3: Tender Details view</p>
+
+<h3>10.5 Vendor Management</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Vendor Management<br>
+    <small>File: screenshots/35-vendor-management.png</small>
+</div>
+<p class="figure-caption">Figure 10.4: Vendor Management</p>
+
+<h3>10.6 Purchase Orders</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Purchase Orders<br>
+    <small>File: screenshots/37-purchase-orders.png</small>
+</div>
+<p class="figure-caption">Figure 10.5: Purchase Order Dashboard</p>
+
+<h3>10.7 Receive Delivery</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Receive Delivery<br>
+    <small>File: screenshots/40-receive-delivery.png</small>
+</div>
+<p class="figure-caption">Figure 10.6: Receive Delivery form</p>
+
+<!-- Module 7: Approval Workflow -->
+<div class="module-header">
+    <h2 id="module-approval">11. Module 7: Approval Workflow</h2>
+</div>
+
+<h3>11.1 Overview</h3>
+<p>The Approval Workflow module implements a multi-level approval system with forwarding capabilities.</p>
+
+<h3>11.2 Approval Hierarchy</h3>
+<div class="flow-diagram">
+General User submits request
+        │
+        ▼
+  Wing Supervisor (Level 1)
+        │
+        ├── Approve ──► Next Level / Processing
+        ├── Reject ───► Back to User
+        └── Forward ──► Another Approver
+                │
+                ▼
+        Admin (Level 2)
+                │
+                ├── Approve ──► Processing
+                └── Reject ───► Back to User
+</div>
+
+<h3>11.3 Approval Dashboard (Request-Based)</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Approval Dashboard Request<br>
+    <small>File: screenshots/42-approval-dashboard-request.png</small>
+</div>
+<p class="figure-caption">Figure 11.1: Approval Dashboard grouped by request</p>
+
+<h3>11.4 Approval Dashboard (Item-Based)</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Approval Dashboard Item<br>
+    <small>File: screenshots/43-approval-dashboard-item.png</small>
+</div>
+<p class="figure-caption">Figure 11.2: Approval Dashboard showing individual items</p>
+
+<h3>11.5 Request Details</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Request Details<br>
+    <small>File: screenshots/44-request-details.png</small>
+</div>
+<p class="figure-caption">Figure 11.3: Request Details with approval actions</p>
+
+<h3>11.6 Approval Forwarding</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Approval Forwarding<br>
+    <small>File: screenshots/45-approval-forwarding.png</small>
+</div>
+<p class="figure-caption">Figure 11.4: Approval Forwarding form</p>
+
+<!-- Module 8: Reports & Analytics -->
+<div class="module-header">
+    <h2 id="module-reports">12. Module 8: Reports & Analytics</h2>
+</div>
+
+<h3>12.1 Reports Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Reports Dashboard<br>
+    <small>File: screenshots/50-reports-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 12.1: Reports & Analytics Dashboard</p>
+
+<h3>12.2 Available Reports</h3>
+<table>
+    <tr>
+        <th>Report</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Inventory Report</td>
+        <td>Current inventory status and valuation</td>
+    </tr>
+    <tr>
+        <td>Stock Movement Report</td>
+        <td>In/out movements over time</td>
+    </tr>
+    <tr>
+        <td>Issuance Report</td>
+        <td>Items issued by department/user</td>
+    </tr>
+    <tr>
+        <td>Procurement Report</td>
+        <td>Procurement activity summary</td>
+    </tr>
+    <tr>
+        <td>Tender Report</td>
+        <td>Tender analysis and awards</td>
+    </tr>
+    <tr>
+        <td>Audit Trail Report</td>
+        <td>System activity log</td>
+    </tr>
+</table>
+
+<!-- Module 9: Administration -->
+<div class="module-header">
+    <h2 id="module-admin">13. Module 9: Administration</h2>
+</div>
+
+<h3>13.1 Admin Dashboard</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Admin Dashboard<br>
+    <small>File: screenshots/55-admin-dashboard.png</small>
+</div>
+<p class="figure-caption">Figure 13.1: Admin Dashboard</p>
+
+<h3>13.2 Role Management</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: Role Management<br>
+    <small>File: screenshots/56-role-management.png</small>
+</div>
+<p class="figure-caption">Figure 13.2: Role Management</p>
+
+<h3>13.3 User Management</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: User Management<br>
+    <small>File: screenshots/57-user-management.png</small>
+</div>
+<p class="figure-caption">Figure 13.3: User Role Assignment</p>
+
+<h3>13.4 System Settings</h3>
+<div class="screenshot-placeholder">
+    INSERT SCREENSHOT: System Settings<br>
+    <small>File: screenshots/58-system-settings.png</small>
+</div>
+<p class="figure-caption">Figure 13.4: System Settings</p>
+
+<!-- Appendices -->
+<h1 id="appendices">14. Appendices</h1>
+
+<h3>Appendix A: Complete Route Reference</h3>
+<table>
+    <tr>
+        <th>Route</th>
+        <th>Component</th>
+        <th>Access Level</th>
+    </tr>
+    <tr><td>/login</td><td>LoginPage</td><td>Public</td></tr>
+    <tr><td>/sso-login</td><td>SSOLogin</td><td>Public</td></tr>
+    <tr><td>/ds-landing</td><td>DigitalSystemLanding</td><td>Authenticated</td></tr>
+    <tr><td>/personal-dashboard</td><td>PersonalDashboard</td><td>Authenticated</td></tr>
+    <tr><td>/dashboard/inventory-dashboard</td><td>InventoryDashboard</td><td>inventory.view</td></tr>
+    <tr><td>/dashboard/stock-issuance-personal</td><td>StockIssuancePersonal</td><td>issuance.request</td></tr>
+    <tr><td>/dashboard/my-requests</td><td>MyRequestsPage</td><td>issuance.request</td></tr>
+    <tr><td>/dashboard/wing-dashboard</td><td>WingDashboard</td><td>wing.supervisor</td></tr>
+    <tr><td>/dashboard/approval-dashboard</td><td>ApprovalDashboard</td><td>approval.approve</td></tr>
+    <tr><td>/dashboard/contract-tender</td><td>ContractTender</td><td>procurement.manage</td></tr>
+    <tr><td>/dashboard/purchase-orders</td><td>PurchaseOrderDashboard</td><td>procurement.manage</td></tr>
+    <tr><td>/settings/roles</td><td>RoleManagement</td><td>roles.manage</td></tr>
+    <tr><td>/settings/users</td><td>UserRoleAssignment</td><td>users.assign_roles</td></tr>
+</table>
+
+<h3>Appendix B: Permission Reference</h3>
+<table>
+    <tr>
+        <th>Permission Key</th>
+        <th>Description</th>
+    </tr>
+    <tr><td>admin.super</td><td>Super administrator access</td></tr>
+    <tr><td>roles.manage</td><td>Create and manage roles</td></tr>
+    <tr><td>users.assign_roles</td><td>Assign roles to users</td></tr>
+    <tr><td>inventory.view</td><td>View inventory data</td></tr>
+    <tr><td>inventory.manage</td><td>Full inventory management</td></tr>
+    <tr><td>procurement.view</td><td>View procurement data</td></tr>
+    <tr><td>procurement.manage</td><td>Full procurement management</td></tr>
+    <tr><td>issuance.request</td><td>Submit issuance requests</td></tr>
+    <tr><td>issuance.process</td><td>Process issuance requests</td></tr>
+    <tr><td>approval.approve</td><td>Approve requests</td></tr>
+    <tr><td>wing.supervisor</td><td>Wing supervisor access</td></tr>
+    <tr><td>reports.view</td><td>Access reports</td></tr>
+</table>
+
+<h3>Appendix C: Database Tables</h3>
+<table>
+    <tr>
+        <th>Table</th>
+        <th>Description</th>
+    </tr>
+    <tr><td>item_masters</td><td>Inventory item definitions</td></tr>
+    <tr><td>categories</td><td>Item categories</td></tr>
+    <tr><td>sub_categories</td><td>Item sub-categories</td></tr>
+    <tr><td>stock_acquisitions</td><td>Stock receipt records</td></tr>
+    <tr><td>stock_issuance_requests</td><td>Issuance request headers</td></tr>
+    <tr><td>stock_issuance_items</td><td>Issuance request line items</td></tr>
+    <tr><td>tenders</td><td>Tender records</td></tr>
+    <tr><td>purchase_orders</td><td>Purchase order headers</td></tr>
+    <tr><td>vendors</td><td>Vendor master data</td></tr>
+    <tr><td>ims_roles</td><td>System roles</td></tr>
+    <tr><td>ims_permissions</td><td>System permissions</td></tr>
+    <tr><td>AspNetUsers</td><td>User accounts (from DS)</td></tr>
+</table>
+
+<h3>Appendix D: Soft Delete Implementation</h3>
+<p>All major tables support soft delete with the following columns:</p>
+<table>
+    <tr>
+        <th>Column</th>
+        <th>Type</th>
+        <th>Description</th>
+    </tr>
+    <tr><td>is_deleted</td><td>BIT</td><td>Delete flag (0=Active, 1=Deleted)</td></tr>
+    <tr><td>deleted_at</td><td>DATETIME</td><td>Deletion timestamp</td></tr>
+    <tr><td>deleted_by</td><td>UNIQUEIDENTIFIER</td><td>User who deleted</td></tr>
+</table>
+
+<footer>
+    <p><strong>Document Version:</strong> 2.0 | <strong>Last Updated:</strong> February 25, 2026</p>
+    <p>© 2026 Organization Name. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

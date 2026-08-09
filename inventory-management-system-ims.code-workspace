@@ -1,0 +1,81 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    // Performance-focused settings to prevent freezing
+    "typescript.preferences.useAliasesForRenames": false,
+    "typescript.validate.enable": false,
+    "typescript.suggest.autoImports": false,
+    "typescript.disableAutomaticTypeAcquisition": true,
+    "typescript.suggest.enabled": false,
+    "typescript.tsserver.maxMemoryMB": 512,
+    "typescript.updateImportsOnFileMove.enabled": "never",
+    
+    // Aggressive file exclusions
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.git": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/uploads": true,
+      "**/*.log": true,
+      "**/.cache": true,
+      "**/tmp": true,
+      "**/temp": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/uploads": true,
+      "**/*.log": true,
+      "**/.cache": true
+    },
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/.git/**": true,
+      "**/dist/**": true,
+      "**/build/**": true,
+      "**/uploads/**": true,
+      "**/*.log": true,
+      "**/.cache/**": true,
+      "**/tmp/**": true,
+      "**/temp/**": true
+    },
+    
+    // Focus/unfocus optimizations
+    "window.restoreWindows": "none",
+    "files.autoSave": "off",
+    "git.autorefresh": false,
+    "git.autofetch": false,
+    "extensions.autoUpdate": false,
+    "workbench.enableExperiments": false,
+    "editor.minimap.enabled": false,
+    "breadcrumbs.enabled": false,
+    "editor.semanticHighlighting.enabled": false,
+    "editor.bracketPairColorization.enabled": false,
+    
+    // Reduce background processing
+    "editor.quickSuggestions": {
+      "other": false,
+      "comments": false,
+      "strings": false
+    },
+    "editor.inlineSuggest.enabled": false,
+    "editor.suggestOnTriggerCharacters": false,
+    "editor.wordBasedSuggestions": "off",
+    "github.copilot.editor.enableAutoCompletions": false,
+    "problems.decorations.enabled": false,
+    "explorer.decorations.colors": false,
+    "explorer.decorations.badges": false,
+    "postman.settings.dotenv-detection-notification-visibility": false
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next"
+    ]
+  }
+}

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three-Level Inventory Management System - Workflow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+
+        .storage-levels {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 50px;
+            gap: 20px;
+        }
+
+        .storage-box {
+            flex: 1;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .storage-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .storage-box.admin {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .storage-box.wing {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .storage-box.personal {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .storage-box h3 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .storage-box p {
+            font-size: 1em;
+            opacity: 0.95;
+        }
+
+        .workflow-section {
+            margin-bottom: 60px;
+        }
+
+        .workflow-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+            text-align: center;
+        }
+
+        .workflow-step {
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .workflow-step.wing {
+            border-left-color: #f5576c;
+        }
+
+        .workflow-step.admin {
+            border-left-color: #764ba2;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .step-number.wing {
+            background: #f5576c;
+        }
+
+        .step-number.admin {
+            background: #764ba2;
+        }
+
+        .workflow-step h4 {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+
+        .workflow-step ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .workflow-step ul li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .workflow-step ul li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .decision-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+        }
+
+        .decision-box h5 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .option {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+
+        .option.reject {
+            border-left-color: #dc3545;
+        }
+
+        .arrow {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .highlight-box {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .highlight-box strong {
+            color: #1976d2;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin: 5px 5px 5px 0;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-forwarded {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-issued {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-procurement {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .storage-levels {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Three-Level Inventory Management System</h1>
+        <p class="subtitle">Complete Workflow & Approval Process</p>
+
+        <!-- Storage Levels -->
+        <div class="storage-levels">
+            <div class="storage-box admin">
+                <h3>🏛️ Level 1</h3>
+                <h4>ADMIN STORE</h4>
+                <p>Central/Organization Level</p>
+                <p><strong>Master Inventory</strong></p>
+                <p>Handles procurement & tenders</p>
+            </div>
+            <div class="storage-box wing">
+                <h3>🏢 Level 2</h3>
+                <h4>WING STORE</h4>
+                <p>Department/Wing Level</p>
+                <p><strong>Wing Inventory</strong></p>
+                <p>Managed by Wing Supervisor</p>
+            </div>
+            <div class="storage-box personal">
+                <h3>👤 Level 3</h3>
+                <h4>PERSONAL STORE</h4>
+                <p>Individual User Level</p>
+                <p><strong>User Assigned Items</strong></p>
+                <p>Tracked for accountability</p>
+            </div>
+        </div>
+
+        <!-- Workflow 1: Individual Request -->
+        <div class="workflow-section">
+            <div class="workflow-title">
+                📋 WORKFLOW 1: Individual User Request
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">1</span>
+                <h4>User Creates Personal Issuance Request</h4>
+                <ul>
+                    <li>User fills request form with required items</li>
+                    <li>Can select from <strong>Item Masters</strong> OR add <strong>Custom Items</strong></li>
+                    <li>Specifies quantity, purpose, and urgency level</li>
+                    <li>Request Type: <span class="status-badge status-pending">Individual</span></li>
+                </ul>
+                <div class="highlight-box">
+                    <strong>Status:</strong> <span class="status-badge status-pending">Pending</span> → Request sent to Wing Supervisor
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <div class="workflow-step wing">
+                <span class="step-number wing">2</span>
+                <h4>Wing Supervisor Reviews Request</h4>
+                <ul>
+                    <li>Supervisor receives request notification</li>
+                    <li>System displays <strong>Wing Store Inventory Availability</strong></li>
+                    <li>Example: Item A - Requested: 5, Available in Wing: 10 ✅</li>
+                    <li>Example: Item B - Requested: 3, Available in Wing: 0 ❌</li>
+                </ul>
+
+                <div class="decision-box">
+                    <h5>🔍 Supervisor Decision:</h5>
+                    
+                    <div class="option">
+                        <strong>✅ IF AVAILABLE in Wing Store:</strong>
+                        <ul>
+                            <li>Approve & Issue from Wing Store</li>
+                            <li>Stock deducted from Wing Store</li>
+                            <li>Item added to User's Personal Store</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-issued">Approved & Issued</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="option reject">
+                        <strong>❌ IF NOT AVAILABLE in Wing Store:</strong>
+                        <ul>
+                            <li>Forward request to Admin</li>
+                            <li>Add justification/notes</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-forwarded">Forwarded to Admin</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️ (If Not Available)</div>
+
+            <div class="workflow-step admin">
+                <span class="step-number admin">3</span>
+                <h4>Admin Reviews Forwarded Request</h4>
+                <ul>
+                    <li>Admin receives forwarded request notification</li>
+                    <li>System displays <strong>Admin Store (Central) Inventory Availability</strong></li>
+                    <li>Reviews supervisor's justification</li>
+                </ul>
+
+                <div class="decision-box">
+                    <h5>🔍 Admin Decision:</h5>
+                    
+                    <div class="option">
+                        <strong>✅ IF AVAILABLE in Admin Store:</strong>
+                        <ul>
+                            <li>Approve & Issue to Wing Store (replenish wing inventory)</li>
+                            <li>Wing supervisor then issues to user</li>
+                            <li>OR Issue directly to user (bypass wing store)</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-issued">Approved & Issued by Admin</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="option reject">
+                        <strong>❌ IF NOT AVAILABLE in Admin Store:</strong>
+                        <ul>
+                            <li>Initiate Procurement/Tender Process</li>
+                            <li>Create tender request for purchasing</li>
+                            <li>Notify user of expected timeline</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-procurement">Pending Procurement</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow 2: Wing Request -->
+        <div class="workflow-section">
+            <div class="workflow-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                🏢 WORKFLOW 2: Wing-Level Organizational Request
+            </div>
+
+            <div class="workflow-step wing">
+                <span class="step-number wing">1</span>
+                <h4>Wing Creates Organizational Request</h4>
+                <ul>
+                    <li>Wing Head/Supervisor creates request for wing use (not specific user)</li>
+                    <li>Requests items to replenish or expand wing inventory</li>
+                    <li>Request Type: <span class="status-badge status-pending">Organizational</span></li>
+                    <li><strong>IMPORTANT:</strong> Request goes DIRECTLY to Admin (skips wing approval)</li>
+                </ul>
+                <div class="highlight-box">
+                    <strong>Status:</strong> <span class="status-badge status-pending">Pending Admin Review</span> → Sent directly to Admin
+                </div>
+            </div>
+
+            <div class="arrow">⬇️ (Direct to Admin)</div>
+
+            <div class="workflow-step admin">
+                <span class="step-number admin">2</span>
+                <h4>Admin Reviews Wing Request</h4>
+                <ul>
+                    <li>Admin receives wing-level request</li>
+                    <li>System displays <strong>Admin Store Inventory Availability</strong></li>
+                    <li>Reviews wing justification and requirements</li>
+                </ul>
+
+                <div class="decision-box">
+                    <h5>🔍 Admin Decision:</h5>
+                    
+                    <div class="option">
+                        <strong>✅ IF AVAILABLE in Admin Store:</strong>
+                        <ul>
+                            <li>Approve & Issue to Wing Store</li>
+                            <li>Stock deducted from Admin Store</li>
+                            <li>Stock added to Wing Store</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-issued">Approved & Issued</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="option reject">
+                        <strong>❌ IF NOT AVAILABLE in Admin Store:</strong>
+                        <ul>
+                            <li>Initiate Tender/Procurement Process</li>
+                            <li>Create tender for purchasing items</li>
+                            <li>Process tender workflow</li>
+                            <li>Notify wing of expected delivery timeline</li>
+                            <li><strong>Status:</strong> <span class="status-badge status-procurement">Pending Tender/Procurement</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Features -->
+        <div class="workflow-section">
+            <div class="workflow-title" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                ⭐ Key Features & Benefits
+            </div>
+
+            <div class="workflow-step">
+                <h4>📊 Real-Time Inventory Tracking</h4>
+                <ul>
+                    <li>Live visibility of stock at all three levels</li>
+                    <li>Automatic stock reservation during pending approvals</li>
+                    <li>Prevent over-allocation and stock discrepancies</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <h4>🔐 Multi-Level Approval Hierarchy</h4>
+                <ul>
+                    <li>User → Supervisor → Admin (escalation chain)</li>
+                    <li>Automated notifications at each stage</li>
+                    <li>Approval history and audit trail</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <h4>📦 Smart Stock Management</h4>
+                <ul>
+                    <li>Wing stores handle routine individual requests</li>
+                    <li>Admin store for wing replenishment and new items</li>
+                    <li>Automatic low-stock alerts</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <h4>🎯 Custom Items Support</h4>
+                <ul>
+                    <li>Users can request items not in item masters</li>
+                    <li>Flexibility for special requirements</li>
+                    <li>Tracks both inventory and custom items</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <h4>📈 Automated Procurement Triggers</h4>
+                <ul>
+                    <li>System identifies when items need to be purchased</li>
+                    <li>Initiates tender process automatically</li>
+                    <li>Links requests to tender outcomes</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Request Status Flow -->
+        <div class="workflow-section">
+            <div class="workflow-title" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                📌 Request Status Tracking
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="background: #fff3cd; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Pending</h4>
+                    <p>Awaiting supervisor review</p>
+                </div>
+                <div style="background: #d1ecf1; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Forwarded to Admin</h4>
+                    <p>Escalated from wing level</p>
+                </div>
+                <div style="background: #d4edda; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Approved</h4>
+                    <p>Items being issued</p>
+                </div>
+                <div style="background: #d4edda; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Issued</h4>
+                    <p>Items delivered to user</p>
+                </div>
+                <div style="background: #f8d7da; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Pending Procurement</h4>
+                    <p>Awaiting tender/purchase</p>
+                </div>
+                <div style="background: #f8d7da; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h4>Rejected</h4>
+                    <p>Request declined</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <p style="font-size: 1.1em; color: #7f8c8d;">
+                <strong>📅 Presentation Date:</strong> November 27, 2025<br>
+                <strong>🏢 System:</strong> Inventory Management System (IMS)<br>
+                <strong>📋 Version:</strong> Three-Level Store Architecture v1.0
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Add print functionality
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>

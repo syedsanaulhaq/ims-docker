@@ -1,0 +1,264 @@
+// Supabase service for office hierarchy management
+import { supabase } from '@/integrations/supabase/client';
+import { ApiResponse } from './api';
+
+export interface OfficeSupabaseRow {
+  id: number;
+  name: string;
+  description?: string;
+  telephone_number?: string;
+  email?: string;
+  office_code?: string;
+  is_active: boolean;
+  is_deleted: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WingSupabaseRow {
+  id: number;
+  name: string;
+  short_name: string;
+  focal_person?: string;
+  contact_no?: string;
+  creator?: string;
+  create_date?: string;
+  modifier?: string;
+  modify_date?: string;
+  office_id: number;
+  is_act: boolean;
+  hod_id?: string;
+  hod_name?: string;
+  wing_code?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DecSupabaseRow {
+  int_auto_id: number;
+  wing_id: number;
+  dec_name: string;
+  dec_acronym?: string;
+  dec_address?: string;
+  location?: string;
+  is_act: boolean;
+  date_added?: string;
+  dec_code?: number;
+  hod_id?: string;
+  hod_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Transform database rows to API response format
+const transformOfficeData = (data: OfficeSupabaseRow[]): any[] => {
+  return data.map((office: OfficeSupabaseRow) => ({
+    Id: office.intOfficeID,
+    Name: office.strOfficeName,
+    Description: office.strOfficeDescription || '',
+    TelephoneNumber: office.strTelephoneNumber || '',
+    Email: office.strEmail || '',
+    OfficeCode: office.OfficeCode || '',
+    IsActive: office.IS_ACT,
+    IsDeleted: office.IS_DELETED
+  }));
+};
+
+const transformWingData = (data: WingSupabaseRow[]): any[] => {
+  return data.map((wing: WingSupabaseRow) => ({
+    Id: wing.intOfficeID,
+    Name: wing.strOfficeName,
+    ShortName: wing.short_name,
+    FocalPerson: wing.focal_person || '',
+    ContactNo: wing.contact_no || '',
+    Creator: wing.creator,
+    CreateDate: wing.create_date || wing.CreatedAt,
+    Modifier: wing.modifier,
+    ModifyDate: wing.modify_date || wing.UpdatedAt,
+    OfficeID: wing.office_id,
+    IS_ACT: wing.is_act,
+    HODID: wing.hod_id,
+    HODName: wing.hod_name,
+    WingCode: wing.wing_code || 0
+  }));
+};
+
+const transformDecData = (data: DecSupabaseRow[]): any[] => {
+  return data.map((dec: DecSupabaseRow) => ({
+    Id: dec.int_auto_id,
+    WingID: dec.wing_id,
+    Name: dec.dec_name,
+    ShortName: dec.dec_acronym || '',
+    OfficeID: 0, // Will need to get this via wing relation
+    FocalPerson: '',
+    ContactNo: '',
+    Creator: null,
+    CreateDate: dec.date_added || dec.CreatedAt || '',
+    Modifier: null,
+    ModifyDate: dec.UpdatedAt || '',
+    IS_ACT: dec.is_act,
+    HODID: dec.hod_id,
+    HODName: dec.hod_name,
+    DecCode: dec.dec_code || 0
+  }));
+};
+
+export const officeSupabaseService = {
+  async getOffices(): Promise<ApiResponse<any[]>> {
+    try {
+
+      const { data, error } = await supabase
+        .from('tblOffices')
+        .select('*')
+        .eq('IS_DELETED', false)
+        .eq('IS_ACT', true)
+        .order('strOfficeName');
+
+      if (error) {
+        
+        throw error;
+      }
+
+      const transformedData = transformOfficeData(data || []);
+
+      return {
+        success: true,
+        data: transformedData,
+        message: 'Offices fetched successfully'
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  },
+
+  async getWings(): Promise<ApiResponse<any[]>> {
+    try {
+
+      const { data, error } = await supabase
+        .from('WingsInformation')
+        .select('*')
+        .eq('is_act', true)
+        .order('strOfficeName');
+
+      if (error) {
+        
+        throw error;
+      }
+
+      const transformedData = transformWingData(data || []);
+
+      return {
+        success: true,
+        data: transformedData,
+        message: 'Wings fetched successfully'
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  },
+
+  async getDecs(): Promise<ApiResponse<any[]>> {
+    try {
+
+      const { data, error } = await supabase
+        .from('DEC_MST')
+        .select('*')
+        .eq('is_act', true)
+        .order('dec_name');
+
+      if (error) {
+        
+        throw error;
+      }
+
+      const transformedData = transformDecData(data || []);
+
+      return {
+        success: true,
+        data: transformedData,
+        message: 'DECs fetched successfully'
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  },
+
+  async getWingsByOfficeId(officeId: number): Promise<ApiResponse<any[]>> {
+    try {
+
+      const { data, error } = await supabase
+        .from('WingsInformation')
+        .select('*')
+        .eq('office_id', officeId)
+        .eq('is_act', true)
+        .order('strOfficeName');
+
+      if (error) {
+        
+        throw error;
+      }
+
+      const transformedData = transformWingData(data || []);
+
+      return {
+        success: true,
+        data: transformedData,
+        message: 'Wings fetched successfully'
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  },
+
+  async getDecsByWingId(wingId: number): Promise<ApiResponse<any[]>> {
+    try {
+
+      const { data, error } = await supabase
+        .from('DEC_MST')
+        .select('*')
+        .eq('wing_id', wingId)
+        .eq('is_act', true)
+        .order('dec_name');
+
+      if (error) {
+        
+        throw error;
+      }
+
+      const transformedData = transformDecData(data || []);
+
+      return {
+        success: true,
+        data: transformedData,
+        message: 'DECs fetched successfully'
+      };
+    } catch (error) {
+      
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+};

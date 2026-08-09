@@ -1,0 +1,331 @@
+--- User Details ---
+
+[
+  {
+    "Id": "869dd81b-a782-494d-b8c2-695369b5ebb6",
+    "FullName": "Syed Sana ul Haq Fazli",
+    "UserName": "1730115698727",
+    "Email": "sfazli@ecp.gov.pk",
+    "intWingID": 19
+  }
+]
+
+--- Requests for this user ---
+
+[
+  {
+    "id": "52049EBE-CD64-45DB-A102-D80A27F1A6C7",
+    "request_number": "ISS-20260524-1855",
+    "request_type": "Individual",
+    "purpose": "test request",
+    "urgency_level": "Low",
+    "approval_status": "Forwarded to Admin",
+    "request_status": "Submitted",
+    "created_at": "2026-05-24T17:37:01.326Z",
+    "submitted_at": "2026-05-24T17:37:01.326Z"
+  },
+  {
+    "id": "F7A5DAC7-3D48-4F85-880A-6DFAF9467A12",
+    "request_number": "ISS-20260511-5324",
+    "request_type": "Individual",
+    "purpose": "Final browser validation after restart",
+    "urgency_level": "Normal",
+    "approval_status": "Issued",
+    "request_status": "Issued",
+    "created_at": "2026-05-11T11:18:06.943Z",
+    "submitted_at": "2026-05-11T11:18:06.943Z"
+  },
+  {
+    "id": "3133BB13-268B-4F40-A3C5-2E328FFE0E22",
+    "request_number": "ISS-20260511-4558",
+    "request_type": "Individual",
+    "purpose": "Browser retest request for automatic stock deduction validation",
+    "urgency_level": "Normal",
+    "approval_status": "Issued",
+    "request_status": "Issued",
+    "created_at": "2026-05-11T11:10:20.973Z",
+    "submitted_at": "2026-05-11T11:10:20.973Z"
+  },
+  {
+    "id": "AAD2844B-4615-46F9-896B-19D614AECEAC",
+    "request_number": "ISS-20260511-6119",
+    "request_type": "Individual",
+    "purpose": "Personal request for daily office calculations and documentation work",
+    "urgency_level": "Normal",
+    "approval_status": "Issued",
+    "request_status": "Issued",
+    "created_at": "2026-05-11T10:58:45.706Z",
+    "submitted_at": "2026-05-11T10:58:45.706Z"
+  },
+  {
+    "id": "101E41C7-0BDF-4D4D-A9B1-EEB341C37EC2",
+    "request_number": "ISS-20260417-9441",
+    "request_type": "Individual",
+    "purpose": "latest",
+    "urgency_level": "Normal",
+    "approval_status": "Forwarded to Admin",
+    "request_status": "Submitted",
+    "created_at": "2026-04-17T10:36:41.463Z",
+    "submitted_at": "2026-04-17T10:36:41.463Z"
+  },
+  {
+    "id": "E05A265A-44F9-47CB-850A-9F63FAA32297",
+    "request_number": "ISS-20260417-8385",
+    "request_type": "Individual",
+    "purpose": "New Item Request",
+    "urgency_level": "Normal",
+    "approval_status": "Forwarded to Admin",
+    "request_status": "Submitted",
+    "created_at": "2026-04-17T10:18:41.020Z",
+    "submitted_at": "2026-04-17T10:18:41.020Z"
+  },
+  {
+    "id": "951209F9-9ECE-4F92-BECC-2BA4C8EBB919",
+    "request_number": "ISS-20260417-3189",
+    "request_type": "Individual",
+    "purpose": "New Request",
+    "urgency_level": "Normal",
+    "approval_status": "Pending Supervisor Review",
+    "request_status": "Submitted",
+    "created_at": "2026-04-17T09:59:39.220Z",
+    "submitted_at": "2026-04-17T09:59:39.220Z"
+  },
+  {
+    "id": "5E1DC911-2A32-47E8-B7D4-C91CDF3DA4B8",
+    "request_number": "ISS-20260413-7285",
+    "request_type": "Individual",
+    "purpose": "Need Center table",
+    "urgency_level": "Normal",
+    "approval_status": "Issued",
+    "request_status": "Issued",
+    "created_at": "2026-04-13T19:36:10.110Z",
+    "submitted_at": "2026-04-13T19:36:10.110Z"
+  }
+]
+
+--- Items for request ---
+
+[
+  {
+    "id": "97ABC861-5CEB-49AB-BCA1-16C19A89AC8E",
+    "item_master_id": "EFDD396B-EA9F-490D-AB48-75B3449526C6",
+    "nomenclature": "Air Freshener (Fresco or equivalent 300ml.) For Air Freshener Dispenser",
+    "requested_quantity": 1,
+    "approved_quantity": null,
+    "item_status": null
+  },
+  {
+    "id": "C15DED14-7D77-47E4-9709-64664C126F16",
+    "item_master_id": "EE2C4206-BECF-48BE-B833-0FDBC9F46AA9",
+    "nomenclature": "Cartridge for Inkjet Color Printer EPSON L805",
+    "requested_quantity": 1,
+    "approved_quantity": null,
+    "item_status": null
+  },
+  {
+    "id": "BC670CD6-4216-427C-99AE-9471B67C9E5F",
+    "item_master_id": "8F4A3802-865C-4DEF-8DB7-CE0C97AB70E1",
+    "nomenclature": "Chairs for Conference/Training Hall (as per sample)",
+    "requested_quantity": 1,
+    "approved_quantity": null,
+    "item_status": null
+  },
+  {
+    "id": "45F40C9D-0853-4257-9B67-F78B47D4E237",
+    "item_master_id": "1F0B7933-F1EA-4A95-913C-4F3044DF7637",
+    "nomenclature": "Center Table Set (2 in 1)",
+    "requested_quantity": 1,
+    "approved_quantity": null,
+    "item_status": null
+  }
+]
+
+--- Approval workflows ---
+
+[
+  {
+    "id": "B172C94E-3CD3-4B18-9935-3201004553BA",
+    "current_approver_id": "fe516fe7-4ee0-4d52-a4d9-ced9c3beb6dc",
+    "current_status": "pending",
+    "is_admin_workflow": false,
+    "current_approver_name": "Haseeb Faryad"
+  }
+]
+
+--- History ---
+
+[
+  {
+    "step_number": 1,
+    "action_type": "forwarded_to_admin",
+    "action_date": "2026-05-24T20:20:19.900Z",
+    "comments": "Forwarded request to DD Admin for approval",
+    "action_by_name": "Muhammad Ehtesham Siddiqui"
+  },
+  {
+    "step_number": 2,
+    "action_type": "forwarded_to_admin",
+    "action_date": "2026-05-24T20:25:05.186Z",
+    "comments": "Forwarded request to AD Admin for approval",
+    "action_by_name": "Asad ur Rehman"
+  },
+  {
+    "step_number": 3,
+    "action_type": "forwarded_to_admin",
+    "action_date": "2026-05-24T20:38:20.933Z",
+    "comments": "Forwarded request to Storekeeper for approval",
+    "action_by_name": "Haseeb Faryad"
+  }
+]
+
+--- Workflow/Approval Tables ---
+
+[
+  {
+    "TABLE_NAME": "ims_workflow_roles"
+  },
+  {
+    "TABLE_NAME": "View_IssuanceApprovalStatus"
+  },
+  {
+    "TABLE_NAME": "approval_items"
+  },
+  {
+    "TABLE_NAME": "ims_user_workflow_roles"
+  },
+  {
+    "TABLE_NAME": "stock_issuance_approval_decisions"
+  },
+  {
+    "TABLE_NAME": "vw_pending_supervisor_approvals"
+  },
+  {
+    "TABLE_NAME": "vw_pending_admin_approvals"
+  },
+  {
+    "TABLE_NAME": "vw_enhanced_approval_overview"
+  },
+  {
+    "TABLE_NAME": "stock_issuance_approval_history"
+  },
+  {
+    "TABLE_NAME": "approval_workflows"
+  },
+  {
+    "TABLE_NAME": "workflow_approvers"
+  },
+  {
+    "TABLE_NAME": "request_approvals"
+  },
+  {
+    "TABLE_NAME": "approval_history"
+  },
+  {
+    "TABLE_NAME": "vw_pending_approvals"
+  },
+  {
+    "TABLE_NAME": "vw_approval_trail"
+  },
+  {
+    "TABLE_NAME": "vw_approval_requests_with_items"
+  },
+  {
+    "TABLE_NAME": "IssuanceApprovalHistory"
+  },
+  {
+    "TABLE_NAME": "stock_issuance_approvals"
+  },
+  {
+    "TABLE_NAME": "IssuanceApprovalForwards"
+  },
+  {
+    "TABLE_NAME": "LEAVE_APPROVAL_HIERARCHY"
+  },
+  {
+    "TABLE_NAME": "ims_dynamic_workflow_steps"
+  },
+  {
+    "TABLE_NAME": "ims_request_workflow_state"
+  }
+]
+
+--- request_approvals Columns ---
+
+[
+  {
+    "COLUMN_NAME": "id",
+    "DATA_TYPE": "uniqueidentifier"
+  },
+  {
+    "COLUMN_NAME": "request_id",
+    "DATA_TYPE": "uniqueidentifier"
+  },
+  {
+    "COLUMN_NAME": "request_type",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "workflow_id",
+    "DATA_TYPE": "uniqueidentifier"
+  },
+  {
+    "COLUMN_NAME": "current_status",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "current_approver_id",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "submitted_by",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "submitted_date",
+    "DATA_TYPE": "datetime2"
+  },
+  {
+    "COLUMN_NAME": "finalized_by",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "finalized_date",
+    "DATA_TYPE": "datetime2"
+  },
+  {
+    "COLUMN_NAME": "rejected_by",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "rejected_date",
+    "DATA_TYPE": "datetime2"
+  },
+  {
+    "COLUMN_NAME": "rejection_reason",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "created_date",
+    "DATA_TYPE": "datetime2"
+  },
+  {
+    "COLUMN_NAME": "updated_date",
+    "DATA_TYPE": "datetime2"
+  },
+  {
+    "COLUMN_NAME": "approver_name",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "approver_designation",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "approval_comments",
+    "DATA_TYPE": "nvarchar"
+  },
+  {
+    "COLUMN_NAME": "is_admin_workflow",
+    "DATA_TYPE": "bit"
+  }
+]

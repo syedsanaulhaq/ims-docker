@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMS Workflow Diagrams - For Presentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Sora:wght@600;700&display=swap');
+
+        :root {
+            --bg-start: #f4f8ff;
+            --bg-mid: #e7f8fb;
+            --bg-end: #fff7e8;
+            --card-bg: #ffffff;
+            --card-border: #dbe8f5;
+            --title: #0f2742;
+            --muted: #4b6076;
+            --shadow: 0 12px 34px rgba(17, 55, 91, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at 8% 10%, #d8f6ff 0%, transparent 34%),
+                        radial-gradient(circle at 92% 90%, #ffe9ba 0%, transparent 34%),
+                        linear-gradient(145deg, var(--bg-start) 0%, var(--bg-mid) 48%, var(--bg-end) 100%);
+            padding: 30px;
+        }
+        .diagram-container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 50px;
+            padding: 40px;
+            page-break-after: always;
+            border: 1px solid var(--card-border);
+        }
+        .diagram-title {
+            font-size: 28px;
+            font-weight: 800;
+            font-family: 'Sora', 'Manrope', sans-serif;
+            color: var(--title);
+            margin-bottom: 30px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #d8e6f3;
+        }
+        .diagram-subtitle {
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600;
+            display: block;
+            margin-top: 8px;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            min-height: 350px;
+            padding: 20px;
+        }
+        .instructions {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0f766e 100%);
+            color: #f8fdff;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            text-align: center;
+            box-shadow: 0 10px 26px rgba(14, 116, 144, 0.32);
+        }
+        .instructions h2 {
+            margin-bottom: 12px;
+            font-weight: 800;
+            font-family: 'Sora', 'Manrope', sans-serif;
+        }
+        .instructions p {
+            opacity: 0.95;
+            margin: 5px 0;
+        }
+
+        .lifecycle-wrap {
+            max-width: 620px;
+            margin: 10px auto;
+            position: relative;
+            padding: 8px 0;
+        }
+
+        .lifecycle-wrap::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 5px;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            background: linear-gradient(180deg, #20b8a7 0%, #2694f1 48%, #22c55e 100%);
+            opacity: 0.75;
+        }
+
+        .phase-card {
+            position: relative;
+            z-index: 1;
+            margin: 0 auto 22px;
+            width: min(94%, 460px);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.78);
+            box-shadow: 0 10px 24px rgba(14, 57, 102, 0.2);
+            padding: 14px 18px 16px;
+            animation: phase-in 0.55s ease both;
+        }
+
+        .phase-card:nth-child(1) { animation-delay: 0.05s; }
+        .phase-card:nth-child(2) { animation-delay: 0.14s; }
+        .phase-card:nth-child(3) { animation-delay: 0.23s; }
+        .phase-card:nth-child(4) { animation-delay: 0.32s; }
+        .phase-card:nth-child(5) { animation-delay: 0.41s; }
+
+        .phase-label {
+            font-family: 'Sora', 'Manrope', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #f8feff;
+            margin-bottom: 10px;
+        }
+
+        .phase-steps {
+            display: grid;
+            gap: 8px;
+        }
+
+        .phase-step {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f2742;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.76);
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        .phase-tender { background: linear-gradient(145deg, #15b8a4 0%, #09a38a 100%); }
+        .phase-vendor { background: linear-gradient(145deg, #1ea7d6 0%, #148ec4 100%); }
+        .phase-po { background: linear-gradient(145deg, #3b8cf2 0%, #2563eb 100%); }
+        .phase-receive { background: linear-gradient(145deg, #6f68ef 0%, #5b47d4 100%); }
+        .phase-stock { background: linear-gradient(145deg, #20b15f 0%, #16994d 100%); }
+
+        @keyframes phase-in {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .phase-card {
+                width: 100%;
+                margin-bottom: 16px;
+            }
+
+            .phase-step {
+                font-size: 14px;
+            }
+        }
+
+        @media print {
+            .instructions { display: none; }
+            body { background: white; }
+            .diagram-container {
+                box-shadow: none;
+                border: 1px solid #d1d5db;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h2>📸 How to Save as Images</h2>
+        <p><strong>Option 1:</strong> Right-click each diagram → "Save image as..." (Chrome/Edge)</p>
+        <p><strong>Option 2:</strong> Press Win+Shift+S to use Snipping Tool</p>
+        <p><strong>Option 3:</strong> Press Ctrl+P → Save as PDF</p>
+    </div>
+
+    <!-- Diagram 1: Clean Vertical Flow -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            🏢 Complete Inventory Workflow
+            <span class="diagram-subtitle">5 Clear Stages - From Request to Delivery</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#94a3b8', 'fontFamily': 'Segoe UI'}}}%%
+flowchart TB
+    subgraph STAGE1["📝 STAGE 1: REQUEST"]
+        A["🧑‍💼 User Creates Request"]
+    end
+
+    subgraph STAGE2["✅ STAGE 2: APPROVAL"]
+        B["👨‍💼 Supervisor Reviews"]
+        C{"Approved?"}
+    end
+
+    subgraph STAGE3["📦 STAGE 3: PROCUREMENT"]
+        D["📋 Create Tender"]
+        E["🏪 Vendor Bids"]
+        F["📄 Purchase Order"]
+    end
+
+    subgraph STAGE4["🚚 STAGE 4: RECEIVE"]
+        G["📥 Stock Received"]
+        H["🔍 Quality Check"]
+    end
+
+    subgraph STAGE5["🎁 STAGE 5: ISSUE"]
+        I["✅ Issue to User"]
+    end
+
+    A --> B
+    B --> C
+    C -->|Yes| D
+    C -->|No| A
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+
+    style STAGE1 fill:#A5D6A7,stroke:#2E7D32,stroke-width:2px
+    style STAGE2 fill:#90CAF9,stroke:#1565C0,stroke-width:2px
+    style STAGE3 fill:#FFCC80,stroke:#E65100,stroke-width:2px
+    style STAGE4 fill:#CE93D8,stroke:#6A1B9A,stroke-width:2px
+    style STAGE5 fill:#EF9A9A,stroke:#C62828,stroke-width:2px
+
+    style A fill:#66BB6A,stroke:#2E7D32
+    style B fill:#42A5F5,stroke:#1565C0
+    style C fill:#42A5F5,stroke:#1565C0
+    style D fill:#FFA726,stroke:#E65100
+    style E fill:#FFA726,stroke:#E65100
+    style F fill:#FFA726,stroke:#E65100
+    style G fill:#AB47BC,stroke:#6A1B9A
+    style H fill:#AB47BC,stroke:#6A1B9A
+    style I fill:#EF5350,stroke:#C62828
+        </div>
+    </div>
+
+    <!-- Diagram 1B: Simple Horizontal Timeline -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            ⏱️ IMS Process Timeline
+            <span class="diagram-subtitle">Simple 5-Step Overview</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#94a3b8', 'fontFamily': 'Segoe UI'}}}%%
+flowchart LR
+    subgraph S1[" "]
+        A1["📝<br/><b>REQUEST</b><br/>_________<br/>User submits<br/>requirements"]
+    end
+    
+    subgraph S2[" "]
+        B1["✅<br/><b>APPROVE</b><br/>_________<br/>Supervisor<br/>reviews"]
+    end
+    
+    subgraph S3[" "]
+        C1["📦<br/><b>PROCURE</b><br/>_________<br/>Tender &<br/>Purchase"]
+    end
+    
+    subgraph S4[" "]
+        D1["🚚<br/><b>RECEIVE</b><br/>_________<br/>Stock<br/>arrives"]
+    end
+    
+    subgraph S5[" "]
+        E1["🎁<br/><b>ISSUE</b><br/>_________<br/>Deliver to<br/>user"]
+    end
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 --> S5
+
+    style S1 fill:#A5D6A7,stroke:#2E7D32,stroke-width:3px
+    style S2 fill:#90CAF9,stroke:#1565C0,stroke-width:3px
+    style S3 fill:#FFCC80,stroke:#E65100,stroke-width:3px
+    style S4 fill:#CE93D8,stroke:#6A1B9A,stroke-width:3px
+    style S5 fill:#EF9A9A,stroke:#C62828,stroke-width:3px
+
+    style A1 fill:#66BB6A,stroke:#2E7D32,stroke-width:2px
+    style B1 fill:#42A5F5,stroke:#1565C0,stroke-width:2px
+    style C1 fill:#FFA726,stroke:#E65100,stroke-width:2px
+    style D1 fill:#AB47BC,stroke:#6A1B9A,stroke-width:2px
+    style E1 fill:#EF5350,stroke:#C62828,stroke-width:2px
+        </div>
+    </div>
+
+    <!-- Diagram 2: User Journey -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            👤 User Journey - How to Get Items
+            <span class="diagram-subtitle">Step-by-step request process for employees</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#9ca3af', 'fontFamily': 'Segoe UI'}}}%%
+flowchart LR
+    subgraph STEP1[" "]
+        S1["🧑‍💼<br/><b>Step 1</b><br/>Login to<br/>System"]
+    end
+
+    subgraph STEP2[" "]
+        S2["📝<br/><b>Step 2</b><br/>Fill Request<br/>Form"]
+    end
+
+    subgraph STEP3[" "]
+        S3["⏳<br/><b>Step 3</b><br/>Wait for<br/>Approval"]
+    end
+
+    subgraph STEP4[" "]
+        S4["📧<br/><b>Step 4</b><br/>Get<br/>Notification"]
+    end
+
+    subgraph STEP5[" "]
+        S5["🎁<br/><b>Step 5</b><br/>Collect<br/>Items"]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5
+
+    style STEP1 fill:#93c5fd,stroke:#1d4ed8,color:#1e3a8a
+    style STEP2 fill:#fde68a,stroke:#d97706,color:#78350f
+    style STEP3 fill:#fca5a5,stroke:#dc2626,color:#7f1d1d
+    style STEP4 fill:#6ee7b7,stroke:#059669,color:#064e3b
+    style STEP5 fill:#c4b5fd,stroke:#7c3aed,color:#3b0764
+        </div>
+    </div>
+
+    <!-- Diagram 3: Approval Levels -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            ✅ 3-Level Approval System
+            <span class="diagram-subtitle">Every request goes through three checkpoints</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#9ca3af', 'fontFamily': 'Segoe UI'}}}%%
+flowchart LR
+    subgraph START[" "]
+        U["👤<br/><b>User</b><br/>Submits<br/>Request"]
+    end
+
+    subgraph L1["Level 1"]
+        A1["👔<br/><b>Supervisor</b><br/>Reviews need<br/>& quantity"]
+    end
+
+    subgraph L2["Level 2"]
+        A2["💵<br/><b>Finance</b><br/>Budget &<br/>cost check"]
+    end
+
+    subgraph L3["Level 3"]
+        A3["🏛️<br/><b>Admin</b><br/>Final<br/>authorization"]
+    end
+
+    subgraph DONE[" "]
+        D["✅<br/><b>Approved</b><br/>Ready for<br/>issuance"]
+    end
+
+    U --> A1
+    A1 -->|"Approve ✓"| A2
+    A2 -->|"Verify ✓"| A3
+    A3 -->|"Authorize ✓"| D
+
+    style START fill:#e5e7eb,stroke:#9ca3af,color:#374151
+    style L1 fill:#93c5fd,stroke:#1d4ed8,color:#1e3a8a
+    style L2 fill:#fde68a,stroke:#d97706,color:#78350f
+    style L3 fill:#f9a8d4,stroke:#db2777,color:#831843
+    style DONE fill:#6ee7b7,stroke:#059669,color:#064e3b
+        </div>
+    </div>
+
+    <!-- Diagram 4: Who Does What -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            👥 Who Does What - User Roles
+            <span class="diagram-subtitle">Different people, different responsibilities</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#9ca3af', 'fontFamily': 'Segoe UI'}}}%%
+flowchart TB
+    subgraph TOP["🔷 Top Management"]
+        T1["👑 Super Admin<br/><i>Full control of system</i>"]
+        T2["🏛️ Admin<br/><i>Manage inventory & approvals</i>"]
+    end
+
+    subgraph MID["🔶 Middle Management"]
+        M1["👔 Wing Supervisor<br/><i>Approve team requests</i>"]
+        M2["💵 Finance Officer<br/><i>Budget verification</i>"]
+        M3["📋 Procurement<br/><i>Handle tenders & vendors</i>"]
+    end
+
+    subgraph OPS["🔷 Operations"]
+        O1["🧑‍🔧 Store Keeper<br/><i>Manage physical stock</i>"]
+    end
+
+    subgraph END["⚪ End Users"]
+        E1["👤 Employees<br/><i>Request & receive items</i>"]
+    end
+
+    T1 --> T2 --> M1 & M2 & M3
+    M1 --> O1
+    M3 --> O1
+    O1 --> E1
+
+    style TOP fill:#7dd3fc,stroke:#0284c7,color:#0c4a6e
+    style MID fill:#fde68a,stroke:#d97706,color:#78350f
+    style OPS fill:#6ee7b7,stroke:#059669,color:#064e3b
+    style END fill:#d8b4fe,stroke:#9333ea,color:#3b0764
+        </div>
+    </div>
+
+    <!-- Diagram 5: Inventory Levels -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            📦 Where Items Are Stored
+            <span class="diagram-subtitle">Three-tier storage system</span>
+        </div>
+        <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffff', 'primaryTextColor': '#374151', 'lineColor': '#9ca3af', 'fontFamily': 'Segoe UI'}}}%%
+flowchart TB
+    subgraph CENTRAL["🏛️ CENTRAL WAREHOUSE"]
+        C1["📦 All purchased items<br/>stored here first"]
+    end
+
+    subgraph WINGS["🏢 DEPARTMENT STORES"]
+        W1["Wing A"]
+        W2["Wing B"]
+        W3["Wing C"]
+        W4["Wing D"]
+    end
+
+    subgraph PERSONAL["👤 WITH USERS"]
+        P1["Employee 1<br/>🖥️ Laptop"]
+        P2["Employee 2<br/>🖨️ Printer"]
+        P3["Employee 3<br/>📱 Phone"]
+    end
+
+    C1 --> W1 & W2 & W3 & W4
+    W1 --> P1
+    W2 --> P2
+    W3 --> P3
+
+    style CENTRAL fill:#fca5a5,stroke:#dc2626,color:#7f1d1d
+    style WINGS fill:#93c5fd,stroke:#1d4ed8,color:#1e3a8a
+    style PERSONAL fill:#6ee7b7,stroke:#059669,color:#064e3b
+        </div>
+    </div>
+
+    <!-- Diagram 6: Procurement Simple -->
+    <div class="diagram-container">
+        <div class="diagram-title">
+            🛒 End-to-End Procurement Lifecycle
+            <span class="diagram-subtitle">Bright, professional phase view from tender to inventory availability</span>
+        </div>
+        <div class="lifecycle-wrap">
+            <section class="phase-card phase-tender">
+                <div class="phase-label">Phase 1: Tender</div>
+                <div class="phase-steps">
+                    <div class="phase-step">Define Requirements</div>
+                    <div class="phase-step">Create Tender</div>
+                    <div class="phase-step">Publish</div>
+                </div>
+            </section>
+
+            <section class="phase-card phase-vendor">
+                <div class="phase-label">Phase 2: Vendor</div>
+                <div class="phase-steps">
+                    <div class="phase-step">Receive Bids</div>
+                    <div class="phase-step">Evaluate</div>
+                    <div class="phase-step">Award</div>
+                </div>
+            </section>
+
+            <section class="phase-card phase-po">
+                <div class="phase-label">Phase 3: Purchase Order</div>
+                <div class="phase-steps">
+                    <div class="phase-step">Generate PO</div>
+                    <div class="phase-step">Send to Vendor</div>
+                </div>
+            </section>
+
+            <section class="phase-card phase-receive">
+                <div class="phase-label">Phase 4: Receive</div>
+                <div class="phase-steps">
+                    <div class="phase-step">Delivery</div>
+                    <div class="phase-step">Quality Check</div>
+                    <div class="phase-step">Accept</div>
+                </div>
+            </section>
+
+            <section class="phase-card phase-stock">
+                <div class="phase-label">Phase 5: Stock</div>
+                <div class="phase-steps">
+                    <div class="phase-step">Update Inventory</div>
+                    <div class="phase-step">Available for Issuance</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 20
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+-- ============================================================================
+-- MILESTONE-1: OPENING BALANCE STOCK TRACKING - PRODUCTION DEPLOYMENT
+-- ============================================================================
+-- Complete script for deploying opening balance tracking system
+-- Includes: Tables, Stored Procedures, Views with proper batch syntax
+-- Date: February 18, 2026
+-- ============================================================================
+
+USE InventoryManagementDB;
+GO
+
+PRINT '====================================================================';
+PRINT 'MILESTONE-1: Opening Balance Stock Tracking - Production Deployment';
+PRINT '====================================================================';
+PRINT '';
+
+-- ============================================================================
+-- STEP 1: Update stock_acquisitions table for quantity tracking
+-- ============================================================================
+PRINT 'STEP 1: Updating stock_acquisitions table for quantity tracking...';
+
+-- Check if stock_acquisitions table exists, create if not
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'stock_acquisitions')
+BEGIN
+    CREATE TABLE stock_acquisitions (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        acquisition_number NVARCHAR(50) UNIQUE,
+        po_id UNIQUEIDENTIFIER NULL,
+        delivery_id UNIQUEIDENTIFIER NULL,
+        item_master_id UNIQUEIDENTIFIER NULL,
+        total_items INT NULL,
+        total_quantity DECIMAL(15,2) NULL,
+        total_value DECIMAL(15,2) NULL,
+        quantity_received DECIMAL(15,2) DEFAULT 0,
+        quantity_issued DECIMAL(15,2) DEFAULT 0,
+        quantity_available AS (quantity_received - quantity_issued) PERSISTED,
+        unit_cost DECIMAL(15,2) NULL,
+        delivery_date DATE NULL,
+        acquisition_date DATETIME2 DEFAULT GETDATE(),
+        processed_by NVARCHAR(450) NULL,
+        status VARCHAR(20) DEFAULT 'completed',
+        notes NVARCHAR(MAX),
+        created_at DATETIME2 DEFAULT GETDATE(),
+        updated_at DATETIME2 DEFAULT GETDATE()
+    );
+    PRINT '  ✓ Created stock_acquisitions table with all columns';
+END
+ELSE
+BEGIN
+    PRINT '  ℹ Table exists, checking columns...';
+    
+    -- Add item_master_id if missing
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'item_master_id')
+    BEGIN
+        ALTER TABLE stock_acquisitions ADD item_master_id UNIQUEIDENTIFIER NULL;
+        PRINT '  ✓ Added item_master_id column';
+    END
+
+    -- Add quantity_received if missing
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'quantity_received')
+    BEGIN
+        ALTER TABLE stock_acquisitions ADD quantity_received DECIMAL(15,2) NULL DEFAULT 0;
+        PRINT '  ✓ Added quantity_received column';
+    END
+
+    -- Add quantity_issued if missing
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'quantity_issued')
+    BEGIN
+        ALTER TABLE stock_acquisitions ADD quantity_issued DECIMAL(15,2) NULL DEFAULT 0;
+        PRINT '  ✓ Added quantity_issued column';
+    END
+
+    -- Add delivery_date if missing
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'delivery_date')
+    BEGIN
+        ALTER TABLE stock_acquisitions ADD delivery_date DATE NULL;
+        PRINT '  ✓ Added delivery_date column';
+    END
+
+    -- Add unit_cost if missing
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'unit_cost')
+    BEGIN
+        ALTER TABLE stock_acquisitions ADD unit_cost DECIMAL(15,2) NULL;
+        PRINT '  ✓ Added unit_cost column';
+    END
+
+    -- Fix processed_by data type if needed
+    IF EXISTS (SELECT * FROM sys.columns 
+               WHERE object_id = OBJECT_ID('stock_acquisitions') 
+               AND name = 'processed_by' 
+               AND system_type_id = TYPE_ID('uniqueidentifier'))
+    BEGIN
+        ALTER TABLE stock_acquisitions DROP COLUMN processed_by;
+        ALTER TABLE stock_acquisitions ADD processed_by NVARCHAR(450) NULL;
+        PRINT '  ✓ Fixed processed_by column data type (UNIQUEIDENTIFIER → NVARCHAR(450))';
+    END
+    
+    -- Make legacy columns nullable for opening balance compatibility
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'po_id' AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE stock_acquisitions ALTER COLUMN po_id UNIQUEIDENTIFIER NULL;
+        PRINT '  ✓ Changed po_id to allow NULL';
+    END
+    
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'delivery_id' AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE stock_acquisitions ALTER COLUMN delivery_id UNIQUEIDENTIFIER NULL;
+        PRINT '  ✓ Changed delivery_id to allow NULL';
+    END
+    
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'total_items' AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE stock_acquisitions ALTER COLUMN total_items INT NULL;
+        PRINT '  ✓ Changed total_items to allow NULL';
+    END
+    
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'total_quantity' AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE stock_acquisitions ALTER COLUMN total_quantity DECIMAL(15,2) NULL;
+        PRINT '  ✓ Changed total_quantity to allow NULL';
+    END
+    
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'total_value' AND is_nullable = 0)
+    BEGIN
+        ALTER TABLE stock_acquisitions ALTER COLUMN total_value DECIMAL(15,2) NULL;
+        PRINT '  ✓ Changed total_value to allow NULL';
+    END
+END
+GO
+
+-- Update existing rows with default values
+UPDATE stock_acquisitions SET quantity_received = 0 WHERE quantity_received IS NULL;
+UPDATE stock_acquisitions SET quantity_issued = 0 WHERE quantity_issued IS NULL;
+PRINT '  ✓ Initialized default values';
+GO
+
+-- Add computed column if missing
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'quantity_available')
+    AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'quantity_received')
+    AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'quantity_issued')
+BEGIN
+    ALTER TABLE stock_acquisitions ADD quantity_available AS (ISNULL(quantity_received, 0) - ISNULL(quantity_issued, 0)) PERSISTED;
+    PRINT '  ✓ Added quantity_available computed column';
+END
+GO
+
+-- Add foreign key constraint if missing
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_StockAcq_ItemMaster')
+    AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'item_master_id')
+    AND EXISTS (SELECT * FROM sys.tables WHERE name = 'item_masters')
+BEGIN
+    ALTER TABLE stock_acquisitions
+    ADD CONSTRAINT FK_StockAcq_ItemMaster 
+    FOREIGN KEY (item_master_id) REFERENCES item_masters(id);
+    PRINT '  ✓ Added foreign key constraint to item_masters';
+END
+GO
+
+-- Add index for FIFO queries if missing
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_StockAcq_ItemMaster_Date')
+    AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'item_master_id')
+    AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('stock_acquisitions') AND name = 'delivery_date')
+BEGIN
+    CREATE INDEX IX_StockAcq_ItemMaster_Date 
+    ON stock_acquisitions(item_master_id, delivery_date);
+    PRINT '  ✓ Added index for FIFO queries';
+END
+GO
+
+PRINT '  ✅ stock_acquisitions table ready';
+PRINT '';
+
+-- ============================================================================
+-- STEP 2: Create opening_balance_entries table
+-- ============================================================================
+PRINT 'STEP 2: Creating opening_balance_entries table...';
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'opening_balance_entries')
+BEGIN
+    CREATE TABLE opening_balance_entries (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        
+        -- Tender/Source Information
+        tender_id UNIQUEIDENTIFIER NULL,
+        tender_reference NVARCHAR(100),
+        tender_title NVARCHAR(500),
+        
+        -- Item Information
+        item_master_id UNIQUEIDENTIFIER NOT NULL,
+        
+        -- Quantity Tracking
+        quantity_received INT NOT NULL,
+        quantity_already_issued INT NOT NULL DEFAULT 0,
+        quantity_available AS (quantity_received - quantity_already_issued) PERSISTED,
+        
+        -- Financial
+        unit_cost DECIMAL(15,2),
+        total_cost AS (quantity_received * unit_cost) PERSISTED,
+        
+        -- Source Details
+        source_type NVARCHAR(50) DEFAULT 'TENDER',
+        acquisition_date DATE,
+        
+        -- Audit Trail
+        entry_date DATETIME2 DEFAULT GETDATE(),
+        entered_by NVARCHAR(450) NOT NULL,
+        remarks NVARCHAR(1000),
+        
+        -- Status
+        status NVARCHAR(30) DEFAULT 'ACTIVE',
+        processed_to_stock BIT DEFAULT 0,
+        
+        -- Foreign Keys
+        FOREIGN KEY (item_master_id) REFERENCES item_masters(id)
+    );
+    
+    PRINT '  ✓ Created opening_balance_entries table';
+END
+ELSE
+BEGIN
+    PRINT '  ℹ opening_balance_entries table already exists';
+    
+    -- Drop entered_by FK constraint if exists (for flexibility)
+    IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name LIKE 'FK__opening_b__enter%')
+    BEGIN
+        DECLARE @fkName NVARCHAR(200);
+        SELECT @fkName = name FROM sys.foreign_keys WHERE name LIKE 'FK__opening_b__enter%';
+        EXEC('ALTER TABLE opening_balance_entries DROP CONSTRAINT ' + @fkName);
+        PRINT '  ✓ Removed entered_by FK constraint';
+    END
+END
+GO
+
+-- Create indexes for opening_balance_entries table
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_OpeningBalance_Item' AND object_id = OBJECT_ID('opening_balance_entries'))
+BEGIN
+    CREATE INDEX IX_OpeningBalance_Item ON opening_balance_entries(item_master_id);
+    PRINT '  ✓ Created index IX_OpeningBalance_Item';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_OpeningBalance_Tender' AND object_id = OBJECT_ID('opening_balance_entries'))
+BEGIN
+    CREATE INDEX IX_OpeningBalance_Tender ON opening_balance_entries(tender_id);
+    PRINT '  ✓ Created index IX_OpeningBalance_Tender';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_OpeningBalance_Date' AND object_id = OBJECT_ID('opening_balance_entries'))
+BEGIN
+    CREATE INDEX IX_OpeningBalance_Date ON opening_balance_entries(acquisition_date);
+    PRINT '  ✓ Created index IX_OpeningBalance_Date';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_OpeningBalance_Status' AND object_id = OBJECT_ID('opening_balance_entries'))
+BEGIN
+    CREATE INDEX IX_OpeningBalance_Status ON opening_balance_entries(status);
+    PRINT '  ✓ Created index IX_OpeningBalance_Status';
+END
+GO
+
+PRINT '  ✅ opening_balance_entries table ready';
+PRINT '';
+
+-- ============================================================================
+-- STEP 3: Create stored procedure to process opening balance to stock
+-- ============================================================================
+PRINT 'STEP 3: Creating sp_ProcessOpeningBalanceToStock procedure...';
+GO
+
+IF OBJECT_ID('dbo.sp_ProcessOpeningBalanceToStock', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_ProcessOpeningBalanceToStock;
+GO
+
+CREATE PROCEDURE dbo.sp_ProcessOpeningBalanceToStock
+    @OpeningBalanceId UNIQUEIDENTIFIER,
+    @ProcessedBy UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @ItemMasterId UNIQUEIDENTIFIER;
+    DECLARE @QuantityReceived INT;
+    DECLARE @QuantityIssued INT;
+    DECLARE @UnitCost DECIMAL(15,2);
+    DECLARE @AcquisitionDate DATE;
+    DECLARE @TenderReference NVARCHAR(100);
+    DECLARE @AcquisitionNumber NVARCHAR(50);
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Get opening balance details
+        SELECT 
+            @ItemMasterId = item_master_id,
+            @QuantityReceived = quantity_received,
+            @QuantityIssued = quantity_already_issued,
+            @UnitCost = unit_cost,
+            @AcquisitionDate = acquisition_date,
+            @TenderReference = tender_reference
+        FROM opening_balance_entries
+        WHERE id = @OpeningBalanceId AND processed_to_stock = 0;
+        
+        IF @ItemMasterId IS NULL
+        BEGIN
+            THROW 50001, 'Opening balance entry not found or already processed', 1;
+        END
+        
+        -- Generate OPB acquisition number (OPB-YYYY-XXXXXX)
+        DECLARE @MaxAcqNum INT;
+        SELECT @MaxAcqNum = ISNULL(MAX(CAST(RIGHT(acquisition_number, 6) AS INT)), 0)
+        FROM stock_acquisitions
+        WHERE acquisition_number LIKE 'OPB-' + CAST(YEAR(GETDATE()) AS VARCHAR) + '%';
+        
+        SET @AcquisitionNumber = 'OPB-' + CAST(YEAR(GETDATE()) AS VARCHAR) + '-' + 
+                                 RIGHT('000000' + CAST(@MaxAcqNum + 1 AS VARCHAR), 6);
+        
+        -- Create stock acquisition record
+        INSERT INTO stock_acquisitions (
+            id, acquisition_number, item_master_id,
+            quantity_received, quantity_issued, 
+            unit_cost, delivery_date,
+            processed_by, status, notes
+        )
+        VALUES (
+            NEWID(), @AcquisitionNumber, @ItemMasterId,
+            @QuantityReceived, @QuantityIssued,
+            @UnitCost, @AcquisitionDate,
+            @ProcessedBy, 'completed', 
+            'Opening Balance: ' + ISNULL(@TenderReference, 'No tender reference')
+        );
+        
+        -- Mark opening balance as processed
+        UPDATE opening_balance_entries
+        SET processed_to_stock = 1
+        WHERE id = @OpeningBalanceId;
+        
+        COMMIT TRANSACTION;
+        
+        SELECT 
+            @AcquisitionNumber as AcquisitionNumber,
+            'SUCCESS' as Status,
+            'Opening balance processed to stock successfully' as Message;
+            
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        THROW 50000, @ErrorMessage, 1;
+    END CATCH
+END
+GO
+
+PRINT '  ✅ sp_ProcessOpeningBalanceToStock procedure created';
+PRINT '';
+
+-- ============================================================================
+-- STEP 4: Create view for opening balance summary
+-- ============================================================================
+PRINT 'STEP 4: Creating vw_opening_balance_summary view...';
+GO
+
+IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_opening_balance_summary')
+    DROP VIEW vw_opening_balance_summary;
+GO
+
+CREATE VIEW vw_opening_balance_summary AS
+SELECT 
+    obe.id,
+    obe.tender_reference,
+    obe.tender_title,
+    obe.source_type,
+    obe.acquisition_date,
+    
+    -- Item Details
+    im.id as item_master_id,
+    im.nomenclature,
+    im.item_code,
+    c.category_name,
+    sc.sub_category_name,
+    im.unit,
+    
+    -- Quantities
+    obe.quantity_received,
+    obe.quantity_already_issued,
+    obe.quantity_available,
+    
+    -- Financial
+    obe.unit_cost,
+    obe.total_cost,
+    
+    -- Status
+    obe.status,
+    obe.processed_to_stock,
+    
+    -- Audit
+    obe.entry_date,
+    u.UserName as entered_by_name,
+    obe.remarks
+    
+FROM opening_balance_entries obe
+INNER JOIN item_masters im ON obe.item_master_id = im.id
+LEFT JOIN categories c ON im.category_id = c.id
+LEFT JOIN sub_categories sc ON im.sub_category_id = sc.id
+LEFT JOIN AspNetUsers u ON obe.entered_by = u.Id;
+GO
+
+PRINT '  ✅ vw_opening_balance_summary view created';
+PRINT '';
+
+-- ============================================================================
+-- STEP 5: Create view for stock breakdown (Opening Balance vs New Acquisitions)
+-- ============================================================================
+PRINT 'STEP 5: Creating vw_stock_quantity_breakdown view...';
+GO
+
+-- Drop existing view if present
+IF EXISTS (SELECT * FROM sys.views WHERE name = 'vw_stock_quantity_breakdown')
+    DROP VIEW vw_stock_quantity_breakdown;
+GO
+
+-- Create the view (must be first statement in batch)
+CREATE VIEW vw_stock_quantity_breakdown AS
+SELECT 
+    im.id as item_master_id,
+    im.nomenclature,
+    im.item_code,
+    im.unit,
+    im.specifications,
+    c.id as category_id,
+    c.category_name,
+    sc.id as sub_category_id,
+    sc.sub_category_name,
+    
+    -- Opening Balance (OPB-* entries from 2020+ historical stock)
+    ISNULL(SUM(CASE 
+        WHEN sa.acquisition_number LIKE 'OPB-%' 
+        THEN sa.quantity_available 
+        ELSE 0 
+    END), 0) as opening_balance_quantity,
+    
+    -- New Acquisitions (regular deliveries + legacy stock from current_inventory_stock)
+    ISNULL(SUM(CASE 
+        WHEN sa.acquisition_number NOT LIKE 'OPB-%' AND sa.acquisition_number IS NOT NULL
+        THEN sa.quantity_available 
+        ELSE 0 
+    END), 0) + ISNULL(cis.current_quantity, 0) as new_acquisition_quantity,
+    
+    -- Total Stock = Opening Balance + New Acquisitions + Legacy Stock
+    ISNULL(SUM(sa.quantity_available), 0) + ISNULL(cis.current_quantity, 0) as total_quantity,
+    
+    -- Additional metrics
+    ISNULL(SUM(sa.quantity_received), 0) as total_received,
+    ISNULL(SUM(sa.quantity_issued), 0) as total_issued,
+    
+    -- Stock status (use latest from either source)
+    CASE 
+        WHEN MAX(sa.updated_at) > cis.last_updated OR cis.last_updated IS NULL 
+        THEN MAX(sa.updated_at)
+        ELSE cis.last_updated
+    END as last_transaction_date,
+    
+    -- Count of acquisition records
+    COUNT(sa.id) as acquisition_count,
+    COUNT(CASE WHEN sa.acquisition_number LIKE 'OPB-%' THEN 1 END) as opening_balance_count,
+    COUNT(CASE WHEN sa.acquisition_number NOT LIKE 'OPB-%' THEN 1 END) as new_acquisition_count
+
+FROM item_masters im
+LEFT JOIN categories c ON im.category_id = c.id
+LEFT JOIN sub_categories sc ON im.sub_category_id = sc.id
+LEFT JOIN stock_acquisitions sa ON im.id = sa.item_master_id
+LEFT JOIN current_inventory_stock cis ON im.id = cis.item_master_id
+
+GROUP BY 
+    im.id,
+    im.nomenclature,
+    im.item_code,
+    im.unit,
+    im.specifications,
+    c.id,
+    c.category_name,
+    sc.id,
+    sc.sub_category_name,
+    cis.current_quantity,
+    cis.last_updated;
+GO
+
+PRINT '  ✅ vw_stock_quantity_breakdown view created';
+PRINT '';
+
+-- ============================================================================
+-- VERIFICATION: Test the view with sample data
+-- ============================================================================
+PRINT 'STEP 6: Verifying deployment...';
+PRINT '';
+PRINT 'Sample data from vw_stock_quantity_breakdown:';
+SELECT TOP 10 
+    nomenclature,
+    opening_balance_quantity,
+    new_acquisition_quantity,
+    total_quantity
+FROM vw_stock_quantity_breakdown 
+WHERE total_quantity > 0 
+ORDER BY total_quantity DESC;
+GO
+
+-- ============================================================================
+-- COMPLETION
+-- ============================================================================
+PRINT '';
+PRINT '====================================================================';
+PRINT '✅ MILESTONE-1 DEPLOYMENT COMPLETE';
+PRINT '====================================================================';
+PRINT '';
+PRINT '📋 Deployed Components:';
+PRINT '   ✓ stock_acquisitions table (updated with quantity tracking)';
+PRINT '   ✓ opening_balance_entries table';
+PRINT '   ✓ sp_ProcessOpeningBalanceToStock stored procedure';
+PRINT '   ✓ vw_opening_balance_summary view';
+PRINT '   ✓ vw_stock_quantity_breakdown view';
+PRINT '';
+PRINT '💡 Key Features:';
+PRINT '   • Opening Balance entries create acquisition numbers: OPB-YYYY-XXXXXX';
+PRINT '   • Stock breakdown shows: Opening Balance + New Acquisitions = Total';
+PRINT '   • Integrates with current_inventory_stock for legacy data';
+PRINT '   • FIFO tracking with quantity_available = received - issued';
+PRINT '';
+PRINT '🎯 Frontend URLs:';
+PRINT '   • Opening Balance Entry: /dashboard/opening-balance-entry';
+PRINT '   • Stock Quantities View: /dashboard/inventory-stock-quantities';
+PRINT '';
+PRINT '====================================================================';
+GO

@@ -1,0 +1,47 @@
+/* AGGRESSIVE FIX: Force icon centering in collapsed sidebar */
+
+/* When sidebar is collapsed to icon mode, override ALL conflicting styles */
+[data-state="collapsed"] [data-sidebar="menu-button"],
+div[data-collapsible="icon"] [data-sidebar="menu-button"] {
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  max-width: 2.5rem !important;
+  padding: 0.5rem !important;
+  gap: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Hide all text and non-icon elements */
+[data-state="collapsed"] [data-sidebar="menu-button"] span,
+[data-state="collapsed"] [data-sidebar="menu-button"] .lucide-chevron-right,
+div[data-collapsible="icon"] [data-sidebar="menu-button"] span,
+div[data-collapsible="icon"] [data-sidebar="menu-button"] .lucide-chevron-right {
+  display: none !important;
+}
+
+/* Ensure SVG icons are centered and sized correctly */
+[data-state="collapsed"] [data-sidebar="menu-button"] svg,
+div[data-collapsible="icon"] [data-sidebar="menu-button"] svg {
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Fix Link element inside button */
+[data-state="collapsed"] [data-sidebar="menu-button"] a,
+[data-state="collapsed"] [data-sidebar="menu-button"] [role="button"],
+div[data-collapsible="icon"] [data-sidebar="menu-button"] a,
+div[data-collapsible="icon"] [data-sidebar="menu-button"] [role="button"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}

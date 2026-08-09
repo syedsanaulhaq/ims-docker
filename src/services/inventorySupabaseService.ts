@@ -1,0 +1,163 @@
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+const TABLE = 'current_inventory_stock';
+
+// Use generic types to avoid TypeScript issues
+type InventoryItem = any;
+type InsertInventoryItem = any;
+type UpdateInventoryItem = any;
+
+export const inventorySupabaseService = {
+  async getAll() {
+    // Query with proper joins including categories and subcategories
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select(`
+        *,
+        item_masters(
+          id, 
+          nomenclature, 
+          unit,
+          categories(id, category_name),
+          sub_categories(id, sub_category_name)
+        ),
+        stores(id, store_name),
+        vendors(id, vendor_name)
+      `);
+    if (error) throw error;
+    return data as any[];
+  },
+
+  async getById(intOfficeID: string) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select(`
+        *,
+        item_masters(
+          id, 
+          nomenclature, 
+          unit,
+          categories(id, category_name),
+          sub_categories(id, sub_category_name)
+        ),
+        stores(id, store_name),
+        vendors(id, vendor_name)
+      `)
+      .eq('intOfficeID', id)
+      .single();
+    if (error) throw error;
+    return data as InventoryItem;
+  },
+
+  async create(item: InsertInventoryItem) {
+    const { data, error } = await supabase.from(TABLE).insert(item).select().single();
+    if (error) throw error;
+    return data as InventoryItem;
+  },
+
+  async update(intOfficeID: string, item: UpdateInventoryItem) {
+    const { data, error } = await supabase.from(TABLE).update(item).eq('intOfficeID', id).select().single();
+    if (error) throw error;
+    return data as InventoryItem;
+  },
+
+  async remove(intOfficeID: string) {
+    const { error } = await supabase.from(TABLE).delete().eq('intOfficeID', id);
+    if (error) throw error;
+    return true;
+  },
+
+  async getVendors() {
+    const { data, error } = await supabase.from('vendors').select('*');
+    if (error) throw error;
+    return data;
+  },
+
+  async getCategories() {
+    const { data, error } = await supabase.from('categories').select('*');
+    if (error) throw error;
+    return data;
+  },
+
+  async getSubCategories() {
+    const { data, error } = await supabase.from('sub_categories').select('*');
+    if (error) throw error;
+    return data;
+  },
+
+  async getStores() {
+    const { data, error } = await supabase.from('stores').select('*');
+    if (error) throw error;
+    return data;
+  },
+
+  async getOffices() {
+    const { data, error } = await supabase.from('tblOffices').select('*');
+    if (error) throw error;
+    return data;
+  },
+
+  async getItemMasters() {
+    const { data, error } = await supabase
+      .from('item_masters')
+      .select(`
+        *,
+        categories(id, category_name),
+        sub_categories(id, sub_category_name)
+      `);
+    if (error) throw error;
+    return data;
+  },
+
+  async getItemMaster(intOfficeID: string) {
+    const { data, error } = await supabase
+      .from('item_masters')
+      .select(`
+        *,
+        categories(id, category_name),
+        sub_categories(id, sub_category_name)
+      `)
+      .eq('intOfficeID', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async createItemMaster(itemData: any) {
+    const { data, error } = await supabase
+      .from('item_masters')
+      .insert([itemData])
+      .select(`
+        *,
+        categories(id, category_name),
+        sub_categories(id, sub_category_name)
+      `)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateItemMaster(intOfficeID: string, itemData: any) {
+    const { data, error } = await supabase
+      .from('item_masters')
+      .update(itemData)
+      .eq('intOfficeID', id)
+      .select(`
+        *,
+        categories(id, category_name),
+        sub_categories(id, sub_category_name)
+      `)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteItemMaster(intOfficeID: string) {
+    const { error } = await supabase
+      .from('item_masters')
+      .delete()
+      .eq('intOfficeID', id);
+    if (error) throw error;
+  },
+};

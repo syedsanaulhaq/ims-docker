@@ -1,0 +1,20 @@
+{
+  "name": "inventory-management-system-scripts",
+  "scripts": {
+    "start:production": "cross-env ENV_STAGE=production node backend-server.cjs",
+    "start:staging": "cross-env ENV_STAGE=staging node backend-server.cjs",
+    "start:development": "cross-env ENV_STAGE=development node backend-server.cjs",
+    "dev:production": "cross-env ENV_STAGE=production npm run dev",
+    "dev:staging": "cross-env ENV_STAGE=staging npm run dev",
+    "dev:development": "cross-env ENV_STAGE=development npm run dev",
+    "db:migrate:production": "cross-env ENV_STAGE=production node scripts/migrate.js",
+    "db:migrate:staging": "cross-env ENV_STAGE=staging node scripts/migrate.js",
+    "db:migrate:development": "cross-env ENV_STAGE=development node scripts/migrate.js",
+    "demo:prepare": "npm run start:staging",
+    "demo:reset": "node scripts/reset-demo-data.js",
+    "env:switch": "node scripts/switch-environment.js"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
+}

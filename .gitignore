@@ -1,0 +1,129 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables (IMPORTANT: Keep these secret!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.sqlserver
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Development and documentation files
+DEV-STATUS.md
+DEVELOPMENT-GUIDE.md
+ENVIRONMENT-SWITCHING.md
+QUICK-SWITCH-GUIDE.md
+SWITCHING-CHEAT-SHEET.txt
+TENDER-SPOT-ENHANCEMENT.md
+create-logos.*
+#login_logo.png
+#public/ecp-logo.png
+
+# Test files
+public/api-test.html
+public/dashboard-test.html
+public/lovable-uploads/
+enhanced-approval-workflow-visual.html
+system-architecture-diagram.html
+test-*.html
+
+# Debug and temporary files
+src/components/debug/
+scripts/check-environment.js
+
+# Large SQL files and databases (but keep schema and migration files)
+*.db
+*.sqlite
+*.mdf
+*.ldf
+
+# Backup files
+*_backup.*
+*_Backup.*
+*_backup/
+*_Backup/
+Dashboard_Backup.tsx
+*_New.tsx
+*_temp.*
+
+# Upload directories
+uploads/
+temp/
+
+# Lock files
+bun.lockb
+package-lock.json
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Coverage and testing
+coverage/
+.nyc_output
+
+# Build caches
+.cache
+.parcel-cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+# Don't ignore important SQL files
+!*schema*.sql
+!*migration*.sql
+!create-*.sql
+!update-*.sql
+*.ldf
+
+# Temporary and cache files
+.tmp/
+temp/
+cache/
+.cache/
+node_modules/.vite/
+
+# Upload directories
+uploads/
+public/uploads/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Local backups and temporary scripts
+.env.backup.*
+temp-*
+check-*
+playwright-report/
+test-results/
+pw-e2e-results.json
+query_script.cjs
+
