@@ -15,8 +15,10 @@ const loadEnvFile = (envFile, override) => {
   }
 };
 
-// 1) Load base defaults.
-loadEnvFile('.env', false);
+// 1) Load base defaults (only in development).
+if (runtimeEnv !== 'production') {
+  loadEnvFile('.env', false);
+}
 
 // 2) Allow explicit file override when provided.
 if (process.env.ENV_FILE) {
@@ -26,8 +28,10 @@ if (process.env.ENV_FILE) {
   loadEnvFile(`.env-${runtimeEnv}`, false);
 }
 
-// 4) Load SQL Server overrides last (do not override environment variables).
-loadEnvFile('.env.sqlserver', false);
+// 4) Load SQL Server overrides last (only in development).
+if (runtimeEnv !== 'production') {
+  loadEnvFile('.env.sqlserver', false);
+}
 
 const config = {
   // Server

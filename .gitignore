@@ -127,3 +127,5 @@ test-results/
 pw-e2e-results.json
 query_script.cjs
 
+# Deployment archives
+*.tar.gz

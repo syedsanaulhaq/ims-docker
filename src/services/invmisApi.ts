@@ -6,6 +6,11 @@
 
 // Environment-based API URL configuration
 export const getApiBaseUrl = () => {
+  // Check for environment variable first
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`;
+  }
+
   const hostname = window.location.hostname;
   const currentPort = window.location.port;
   
@@ -21,11 +26,6 @@ export const getApiBaseUrl = () => {
   // Environment-based URL selection
   if (isStaging) {
     return 'http://localhost:5001/api';  // Staging API
-  }
-  
-  // Check for environment variable
-  if (import.meta.env.VITE_API_URL) {
-    return `${import.meta.env.VITE_API_URL}/api`;
   }
   
   // Default to our current backend server

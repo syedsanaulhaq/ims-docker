@@ -1,0 +1,17 @@
+# Development Dockerfile for frontend service
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies first (leverage caching)
+COPY package*.json ./
+RUN npm install
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 9090
+
+# Run Vite dev server
+CMD ["npx", "vite", "--host", "0.0.0.0", "--port", "9090"]

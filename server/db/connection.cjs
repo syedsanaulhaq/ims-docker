@@ -3,8 +3,17 @@ const sql = require('mssql');
 const config = require('../config/env.cjs');
 
 // Database connection configuration
+let dbServer = config.DB_HOST;
+let instanceName = undefined;
+
+if (dbServer && dbServer.includes('\\')) {
+  const parts = dbServer.split('\\');
+  dbServer = parts[0];
+  instanceName = parts[1];
+}
+
 const dbConfig = {
-  server: config.DB_HOST,
+  server: dbServer,
   port: config.DB_PORT,
   user: config.DB_USER,
   password: config.DB_PASSWORD,
@@ -19,6 +28,10 @@ const dbConfig = {
     requestTimeout: 30000
   }
 };
+
+if (instanceName) {
+  dbConfig.options.instanceName = instanceName;
+}
 
 // Create connection pool
 let pool = null;

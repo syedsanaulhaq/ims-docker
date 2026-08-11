@@ -1,0 +1,17 @@
+# Development Dockerfile for backend service
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies first (leverage caching)
+COPY package*.json ./
+RUN npm install
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 3001
+
+# Run the backend dev server
+CMD ["node", "server/index.cjs"]
