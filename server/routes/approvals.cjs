@@ -752,7 +752,7 @@ router.get('/admin/pending', requireAuth, requirePermission('stock_request.view_
           u.FullName as requester_name,
           w.Name as wing_name
         FROM stock_issuance_requests sir
-        LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+        LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
         LEFT JOIN WingsInformation w ON sir.requester_wing_id = w.Id
         WHERE sir.approval_status IN ('Forwarded to Admin', 'Approved by Supervisor', 'Pending Admin Approval')
           AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
@@ -855,7 +855,7 @@ router.get('/my-lane-pending', requireAuth, async (req, res) => {
         FROM ims_request_workflow_state rws
         LEFT JOIN request_approvals ra ON ra.request_id = rws.request_id
         LEFT JOIN stock_issuance_requests sir ON sir.id = rws.request_id
-        LEFT JOIN AspNetUsers requester ON requester.Id = sir.requester_user_id
+        LEFT JOIN AspNetUsers requester ON TRY_CONVERT(uniqueidentifier, requester.Id) = sir.requester_user_id
         LEFT JOIN AspNetUsers approver ON approver.Id = rws.current_approver_id
         LEFT JOIN stock_issuance_items sii ON sii.request_id = rws.request_id
         LEFT JOIN item_masters im ON im.id = sii.item_master_id
@@ -1014,7 +1014,7 @@ router.get('/request/:requestId', async (req, res) => {
       .query(`
         SELECT sir.*, u.FullName AS requester_name, u.Email AS requester_email
         FROM stock_issuance_requests sir
-        LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+        LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
         WHERE sir.id = @requestId
       `);
 
@@ -2377,7 +2377,7 @@ router.get('/:approvalId', async (req, res, next) => {
         LEFT JOIN AspNetUsers submitter ON ra.submitted_by = submitter.Id
         LEFT JOIN AspNetUsers current_approver ON ra.current_approver_id = current_approver.Id
         LEFT JOIN stock_issuance_requests sir ON ra.request_id = sir.id
-        LEFT JOIN AspNetUsers requester ON sir.requester_user_id = requester.Id
+        LEFT JOIN AspNetUsers requester ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, requester.Id)
         WHERE ra.id = @approvalId
       `);
 

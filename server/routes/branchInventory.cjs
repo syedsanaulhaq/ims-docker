@@ -83,7 +83,7 @@ router.get('/requests', requireAuth, async (req, res) => {
         COALESCE(sir.approval_status, sir.request_status, 'pending') AS final_status,
         COALESCE(sir.urgency_level, 'Medium') AS priority
       FROM stock_issuance_requests sir
-      INNER JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+      INNER JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
       ${branchFilter}
       ORDER BY sir.submitted_at DESC
     `);
@@ -192,7 +192,7 @@ router.get('/:branchId', requireAuth, async (req, res) => {
       INNER JOIN stock_issuance_requests sir ON sii.request_id = sir.id
       LEFT JOIN item_masters im ON sii.item_master_id = im.id
       LEFT JOIN categories c ON im.category_id = c.id
-      LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+      LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
       WHERE (
         UPPER(COALESCE(sir.request_status, '')) IN ('ISSUED', 'COMPLETED')
         OR UPPER(COALESCE(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED')

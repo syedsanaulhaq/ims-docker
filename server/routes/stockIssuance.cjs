@@ -130,7 +130,7 @@ router.get('/', async (req, res) => {
         u.FullName as requester_name,
         w.Name as wing_name
       FROM stock_issuance_requests sir
-      LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+      LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
       LEFT JOIN WingsInformation w ON sir.requester_wing_id = w.Id
       WHERE 1=1
     `;
@@ -691,7 +691,7 @@ router.get('/branch-demands/manager', requireAuth, async (req, res) => {
           COALESCE(COUNT(DISTINCT d.id), 0) as linked_demand_count,
           COALESCE(SUM(d.requested_quantity), 0) as linked_demand_qty
         FROM stock_issuance_requests sir
-        LEFT JOIN AspNetUsers u ON u.Id = sir.requester_user_id
+        LEFT JOIN AspNetUsers u ON TRY_CONVERT(uniqueidentifier, u.Id) = sir.requester_user_id
         LEFT JOIN branch_staff_demands d ON d.included_in_request_id = sir.id AND d.staff_user_id = @userId AND (d.is_deleted = 0 OR d.is_deleted IS NULL)
         WHERE sir.request_type = 'branch'
           AND sir.requester_branch_id = @branchId
@@ -811,7 +811,7 @@ router.get('/issued-items', async (req, res) => {
         ON sir.id = COALESCE(sii.request_id, CASE WHEN sii.stock_issuance_id IS NOT NULL THEN sii.stock_issuance_id END)
       LEFT JOIN stock_issuances si ON si.id = sii.stock_issuance_id
       LEFT JOIN item_masters im ON sii.item_master_id = im.id
-      LEFT JOIN AspNetUsers u ON u.Id = COALESCE(sir.requester_user_id, si.requested_by)
+      LEFT JOIN AspNetUsers u ON u.Id = COALESCE(TRY_CONVERT(nvarchar(450), sir.requester_user_id), si.requested_by)
       WHERE (
         UPPER(COALESCE(sir.approval_status, sir.request_status, si.status, sii.item_status, sii.status, '')) IN ('APPROVED', 'ISSUED', 'COMPLETED')
       )
@@ -1743,7 +1743,7 @@ async function handleBranchStorekeeperRequests(req, res) {
           )
         LEFT JOIN item_masters im ON im.id = sii.item_master_id
         LEFT JOIN current_inventory_stock cis ON cis.item_master_id = sii.item_master_id
-        LEFT JOIN AspNetUsers u ON u.Id = sir.requester_user_id
+        LEFT JOIN AspNetUsers u ON TRY_CONVERT(uniqueidentifier, u.Id) = sir.requester_user_id
         WHERE ra.current_approver_id = @userId
           AND ra.current_status = 'pending'
           AND sir.request_type = 'branch'
@@ -1961,7 +1961,7 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
       .query(`
         SELECT sir.*, u.FullName as requester_name
         FROM stock_issuance_requests sir
-        LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+        LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
         WHERE sir.id = @id
       `);
 

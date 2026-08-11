@@ -210,7 +210,7 @@ router.get('/approvals', requireAuth, async (req, res) => {
         COUNT(sii.id) as item_count,
         SUM(CASE WHEN sii.item_status = 'Approved' THEN 1 ELSE 0 END) as approved_items
       FROM stock_issuance_requests sir
-      LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
+      LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
       LEFT JOIN WingsInformation w ON sir.requester_wing_id = w.Id
       LEFT JOIN stock_issuance_items sii ON sir.id = sii.request_id
       WHERE 1=1
