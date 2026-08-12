@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
         t.title as tender_title,
         t.tender_type,
         v.vendor_name,
-        (SELECT COUNT(*) FROM purchase_order_items WHERE po_id = po.id AND (is_deleted = 0 OR is_deleted IS NULL)) as item_count
+        (SELECT COUNT(*) FROM purchase_order_items WHERE po_id = po.id) as item_count
       FROM purchase_orders po
       LEFT JOIN tenders t ON TRY_CAST(po.tender_id AS UNIQUEIDENTIFIER) = t.id
       LEFT JOIN vendors v ON TRY_CAST(po.vendor_id AS UNIQUEIDENTIFIER) = v.id
