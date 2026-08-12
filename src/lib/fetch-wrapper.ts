@@ -34,9 +34,12 @@ window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<R
   // If URL is relative (starts with /), prepend the base URL
   if (typeof url === 'string' && url.startsWith('/')) {
     url = BASE_URL + url;
-  } else if (typeof url === 'string' && /localhost:(3001|5000|5001)/.test(url)) {
-    // Replace localhost (ports 3001, 5000, 5001) with the configured production BASE_URL
-    url = url.replace(/http:\/\/localhost:(3001|5000|5001)/, BASE_URL);
+  } else {
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isProduction && typeof url === 'string' && /(localhost|127\.0\.0\.1):\d+/.test(url)) {
+      // Replace any localhost or loopback IP with a port with the production BASE_URL
+      url = url.replace(/https?:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+    }
   }
 
   // Ensure session cookies are sent to backend API unless explicitly overridden.
