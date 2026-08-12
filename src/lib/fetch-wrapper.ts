@@ -30,6 +30,7 @@ const originalFetch = window.fetch;
 window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   // Convert input to string if it's a Request or URL object
   let url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  const originalUrl = url;
   
   // If URL is relative (starts with /), prepend the base URL
   if (typeof url === 'string' && url.startsWith('/')) {
@@ -41,6 +42,8 @@ window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<R
       url = url.replace(/https?:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
     }
   }
+
+  console.log(`[Fetch Wrapper] Original: ${originalUrl} -> Final: ${url} (BASE_URL: ${BASE_URL})`);
 
   // Ensure session cookies are sent to backend API unless explicitly overridden.
   // This prevents accidental 401s on protected routes when callers omit credentials.
