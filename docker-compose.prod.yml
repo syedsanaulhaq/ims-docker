@@ -86,6 +86,22 @@ services:
     networks:
       - invmis-network
 
+  # 🗄️ SQL Server Database
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: invmis-db-prod
+    restart: unless-stopped
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Pakistan@786
+      - MSSQL_PID=Developer
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - invmis-network
+
 networks:
   invmis-network:
     driver: bridge
@@ -94,3 +110,4 @@ volumes:
   prometheus-data:
   grafana-data:
   frontend-assets:
+  mssql-data:
