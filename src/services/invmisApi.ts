@@ -16,8 +16,8 @@ export const getApiBaseUrl = () => {
   
   // If running on production server (not localhost)
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // Use the same host with API port 3001
-    return `http://${hostname}:3001/api`;
+    // On production, use Nginx reverse proxy on port 80/443
+    return `${window.location.protocol}//${hostname}${currentPort ? ':' + currentPort : ''}/api`;
   }
   
   // Check if running on staging port (8081)

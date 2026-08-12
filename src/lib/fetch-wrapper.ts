@@ -3,11 +3,13 @@
 
 const getBaseUrl = () => {
   const hostname = window.location.hostname;
+  const port = window.location.port;
   
   // If running on production server (not localhost)
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // Use the same host with API port 3001
-    return `http://${hostname}:3001`;
+    // On production, Nginx proxies /api requests from port 80/443 directly.
+    // So we use the website's own origin (protocol + host + port if any).
+    return `${window.location.protocol}//${hostname}${port ? ':' + port : ''}`;
   }
   
   // Check for environment variable
