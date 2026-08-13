@@ -1145,7 +1145,7 @@ router.get('/stock-breakdown', requireGlobalInventoryAccess, async (req, res) =>
           ) AS total_issued_requests
         FROM stock_issuance_items sii
         INNER JOIN stock_issuance_requests sir
-          ON CONVERT(NVARCHAR(100), sir.id) = CONVERT(NVARCHAR(100), sii.request_id)
+          ON sir.id = sii.request_id
         WHERE UPPER(ISNULL(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED')
           AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
         GROUP BY sii.item_master_id
