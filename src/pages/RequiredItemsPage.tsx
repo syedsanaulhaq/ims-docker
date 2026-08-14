@@ -115,26 +115,26 @@ export default function RequiredItemsPage() {
       setError(null);
       
       // 1. Fetch individual items
-      const itemsRes = await fetch(`http://localhost:3001/api/required-items?status=${filterStatus}`);
+      const itemsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items?status=${filterStatus}`);
       if (!itemsRes.ok) throw new Error('Failed to fetch required items list');
       const itemsData = await itemsRes.json();
       setItems(itemsData.data || []);
 
       // 2. Fetch grouped summary
-      const summaryRes = await fetch('http://localhost:3001/api/required-items/summary');
+      const summaryRes = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/summary`);
       if (!summaryRes.ok) throw new Error('Failed to fetch required items summary');
       const summaryData = await summaryRes.json();
       setSummary(summaryData.data || []);
 
       // 3. Fetch stats
-      const statsRes = await fetch('http://localhost:3001/api/required-items/stats');
+      const statsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/stats`);
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData.stats || { Pending: 0, 'In Tender': 0, Procured: 0, Cancelled: 0 });
       }
 
       // 4. Fetch open tenders for linking
-      const tendersRes = await fetch('http://localhost:3001/api/tenders');
+      const tendersRes = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders`);
       if (tendersRes.ok) {
         const tendersData = await tendersRes.json();
         // The list can be array or {success: true, tenders: [...]}
@@ -231,7 +231,7 @@ export default function RequiredItemsPage() {
 
         const selectedTender = openTenders.find(t => t.id === selectedTenderId);
 
-        const res = await fetch('http://localhost:3001/api/required-items/link-tender', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/link-tender`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -314,7 +314,7 @@ export default function RequiredItemsPage() {
     if (reason === null) return; // cancel clicked
 
     try {
-      const res = await fetch(`http://localhost:3001/api/required-items/${id}/cancel`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/${id}/cancel`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
@@ -403,7 +403,7 @@ export default function RequiredItemsPage() {
     });
 
     try {
-      const res = await fetch('http://localhost:3001/api/required-items/link-tender', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/link-tender`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

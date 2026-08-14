@@ -1,7 +1,7 @@
 import { ApiResponse } from './api';
 import { DeliveryRecord } from './deliveryService';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 // Local SQL Server delivery service
 export const deliveriesLocalService = {

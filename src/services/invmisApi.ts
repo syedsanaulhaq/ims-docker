@@ -29,7 +29,7 @@ export const getApiBaseUrl = () => {
   }
   
   // Default to our current backend server
-  return 'http://localhost:3001/api';
+  return `${import.meta.env.VITE_API_URL}/api`;
 };
 
 const API_BASE_URL = getApiBaseUrl();

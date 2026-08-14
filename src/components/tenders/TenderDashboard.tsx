@@ -87,7 +87,7 @@ const TenderDashboard: React.FC<TenderDashboardProps> = ({
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -109,7 +109,7 @@ const TenderDashboard: React.FC<TenderDashboardProps> = ({
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:3001/api/tenders');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -139,7 +139,7 @@ const TenderDashboard: React.FC<TenderDashboardProps> = ({
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}`, {
         method: 'DELETE',
       });
 
@@ -168,7 +168,7 @@ const TenderDashboard: React.FC<TenderDashboardProps> = ({
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/finalize`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}/finalize`, {
         method: 'POST',
       });
 

@@ -94,7 +94,7 @@ const TenderAcquisitionReport: React.FC = () => {
       setLoading(true);
       
       // Load tender info
-      const tenderResponse = await fetch(`http://localhost:3001/api/tenders/${tenderId}`);
+      const tenderResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}`);
       if (tenderResponse.ok) {
         const tender = await tenderResponse.json();
         setTenderInfo(tender);
@@ -102,7 +102,7 @@ const TenderAcquisitionReport: React.FC = () => {
       }
 
       // Load deliveries
-      const deliveryResponse = await fetch(`http://localhost:3001/api/deliveries/by-tender/${tenderId}`);
+      const deliveryResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/by-tender/${tenderId}`);
       if (deliveryResponse.ok) {
         const deliveriesData = await deliveryResponse.json();
         const deliveriesArray = Array.isArray(deliveriesData) ? deliveriesData : [deliveriesData];

@@ -58,7 +58,7 @@ const InventoryAlertsPage: React.FC = () => {
   const loadItems = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/inventory/current-stock');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-stock`);
       if (!response.ok) throw new Error('Failed to load inventory data');
       const data = await response.json();
       setItems(data.inventory || []);

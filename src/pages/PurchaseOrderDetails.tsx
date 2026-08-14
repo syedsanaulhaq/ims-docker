@@ -67,7 +67,7 @@ export default function PurchaseOrderDetails() {
   const fetchPODetails = async (poId: string) => {  // ✅ Change type from number to string
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${poId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/purchase-orders/${poId}`);
       if (!response.ok) throw new Error('Failed to fetch PO details');
       const data = await response.json();
       setPO(data);
@@ -86,7 +86,7 @@ export default function PurchaseOrderDetails() {
 
     try {
       setSaving(true);
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${po.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/purchase-orders/${po.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

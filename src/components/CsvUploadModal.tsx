@@ -56,7 +56,7 @@ export function CsvUploadModal({ open, onClose, onItemsImported, bidders }: CsvU
     formData.append('bidders', JSON.stringify(bidders.filter(v => v.is_successful)));
 
     try {
-      const response = await fetch('http://localhost:3001/api/tender-items/bulk-upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tender-items/bulk-upload`, {
         method: 'POST',
         body: formData,
       });

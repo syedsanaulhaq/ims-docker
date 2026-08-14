@@ -65,7 +65,7 @@ export default function StockAvailabilityChecker({
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/stock/search-with-availability?search=${encodeURIComponent(searchValue)}`
+        `${import.meta.env.VITE_API_URL}/api/stock/search-with-availability?search=${encodeURIComponent(searchValue)}`
       );
       const data = await response.json();
       setSearchResults(data.items || []);
@@ -93,7 +93,7 @@ export default function StockAvailabilityChecker({
   // Check availability for a specific item
   const checkSingleItemAvailability = async (itemId: string, quantity: number) => {
     try {
-      const response = await fetch('http://localhost:3001/api/stock/check-availability', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,7 +125,7 @@ export default function StockAvailabilityChecker({
     if (selectedItems.length === 0) return;
 
     try {
-      const response = await fetch('http://localhost:3001/api/stock/check-availability-batch', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock/check-availability-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: selectedItems })

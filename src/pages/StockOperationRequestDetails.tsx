@@ -122,7 +122,7 @@ const StockOperationRequestDetails: React.FC = () => {
     try {
       // Try to load real approval history from database
       try {
-        const response = await fetch(`http://localhost:3001/api/approvals/history/${requestId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/history/${requestId}`, {
           method: 'GET',
           credentials: 'include',
           headers: {

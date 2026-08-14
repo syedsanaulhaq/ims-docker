@@ -90,7 +90,7 @@ export const WingApprovalDashboard: React.FC = () => {
       // Get wing information
       if (user?.wing_id) {
         try {
-          const wingsRes = await fetch('http://localhost:3001/api/wings', { credentials: 'include' });
+          const wingsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/wings`, { credentials: 'include' });
           if (wingsRes.ok) {
             const wingsData = await wingsRes.json();
             const wingsList = Array.isArray(wingsData) ? wingsData : (wingsData?.data || []);

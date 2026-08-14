@@ -68,7 +68,7 @@ const StockAcquisitionReport: React.FC = () => {
       setError(null);
 
       // Step 1: Get tender basic information from SQL Server
-      const tenderResponse = await fetch(`http://localhost:3001/api/tenders/${id}`);
+      const tenderResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${id}`);
       
       if (!tenderResponse.ok) {
         throw new Error('Tender not found');
@@ -77,7 +77,7 @@ const StockAcquisitionReport: React.FC = () => {
       const tender = await tenderResponse.json();
 
       // Step 2: Get stock transactions with all joined data from the SQL Server view
-      const stockResponse = await fetch(`http://localhost:3001/api/view-stock-transactions-clean?tender_id=${id}`);
+      const stockResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/view-stock-transactions-clean?tender_id=${id}`);
       
       if (!stockResponse.ok) {
         throw new Error(`Failed to fetch stock transactions: ${stockResponse.statusText}`);

@@ -80,7 +80,7 @@ const TenderReport: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await fetch(`http://localhost:3001/api/view-tenders/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/view-tenders/${id}`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

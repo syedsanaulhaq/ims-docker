@@ -52,9 +52,9 @@ export const TenderVendorWizard: React.FC = () => {
     try {
       setLoading(true);
       const [tendersRes, vendorsRes, categoriesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/annual-tenders'),
-        fetch('http://localhost:3001/api/vendors'),
-        fetch('http://localhost:3001/api/categories')
+        fetch(`${import.meta.env.VITE_API_URL}/api/annual-tenders`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/vendors`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`)
       ]);
 
       const tendersData = await tendersRes.json();
@@ -136,7 +136,7 @@ export const TenderVendorWizard: React.FC = () => {
       // Send all assignments
       for (const assignment of assignments) {
         const response = await fetch(
-          `http://localhost:3001/api/annual-tenders/${assignment.tenderId}/assign-vendors`,
+          `${import.meta.env.VITE_API_URL}/api/annual-tenders/${assignment.tenderId}/assign-vendors`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

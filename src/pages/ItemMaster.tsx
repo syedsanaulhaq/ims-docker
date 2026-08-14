@@ -142,14 +142,14 @@ const ItemMasterManagement = () => {
   const loadCategories = async () => {
     try {
       // Load categories
-      const categoriesResponse = await fetch('http://localhost:3001/api/categories');
+      const categoriesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData);
         }
 
       // Load all sub-categories
-      const subCategoriesResponse = await fetch('http://localhost:3001/api/sub-categories');
+      const subCategoriesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`);
       if (subCategoriesResponse.ok) {
         const subCategoriesData = await subCategoriesResponse.json();
         setSubCategories(subCategoriesData);
@@ -253,7 +253,7 @@ const ItemMasterManagement = () => {
 
       if (editingItem) {
         // Update existing item
-        const response = await fetch(`http://localhost:3001/api/item-masters/${editingItem.id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -269,7 +269,7 @@ const ItemMasterManagement = () => {
         }
       } else {
         // Create new item
-        const response = await fetch('http://localhost:3001/api/item-masters', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -305,7 +305,7 @@ const ItemMasterManagement = () => {
     const confirmed = window.confirm(`Are you sure you want to delete "${item.nomenclature}" (${item.item_code})?`);
     if (confirmed) {
       try {
-        const response = await fetch(`http://localhost:3001/api/item-masters/${item.id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters/${item.id}`, {
           method: 'DELETE'
         });
 
@@ -342,7 +342,7 @@ const ItemMasterManagement = () => {
       const formData = new FormData();
       formData.append('file', uploadFile);
 
-      const response = await fetch('http://localhost:3001/api/items-master/bulk-upload', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/items-master/bulk-upload`, {
         method: 'POST',
         body: formData
       });
@@ -449,7 +449,7 @@ ABC-002,Another Item,Brand X,Box,Technical specs here,Item description,Category2
       setLoading(true);
       setError('');
       
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters`);
       
       if (response.ok) {
         const data = await response.json();

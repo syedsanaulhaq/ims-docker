@@ -89,7 +89,7 @@ const SupervisorApprovals: React.FC = () => {
   const fetchPendingRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/approvals/supervisor/pending?wing_id=${user?.wing_id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/supervisor/pending?wing_id=${user?.wing_id}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -104,7 +104,7 @@ const SupervisorApprovals: React.FC = () => {
   const fetchRequestDetails = async (requestId: string) => {
     const fallbackRequest = pendingRequests.find((r) => getRequestIdentifier(r) === requestId);
     try {
-      const response = await fetch(`http://localhost:3001/api/approvals/request/${requestId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/request/${requestId}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -177,7 +177,7 @@ const SupervisorApprovals: React.FC = () => {
           break;
       }
 
-      const response = await fetch(`http://localhost:3001${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

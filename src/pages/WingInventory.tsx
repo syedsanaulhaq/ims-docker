@@ -91,7 +91,7 @@ export default function WingInventory() {
       
       // Admin: pass '0' — server ignores param and returns all wings
       const wingParam = user?.wing_id || '0';
-      const response = await fetch(`http://localhost:3001/api/wing-inventory/${wingParam}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wing-inventory/${wingParam}`, {
         credentials: 'include'
       });
       

@@ -119,9 +119,9 @@ const TenderReportEnhanced: React.FC = () => {
     try {
       // Fetch all offices, wings, and decs
       const [officesRes, wingsRes, decsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/offices'),
-        fetch('http://localhost:3001/api/wings'),
-        fetch('http://localhost:3001/api/decs').catch(() => ({ ok: false, json: async () => [] }))
+        fetch(`${import.meta.env.VITE_API_URL}/api/offices`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/wings`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/decs`).catch(() => ({ ok: false, json: async () => [] }))
       ]);
 
       const offices = officesRes.ok ? await officesRes.json() : [];
@@ -182,7 +182,7 @@ const TenderReportEnhanced: React.FC = () => {
   const fetchTenderDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/tenders/${id}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${id}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch tender details');
@@ -193,7 +193,7 @@ const TenderReportEnhanced: React.FC = () => {
       
       // Fetch bidders for this tender
       try {
-        const biddersResponse = await fetch(`http://localhost:3001/api/tenders/${id}/vendors`);
+        const biddersResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${id}/vendors`);
         if (biddersResponse.ok) {
           const biddersData = await biddersResponse.json();
           setBidders(biddersData);
@@ -263,7 +263,7 @@ const TenderReportEnhanced: React.FC = () => {
   };
 
   const handleDownload = (filePath: string, fileName: string) => {
-    const url = `http://localhost:3001/uploads/tender-files/${filePath}`;
+    const url = `${import.meta.env.VITE_API_URL}/uploads/tender-files/${filePath}`;
     window.open(url, '_blank');
   };
 

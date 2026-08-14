@@ -55,8 +55,8 @@ const SubCategories = () => {
       setIsLoading(true);
       
       const [categoriesRes, subCategoriesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/categories'),
-        fetch('http://localhost:3001/api/sub-categories')
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`)
       ]);
 
       if (categoriesRes.ok) {
@@ -106,7 +106,7 @@ const SubCategories = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/sub-categories', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subCategoryForm)
@@ -166,7 +166,7 @@ const SubCategories = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/sub-categories/${editingSubCategory}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories/${editingSubCategory}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subCategoryForm)
@@ -199,7 +199,7 @@ const SubCategories = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/sub-categories/${subCategoryId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub-categories/${subCategoryId}`, {
         method: 'DELETE'
       });
 

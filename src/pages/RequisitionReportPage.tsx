@@ -325,7 +325,7 @@ const RequisitionReportPage: React.FC = () => {
         }
 
         try {
-          const detailResp = await fetch(`http://localhost:3001/api/approvals/request/${found.id}`, {
+          const detailResp = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/request/${found.id}`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
@@ -363,7 +363,7 @@ const RequisitionReportPage: React.FC = () => {
             }
           }
 
-          const detailsResp = await fetch(`http://localhost:3001/api/request-details/${found.id}`, {
+          const detailsResp = await fetch(`${import.meta.env.VITE_API_URL}/api/request-details/${found.id}`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }

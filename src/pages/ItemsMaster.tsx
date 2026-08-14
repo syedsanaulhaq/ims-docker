@@ -27,7 +27,7 @@ const ItemsMaster = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -241,7 +241,7 @@ const ItemsMaster = () => {
           {/* Debug Information */}
           <div className="mt-8 bg-gray-800 text-white rounded-lg p-4 text-sm font-mono">
             <div className="text-green-400 mb-2">🐛 Debug Info:</div>
-            <div>API URL: http://localhost:3001/api/item-masters</div>
+            <div>API URL: ${import.meta.env.VITE_API_URL}/api/item-masters</div>
             <div>Items Loaded: {items.length}</div>
             <div>Last Updated: {new Date().toLocaleTimeString()}</div>
             <div>Status: {error ? '❌ Error' : '✅ Connected'}</div>

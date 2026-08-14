@@ -93,7 +93,7 @@ export default function BranchInventory() {
       
       // Admin: pass 0; server ignores it and returns all branches.
       const branchParam = getBranchId() || '0';
-      const response = await fetch(`http://localhost:3001/api/branch-inventory/${branchParam}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/branch-inventory/${branchParam}`, {
         credentials: 'include'
       });
       

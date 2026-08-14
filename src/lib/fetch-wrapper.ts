@@ -16,7 +16,7 @@ const getBaseUrl = () => {
   }
   
   // Default to localhost for development
-  return 'http://localhost:3001';
+  return `${import.meta.env.VITE_API_URL}`;
 };
 
 const BASE_URL = getBaseUrl();
@@ -34,7 +34,7 @@ window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<R
     url = BASE_URL + url;
     } else if (url.includes('localhost:3001')) {
     // Replace localhost:3001 with the configured base URL
-    url = url.replace('http://localhost:3001', BASE_URL);
+    url = url.replace(`${import.meta.env.VITE_API_URL}`, BASE_URL);
     }
 
   // Ensure session cookies are sent to backend API unless explicitly overridden.
