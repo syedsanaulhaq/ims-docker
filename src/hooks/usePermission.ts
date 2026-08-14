@@ -48,7 +48,7 @@ export function usePermission(permissionKey: string) {
 
         // Server-side verification for security
         const response = await fetch(
-          `http://localhost:3001/api/ims/check-permission?permission=${encodeURIComponent(permissionKey)}`,
+          `${import.meta.env.VITE_API_URL}/api/ims/check-permission?permission=${encodeURIComponent(permissionKey)}`,
           {
             method: 'GET',
             credentials: 'include',
@@ -62,7 +62,7 @@ export function usePermission(permissionKey: string) {
           if (!allowed && (altKeys[permissionKey]?.length || 0) > 0) {
             for (const k of altKeys[permissionKey]) {
               const r = await fetch(
-                `http://localhost:3001/api/ims/check-permission?permission=${encodeURIComponent(k)}`,
+                `${import.meta.env.VITE_API_URL}/api/ims/check-permission?permission=${encodeURIComponent(k)}`,
                 { method: 'GET', credentials: 'include' }
               );
               if (r.ok) {

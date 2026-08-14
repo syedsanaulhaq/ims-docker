@@ -207,7 +207,7 @@ class ERPDatabaseService {
   // Office services
   async getActiveOffices(): Promise<Office[]> {
     try {
-      const response = await fetch('http://localhost:3001/api/offices');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/offices`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -234,7 +234,7 @@ class ERPDatabaseService {
   // Wing services
   async getActiveWings(): Promise<Wing[]> {
     try {
-      const response = await fetch('http://localhost:3001/api/wings');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wings`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -276,7 +276,7 @@ class ERPDatabaseService {
   // DEC services
   async getActiveDecs(): Promise<DEC[]> {
     try {
-      const response = await fetch('http://localhost:3001/api/decs');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/decs`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -313,7 +313,7 @@ class ERPDatabaseService {
   // Users services
   async getActiveUsers(): Promise<any[]> {
     try {
-      const response = await fetch('http://localhost:3001/api/aspnet-users/active');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/aspnet-users/active`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -377,7 +377,7 @@ class ERPDatabaseService {
   // Get filtered users by office, wing, and optionally branch
   async getFilteredUsers(officeId: number, wingId: number, branchId?: number | string): Promise<any[]> {
     try {
-      let url = `http://localhost:3001/api/aspnet-users/filtered?officeId=${officeId}&wingId=${wingId}`;
+      let url = `${import.meta.env.VITE_API_URL}/api/aspnet-users/filtered?officeId=${officeId}&wingId=${wingId}`;
       
       // Add branch filter if provided and not "ALL_BRANCHES"
       if (branchId && branchId !== 'ALL_BRANCHES') {

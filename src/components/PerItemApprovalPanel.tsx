@@ -26,7 +26,7 @@ import approvalService from '@/services/approvalService';
 import { sessionService } from '@/services/sessionService';
 
 // Get API URL from environment or default to localhost
-const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const getApiUrl = () => import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL}`;
 
 interface PerItemApprovalPanelProps {
   approvalId: string;

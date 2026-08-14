@@ -217,7 +217,7 @@ const CreateTender: React.FC = () => {
     const fetchInitialData = async () => {
       try {
         // Fetch Item Masters
-        const itemMastersResponse = await fetch('http://localhost:3001/api/item-masters');
+        const itemMastersResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters`);
         if (itemMastersResponse.ok) {
           const itemMastersData = await itemMastersResponse.json();
           // Handle the {success: true, items: [...]} format
@@ -225,21 +225,21 @@ const CreateTender: React.FC = () => {
         }
 
         // Fetch Categories/Groups separately so groups with no currently linked item masters still appear
-        const categoriesResponse = await fetch('http://localhost:3001/api/categories');
+        const categoriesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json();
           setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         }
 
         // Fetch Offices
-        const officesResponse = await fetch('http://localhost:3001/api/offices');
+        const officesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/offices`);
         if (officesResponse.ok) {
           const officesData = await officesResponse.json();
           setOffices(Array.isArray(officesData) ? officesData : []);
         }
 
         // Fetch Vendors
-        const vendorsResponse = await fetch('http://localhost:3001/api/vendors');
+        const vendorsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/vendors`);
         if (vendorsResponse.ok) {
           const vendorsData = await vendorsResponse.json();
           // Handle the {vendors: [...]} format
@@ -304,7 +304,7 @@ const CreateTender: React.FC = () => {
 
   const fetchPendingRequiredItems = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/required-items?status=Pending&limit=500');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items?status=Pending&limit=500`);
       if (!res.ok) throw new Error('Failed to fetch required items');
       const data = await res.json();
       setRequiredItemOptions(data.data || []);
@@ -437,7 +437,7 @@ const CreateTender: React.FC = () => {
   // Helper function to refresh item masters
   const fetchItemMasters = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/item-masters`);
       if (response.ok) {
         const data = await response.json();
         setItemMasters(data.items || []);
@@ -450,7 +450,7 @@ const CreateTender: React.FC = () => {
   // Helper function to refresh vendors
   const fetchVendors = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/vendors');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/vendors`);
       if (response.ok) {
         const data = await response.json();
         if (data.vendors && Array.isArray(data.vendors)) {
@@ -478,7 +478,7 @@ const CreateTender: React.FC = () => {
         const allWings: Wing[] = [];
         
         for (const officeId of tenderData.office_ids) {
-          const response = await fetch(`http://localhost:3001/api/offices/${officeId}/wings`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/offices/${officeId}/wings`);
           if (response.ok) {
             const wingsData = await response.json();
             const wings = Array.isArray(wingsData) ? wingsData : wingsData.data || [];
@@ -520,7 +520,7 @@ const CreateTender: React.FC = () => {
         const allDecs: Dec[] = [];
         
         for (const wingId of tenderData.wing_ids) {
-          const response = await fetch(`http://localhost:3001/api/wings/${wingId}/decs`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wings/${wingId}/decs`);
           if (response.ok) {
             const decsData = await response.json();
             const decs = Array.isArray(decsData) ? decsData : decsData.data || [];
@@ -826,7 +826,7 @@ const CreateTender: React.FC = () => {
         formData.append('rfp_file', fileUploads.rfp_file);
       }
 
-      const response = await fetch('http://localhost:3001/api/tenders', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders`, {
         method: 'POST',
         body: formData, // Remove Content-Type header to let browser set it for FormData
       });
@@ -840,7 +840,7 @@ const CreateTender: React.FC = () => {
 
       if (newTenderId && sourceRequiredItemIds.length > 0) {
         try {
-          const attachResponse = await fetch('http://localhost:3001/api/required-items/attach-tender', {
+          const attachResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/required-items/attach-tender`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -862,7 +862,7 @@ const CreateTender: React.FC = () => {
       if (bidders.length > 0 && newTenderId) {
         for (const bidder of bidders) {
           try {
-            const bidderResponse = await fetch(`http://localhost:3001/api/tenders/${newTenderId}/vendors`, {
+            const bidderResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${newTenderId}/vendors`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

@@ -299,7 +299,7 @@ const StockIssuanceProcessing: React.FC = () => {
                     <div className="flex items-center gap-2 text-xs bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 text-teal-700">
                       <Image className="h-4 w-4" />
                       <span>Signed delivery document uploaded</span>
-                      <a href={`http://localhost:3001${req.delivery_proof_url}`}
+                      <a href={`${import.meta.env.VITE_API_URL}${req.delivery_proof_url}`}
                         target="_blank" rel="noreferrer"
                         className="ml-auto underline font-medium">View</a>
                     </div>

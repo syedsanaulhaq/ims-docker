@@ -200,7 +200,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
         return true;
       });
 
-      const apiUrl = 'http://localhost:3001';
+      const apiUrl = `${import.meta.env.VITE_API_URL}`;
       const buildSummary = async (approval: RequestApproval): Promise<RequestSummary | null> => {
         const requestId = approval.request_id;
 

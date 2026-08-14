@@ -34,7 +34,7 @@ const InventoryDetails = () => {
       try {
         setDataLoading(true);
         // Use the same endpoint as the main dashboard
-        const response = await fetch('http://localhost:3001/api/inventory-stock');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory-stock`);
         
         if (response.ok) {
           const data = await response.json();

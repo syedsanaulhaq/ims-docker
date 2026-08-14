@@ -77,7 +77,7 @@ const FutureRequestsPage: React.FC = () => {
   const loadApprovalHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/my-approval-history', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/my-approval-history`, {
         method: 'GET',
         credentials: 'include',
         headers: {

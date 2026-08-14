@@ -60,7 +60,7 @@ const CurrentInventoryStock: React.FC = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (showLowStock) params.append('low_stock', 'true');
 
-      const response = await fetch(`http://localhost:3001/api/inventory/current-stock?${params.toString()}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-stock?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch inventory');
       
       const data = await response.json();
@@ -74,7 +74,7 @@ const CurrentInventoryStock: React.FC = () => {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/inventory/current-stock/summary');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-stock/summary`);
       if (!response.ok) throw new Error('Failed to fetch summary');
       
       const data = await response.json();
@@ -86,7 +86,7 @@ const CurrentInventoryStock: React.FC = () => {
 
   const fetchItemHistory = async (itemId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/inventory/current-stock/${itemId}/history`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-stock/${itemId}/history`);
       if (!response.ok) throw new Error('Failed to fetch item history');
       
       const data = await response.json();

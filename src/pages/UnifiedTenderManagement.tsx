@@ -161,7 +161,7 @@ const UnifiedTenderManagement: React.FC = () => {
       setLoading(true);
       
       // Load tender info
-      const tenderResponse = await fetch(`http://localhost:3001/api/tenders/${tenderId}`);
+      const tenderResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}`);
       if (tenderResponse.ok) {
         const tender = await tenderResponse.json();
         setTenderInfo(tender);
@@ -181,7 +181,7 @@ const UnifiedTenderManagement: React.FC = () => {
         }
 
       // Load deliveries
-      const deliveryResponse = await fetch(`http://localhost:3001/api/deliveries/by-tender/${tenderId}`);
+      const deliveryResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/by-tender/${tenderId}`);
       if (deliveryResponse.ok) {
         const deliveriesData = await deliveryResponse.json();
         const deliveriesArray = Array.isArray(deliveriesData) ? deliveriesData : [deliveriesData];
@@ -244,7 +244,7 @@ const UnifiedTenderManagement: React.FC = () => {
 
   const updateItemPrice = async (itemId: string, newPrice: number) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/stock-acquisition/update-price/${itemId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stock-acquisition/update-price/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -274,7 +274,7 @@ const UnifiedTenderManagement: React.FC = () => {
 
   const createNewDelivery = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/deliveries', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -364,7 +364,7 @@ const UnifiedTenderManagement: React.FC = () => {
         items: allItems
       };
 
-      const response = await fetch('http://localhost:3001/api/delivery-items', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/delivery-items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData)
@@ -420,7 +420,7 @@ const UnifiedTenderManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/delivery-item-serial-numbers', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/delivery-item-serial-numbers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +459,7 @@ const UnifiedTenderManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/deliveries/${deliveryId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/${deliveryId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -494,7 +494,7 @@ const UnifiedTenderManagement: React.FC = () => {
 
     try {
       // Get current user ID from session
-      const sessionResponse = await fetch('http://localhost:3001/api/session');
+      const sessionResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/session`);
       const session = await sessionResponse.json();
       const currentUserId = session.userId || 'SYSTEM-USER-ID';
       
@@ -504,7 +504,7 @@ const UnifiedTenderManagement: React.FC = () => {
       // Finalize each delivery
       for (const delivery of pendingDeliveries) {
         try {
-          const response = await fetch(`http://localhost:3001/api/deliveries/${delivery.id}/finalize`, {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/${delivery.id}/finalize`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

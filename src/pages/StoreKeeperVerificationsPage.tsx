@@ -67,7 +67,7 @@ export const StoreKeeperVerificationsPage: React.FC = () => {
         return;
       }
       
-      const response = await fetch(`http://localhost:3001/api/inventory/my-forwarded-verifications?userId=${encodeURIComponent(user.user_id)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/my-forwarded-verifications?userId=${encodeURIComponent(user.user_id)}`);
       const data = await response.json();
       
       if (data.success) {
@@ -92,7 +92,7 @@ export const StoreKeeperVerificationsPage: React.FC = () => {
     
     // Fetch detailed inventory information
     try {
-      const response = await fetch('http://localhost:3001/api/inventory/check-availability', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,7 +161,7 @@ export const StoreKeeperVerificationsPage: React.FC = () => {
         verifiedByName: user?.user_name || 'System'
       };
 
-      const response = await fetch('http://localhost:3001/api/inventory/update-verification', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/update-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(verificationPayload)

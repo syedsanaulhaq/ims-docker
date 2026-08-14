@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
 interface TenderFormData {
   reference_number: string;

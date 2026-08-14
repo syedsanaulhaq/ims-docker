@@ -65,9 +65,9 @@ export const TenderWorkflow: React.FC = () => {
     try {
       setLoading(true);
       const [tendersRes, vendorsRes, categoriesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/annual-tenders'),
-        fetch('http://localhost:3001/api/vendors'),
-        fetch('http://localhost:3001/api/categories')
+        fetch(`${import.meta.env.VITE_API_URL}/api/annual-tenders`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/vendors`),
+        fetch(`${import.meta.env.VITE_API_URL}/api/categories`)
       ]);
 
       const tendersData = await tendersRes.json();
@@ -86,7 +86,7 @@ export const TenderWorkflow: React.FC = () => {
 
   const loadTenderAssignments = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/annual-tenders/${tenderId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/annual-tenders/${tenderId}`);
       const data = await response.json();
       const transformed = data.vendors?.map((v: any) => ({
         id: v.id,
@@ -115,7 +115,7 @@ export const TenderWorkflow: React.FC = () => {
       if (!mainCategory) throw new Error('No categories found');
 
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${selectedTender.id}/assign-vendors`,
+        `${import.meta.env.VITE_API_URL}/api/annual-tenders/${selectedTender.id}/assign-vendors`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -151,7 +151,7 @@ export const TenderWorkflow: React.FC = () => {
     setIsSaving(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${selectedTender.id}/assign-vendors`,
+        `${import.meta.env.VITE_API_URL}/api/annual-tenders/${selectedTender.id}/assign-vendors`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -183,7 +183,7 @@ export const TenderWorkflow: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/api/vendor-assignments/${assignmentId}`,
+        `${import.meta.env.VITE_API_URL}/api/vendor-assignments/${assignmentId}`,
         { method: 'DELETE' }
       );
 

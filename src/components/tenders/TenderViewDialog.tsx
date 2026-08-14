@@ -122,19 +122,19 @@ const TenderViewDialog: React.FC<TenderViewDialogProps> = ({ tender, open, onClo
             <div className="font-semibold mb-2">Uploaded Documents</div>
             <ul className="space-y-1">
               {tender.rfp_file_path && (
-                <li><a href={`http://localhost:3001/uploads/${tender.rfp_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">RFP Document</a></li>
+                <li><a href={`${import.meta.env.VITE_API_URL}/uploads/${tender.rfp_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">RFP Document</a></li>
               )}
               {tender.contract_file_path && (
-                <li><a href={`http://localhost:3001/uploads/${tender.contract_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Contract Document</a></li>
+                <li><a href={`${import.meta.env.VITE_API_URL}/uploads/${tender.contract_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Contract Document</a></li>
               )}
               {tender.loi_file_path && (
-                <li><a href={`http://localhost:3001/uploads/${tender.loi_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Letter of Intent (LoI)</a></li>
+                <li><a href={`${import.meta.env.VITE_API_URL}/uploads/${tender.loi_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Letter of Intent (LoI)</a></li>
               )}
               {tender.po_file_path && (
                 <li><a href={`https://euhthwosspivtzmqifsy.supabase.co/storage/v1/object/public/${tender.po_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Purchase/Supply Order</a></li>
               )}
               {tender.noting_file_path && (
-                <li><a href={`http://localhost:3001/uploads/${tender.noting_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Noting</a></li>
+                <li><a href={`${import.meta.env.VITE_API_URL}/uploads/${tender.noting_file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Noting</a></li>
               )}
               {!(tender.rfp_file_path || tender.contract_file_path || tender.loi_file_path || tender.po_file_path || tender.noting_file_path) && (
                 <li className="text-xs text-muted-foreground">No documents uploaded</li>

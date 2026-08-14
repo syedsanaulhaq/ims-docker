@@ -77,7 +77,7 @@ const StockQuantitiesPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:3001/api/inventory/stock-breakdown?show_zero_stock=true', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/stock-breakdown?show_zero_stock=true`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
@@ -110,7 +110,7 @@ const StockQuantitiesPage: React.FC = () => {
     setDetailHistory([]);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/inventory/current-stock/${item.item_master_id}/history`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-stock/${item.item_master_id}/history`, {
         credentials: 'include'
       });
 

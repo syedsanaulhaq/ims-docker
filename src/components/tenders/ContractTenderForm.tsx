@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
 // Form schema matching the EXACT database tenders table structure
 const tenderSchema = z.object({

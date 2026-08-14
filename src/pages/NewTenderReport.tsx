@@ -47,7 +47,7 @@ const NewTenderReport: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders/${tenderId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch tender data: ${response.status} ${response.statusText}`);

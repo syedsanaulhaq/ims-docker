@@ -72,7 +72,7 @@ const AllInventoryItemsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:3001/api/inventory/current-inventory-stock', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/current-inventory-stock`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'

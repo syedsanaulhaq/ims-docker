@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
 interface TenderFormData {
   reference_number: string;

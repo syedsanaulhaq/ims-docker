@@ -151,7 +151,7 @@ const TenderManagement: React.FC = () => {
     
     try {
       // Fetch tenders from API using direct fetch
-      const response = await fetch('http://localhost:3001/api/tenders');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tenders`);
       const tendersResponse = await response.json();
       setTenders(Array.isArray(tendersResponse) ? tendersResponse : []);
 

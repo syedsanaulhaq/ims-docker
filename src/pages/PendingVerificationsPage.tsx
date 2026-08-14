@@ -73,7 +73,7 @@ export const PendingVerificationsPage: React.FC = () => {
       }
       
       // Use the same endpoint as WingDashboard - fetches verification requests made BY the user
-      const response = await fetch(`http://localhost:3001/api/inventory/my-verification-requests?userId=${encodeURIComponent(user.user_id)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/my-verification-requests?userId=${encodeURIComponent(user.user_id)}`);
       const data = await response.json();
       
       if (data.success) {
@@ -137,7 +137,7 @@ export const PendingVerificationsPage: React.FC = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:3001/api/inventory/update-verification', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/update-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -160,7 +160,7 @@ export const PendingVerificationsPage: React.FC = () => {
     // Fetch detailed inventory information
     try {
       // Get availability data for this item
-      const response = await fetch('http://localhost:3001/api/inventory/check-availability', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,7 +212,7 @@ export const PendingVerificationsPage: React.FC = () => {
 
     // Fetch store keepers for the same wing
     try {
-      const skResponse = await fetch(`http://localhost:3001/api/ims/users?wing_id=${request.wing_id}&role=WING_STORE_KEEPER`);
+      const skResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/ims/users?wing_id=${request.wing_id}&role=WING_STORE_KEEPER`);
       const skData = await skResponse.json();
       if (skData.success && Array.isArray(skData.data)) {
         setStoreKeepers(skData.data);
@@ -249,7 +249,7 @@ export const PendingVerificationsPage: React.FC = () => {
         forwardNotes: verificationNotes || 'Please verify item availability from the store.'
       };
 
-      const response = await fetch('http://localhost:3001/api/inventory/forward-verification-to-storekeeper', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/inventory/forward-verification-to-storekeeper`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(forwardingPayload)

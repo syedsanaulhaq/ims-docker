@@ -95,8 +95,8 @@ export const WorkflowAdmin: React.FC = () => {
       setError(null);
 
       const [configsResponse, rolesResponse] = await Promise.all([
-        fetch('http://localhost:3001/api/approvals/workflow/configs', { credentials: 'include' }),
-        fetch('http://localhost:3001/api/permissions/roles', { credentials: 'include' })
+        fetch(`${import.meta.env.VITE_API_URL}/api/approvals/workflow/configs`, { credentials: 'include' }),
+        fetch(`${import.meta.env.VITE_API_URL}/api/permissions/roles`, { credentials: 'include' })
       ]);
 
       const configsData = await configsResponse.json();
@@ -207,7 +207,7 @@ export const WorkflowAdmin: React.FC = () => {
         throw new Error('Add at least one role to save the workflow');
       }
 
-      const response = await fetch(`http://localhost:3001/api/approvals/workflow/configs/${selectedGroup}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/workflow/configs/${selectedGroup}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -273,7 +273,7 @@ export const WorkflowAdmin: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch(`http://localhost:3001/api/approvals/workflow/configs/${groupNumber}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/workflow/configs/${groupNumber}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -347,7 +347,7 @@ export const WorkflowAdmin: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch(`http://localhost:3001/api/approvals/workflow/configs/${targetGroup}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/workflow/configs/${targetGroup}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -377,7 +377,7 @@ export const WorkflowAdmin: React.FC = () => {
       setCheckerLoading(true);
       setCheckerError(null);
 
-      const response = await fetch('http://localhost:3001/api/approvals/workflow/group-items', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/workflow/group-items`, {
         credentials: 'include'
       });
 

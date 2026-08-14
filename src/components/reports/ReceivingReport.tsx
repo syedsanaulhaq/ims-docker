@@ -105,14 +105,14 @@ export default function ReceivingReport({ po, onClose }: ReceivingReportProps) {
     try {
       setLoading(true);
       // Fetch all deliveries for this PO
-      const deliveriesResponse = await fetch(`http://localhost:3001/api/deliveries/by-po/${po.id}`);
+      const deliveriesResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/by-po/${po.id}`);
       if (!deliveriesResponse.ok) throw new Error('Failed to fetch deliveries');
       const deliveriesData = await deliveriesResponse.json();
       setDeliveries(deliveriesData);
 
       // Fetch items for each delivery
       const itemsPromises = deliveriesData.map(async (delivery: Delivery) => {
-        const itemsResponse = await fetch(`http://localhost:3001/api/deliveries/${delivery.id}/items`);
+        const itemsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/${delivery.id}/items`);
         if (!itemsResponse.ok) throw new Error('Failed to fetch delivery items');
         return {
           deliveryId: delivery.id,
@@ -130,7 +130,7 @@ export default function ReceivingReport({ po, onClose }: ReceivingReportProps) {
 
       // Fetch serial numbers for each delivery
       const serialPromises = deliveriesData.map(async (delivery: Delivery) => {
-        const serialResponse = await fetch(`http://localhost:3001/api/deliveries/${delivery.id}/serial-numbers`);
+        const serialResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/deliveries/${delivery.id}/serial-numbers`);
         if (!serialResponse.ok) return { deliveryId: delivery.id, serials: [] };
         return {
           deliveryId: delivery.id,
