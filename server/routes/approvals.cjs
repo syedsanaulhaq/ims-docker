@@ -223,6 +223,11 @@ const requirePermission = (permission) => {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       // Check if user has permission in session
+      const isSuperAdmin = req.session.user?.is_super_admin === true;
+      if (isSuperAdmin) {
+        return next();
+      }
+      
       const hasPermission = req.session.user?.ims_permissions?.some(p => p.permission_key === permission);
       if (hasPermission) {
         return next();

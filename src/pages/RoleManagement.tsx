@@ -13,7 +13,7 @@ import {
   Save
 } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL}`;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface Role {
   role_id: string;
@@ -121,6 +121,14 @@ const RoleManagement: React.FC = () => {
         ? prev.filter(k => k !== permissionKey)
         : [...prev, permissionKey]
     );
+  };
+
+  const handleToggleAllPermissions = (checked: boolean) => {
+    if (checked) {
+      setSelectedPermissions(permissions.map(p => p.permission_key));
+    } else {
+      setSelectedPermissions([]);
+    }
   };
 
   const handleSaveRole = async () => {
@@ -380,7 +388,19 @@ const RoleManagement: React.FC = () => {
 
               {/* Permissions */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Assign Permissions</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Assign Permissions</h3>
+                  
+                  <label className="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-2 rounded-md border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedPermissions.length === permissions.length && permissions.length > 0}
+                      onChange={(e) => handleToggleAllPermissions(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-semibold text-blue-900">Select All Permissions</span>
+                  </label>
+                </div>
 
                 {Object.entries(permissionsByModule).map(([module, perms]) => (
                   <div key={module} className="mb-6">

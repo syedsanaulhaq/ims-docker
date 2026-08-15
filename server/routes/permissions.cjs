@@ -24,6 +24,11 @@ const requirePermission = (permission) => {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       // Check if user has permission in session
+      const isSuperAdmin = req.session.user?.is_super_admin === true;
+      if (isSuperAdmin) {
+        return next();
+      }
+      
       const hasPermission = req.session.user?.ims_permissions?.some(p => p.permission_key === permission);
       if (hasPermission) {
         return next();
@@ -357,10 +362,6 @@ router.put('/roles/:roleId/permissions', requireAuth, requirePermission('roles.m
     const roleCheck = await pool.request()
       .input('roleId', sql.UniqueIdentifier, roleId)
       .query('SELECT role_name FROM ims_roles WHERE id = @roleId');
-
-    if (roleCheck.recordset[0]?.role_name === 'IMS_SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Cannot modify IMS_SUPER_ADMIN role permissions' });
-    }
 
     // Start transaction
     const transaction = new sql.Transaction(pool);
