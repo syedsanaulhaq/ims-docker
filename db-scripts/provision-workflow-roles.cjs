@@ -1,4 +1,4 @@
-const { sql, getPool, initializePool } = require('./server/db/connection.cjs');
+const { sql, getPool, initializePool } = require('../server/db/connection.cjs');
 
 const ROLES_TO_CREATE = [
   { name: 'DG_ADMIN', display: 'DG Admin', desc: 'Director General workflow approver' },

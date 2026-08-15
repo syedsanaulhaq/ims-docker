@@ -1,4 +1,4 @@
-const { sql, getPool, initializePool } = require('./server/db/connection.cjs');
+const { sql, getPool, initializePool } = require('../server/db/connection.cjs');
 
 const ROLE_PERMISSIONS = {
   'IMS_SUPER_ADMIN': 'ALL',

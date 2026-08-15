@@ -129,7 +129,13 @@ SELECT
     sup.FullName as supervisor_name,
     sir.admin_id,
     adm.FullName as admin_name,
-    DATEDIFF(HOUR, sir.submitted_at, GETDATE()) as pending_hours
+    sir.admin_reviewed_at,
+    sir.admin_action,
+    sir.admin_comments,
+    sir.forwarding_reason,
+    (SELECT COUNT(*) FROM stock_issuance_items WHERE request_id = sir.id) as total_items,
+    (SELECT COUNT(*) FROM stock_issuance_items WHERE request_id = sir.id AND UPPER(ISNULL(item_status, '')) = 'APPROVED') as approved_items,
+    ISNULL((SELECT SUM(requested_quantity) FROM stock_issuance_items WHERE request_id = sir.id), 0) as requested_quantity
 FROM stock_issuance_requests sir
 LEFT JOIN AspNetUsers u ON sir.requester_user_id = u.Id
 LEFT JOIN AspNetUsers sup ON sir.supervisor_id = sup.Id
