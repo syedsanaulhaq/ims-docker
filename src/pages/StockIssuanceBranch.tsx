@@ -430,7 +430,7 @@ const StockIssuanceBranch: React.FC = () => {
   };
 
   const filteredItems = itemsLibrary.filter(item => {
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = searchTerm.toLowerCase().trim();
     const matchesSearch = item.vItemNomenclature.toLowerCase().includes(searchLower) ||
                           (item.vItemCode && item.vItemCode.toLowerCase().includes(searchLower));
     const matchesCategory = selectedCategory === 'all' || item.vCategoryName === selectedCategory;
