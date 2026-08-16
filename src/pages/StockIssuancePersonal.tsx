@@ -183,6 +183,7 @@ const StockIssuancePersonal: React.FC = () => {
             return {
               id: item.id || `inventory-${item.item_master_id}`,
               item_master_id: item.item_master_id,  // Add this field
+              item_code: item.item_code || '',
               intOfficeID: item.id,
               nomenclature: item.nomenclature || item.item_name || 'Unknown Item',
               description: item.category_description || item.description || '',

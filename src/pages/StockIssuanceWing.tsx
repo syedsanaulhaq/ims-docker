@@ -298,6 +298,7 @@ const StockIssuanceWing: React.FC = () => {
           .map((item) => ({
             id: `inventory-${item.id}`,
             item_master_id: String(item.item_master_id || item.id || ''),
+            item_code: item.item_code || item.item_masters?.item_code || '',
             intOfficeID: item.id,
             nomenclature: item.nomenclature || item.item_masters?.nomenclature || 'Unknown Item',
             category_id: item.category_id,
