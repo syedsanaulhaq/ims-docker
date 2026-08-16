@@ -269,7 +269,9 @@ const StockIssuancePersonal: React.FC = () => {
   };
 
   const filteredInventory = inventoryItems.filter(item => {
-    const matchesSearch = item.nomenclature.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = item.nomenclature.toLowerCase().includes(searchLower) ||
+                          (item.item_code && item.item_code.toLowerCase().includes(searchLower));
     const matchesCategory = selectedCategory === 'all' || item.category_name === selectedCategory;
     return matchesSearch && matchesCategory;
   });
