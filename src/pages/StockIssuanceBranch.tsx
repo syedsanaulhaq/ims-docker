@@ -624,7 +624,10 @@ const StockIssuanceBranch: React.FC = () => {
                       filteredItems.map(item => (
                         <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{item.vItemNomenclature}</div>
+                            <div className="font-medium text-sm">
+                              {item.vItemCode ? <span className="text-blue-600 mr-2 font-mono text-xs">[{item.vItemCode}]</span> : null}
+                              {item.vItemNomenclature}
+                            </div>
                             <div className="text-xs text-gray-600 line-clamp-2">
                               Unit: {item.vUnitOfMeasure || 'N/A'}
                             </div>

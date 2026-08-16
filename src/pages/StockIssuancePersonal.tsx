@@ -703,9 +703,12 @@ const StockIssuancePersonal: React.FC = () => {
                 {filteredInventory.length > 0 ? (
                   filteredInventory.map(item => (
                     <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">{item.nomenclature}</div>
-                        {item.description && (
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">
+                            {item.item_code ? <span className="text-blue-600 mr-2 font-mono text-xs">[{item.item_code}]</span> : null}
+                            {item.nomenclature}
+                          </div>
+                          {item.description && (
                           <div className="text-xs text-gray-600 line-clamp-2">
                             {item.description}
                           </div>
