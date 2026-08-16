@@ -109,6 +109,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
   const { hasPermission: canViewReports } = usePermission('reports.view');
   const { hasPermission: isWingSupervisor } = usePermission('wing.supervisor');
   const { hasPermission: isWingStoreKeeper } = usePermission('inventory.manage_store_keeper');
+  const { hasPermission: canViewSupervisorMenu } = usePermission('supervisor.menu.view');
   const { hasPermission: isSuperAdmin } = usePermission('admin.super');
   const permissionKeys = new Set((user?.ims_permissions || []).map(p => String(p.permission_key || '').toLowerCase()));
   const hasCentralInventoryViewPermission = permissionKeys.has('inventory.view');
@@ -248,7 +249,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Supervisor",
     icon: Users,
     items: [
-      { title: "Supervisor Dashboard", icon: CheckCircle, path: "/dashboard/supervisor-approval-dashboard", permission: 'approval.approve' },
+      { title: "Supervisor Dashboard", icon: CheckCircle, path: "/dashboard/supervisor-approval-dashboard", permission: 'supervisor.menu.view' },
       { title: "Requisition Report", icon: FileText, path: "/dashboard/requisition-report", permission: undefined },
     ]
   };
@@ -387,6 +388,9 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     if (permissionKey === 'approval.approve') {
       return canApprove || hasApproverRole;
     }
+    if (permissionKey === 'supervisor.menu.view') {
+      return canViewSupervisorMenu || canApprove || hasApproverRole || isSuperAdmin;
+    }
     
     switch (permissionKey) {
       case 'inventory.view': return hasCentralInventoryViewPermission || isSuperAdmin;
@@ -418,8 +422,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
       groups.push({ ...personalMenuGroup, items: visiblePersonalItems });
     }
 
-    // Show Supervisor menu only for users with approval.approve permission or approver roles
-    if (canApprove || hasApproverRole) {
+    // Show Supervisor menu only for users with supervisor.menu.view permission, approval.approve, or approver roles
+    if (canViewSupervisorMenu || canApprove || hasApproverRole) {
       const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
       if (visibleSubordinateItems.length > 0) {
         groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
