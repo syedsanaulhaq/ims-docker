@@ -150,6 +150,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     role === 'DD ADMIN' ||
     role === 'BRANCH SUPERVISOR' ||
     role === 'BRANCH_SUPERVISOR' ||
+    role === 'WING SUPERVISOR' ||
+    role === 'WING_SUPERVISOR' ||
     role === 'STOREKEEPER' ||
     role === 'WING_STORE_KEEPER' ||
     role === 'BRANCH_STORE_KEEPER' ||
@@ -416,8 +418,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
       groups.push({ ...personalMenuGroup, items: visiblePersonalItems });
     }
 
-    // Show Supervisor menu only for users with approval.approve permission
-    if (canApprove) {
+    // Show Supervisor menu only for users with approval.approve permission or approver roles
+    if (canApprove || hasApproverRole) {
       const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
       if (visibleSubordinateItems.length > 0) {
         groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
