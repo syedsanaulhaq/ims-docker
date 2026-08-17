@@ -50,6 +50,7 @@ interface IssuanceItem {
   inventory_id: string;
   inventory_intOfficeID: string;
   item_master_id?: string;  // Add this field for the actual item master ID
+  item_code?: string;
   nomenclature: string;
   requested_quantity: number;
   last_issued_quantity?: number;
@@ -271,7 +272,7 @@ const StockIssuancePersonal: React.FC = () => {
 
   const filteredInventory = inventoryItems.filter(item => {
     const searchLower = searchTerm.toLowerCase().trim();
-    const matchesSearch = item.nomenclature.toLowerCase().includes(searchLower) ||
+    const matchesSearch = (item.nomenclature || '').toLowerCase().includes(searchLower) ||
                           (item.item_code && item.item_code.toLowerCase().includes(searchLower));
     const matchesCategory = selectedCategory === 'all' || item.category_name === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -291,6 +292,7 @@ const StockIssuancePersonal: React.FC = () => {
       inventory_id: item.id,
       inventory_intOfficeID: item.intOfficeID,
       item_master_id: item.item_master_id,  // Add the actual item master ID
+      item_code: item.item_code,
       nomenclature: item.nomenclature,
       requested_quantity: 1,
       last_issued_quantity: history?.qty,
@@ -848,9 +850,12 @@ const StockIssuancePersonal: React.FC = () => {
                     <tbody>
                       {issuanceItems.map(item => (
                         <tr key={item.inventory_id} className="border-t align-middle">
-                          <td className="px-2 py-2 align-top">
-                            <div className="font-medium leading-tight break-words">{item.nomenclature}</div>
-                            <div className="text-[11px] text-gray-500 leading-tight">
+                          <td className="px-3 py-2">
+                            <div className="font-medium">
+                              {item.item_code ? <span className="text-blue-600 mr-2 font-mono text-xs">[{item.item_code}]</span> : null}
+                              {item.nomenclature}
+                            </div>
+                            <div className="text-xs text-gray-500">
                               {item.item_type === 'custom' ? 'Custom item' : `Available: ${item.available_stock}`}
                             </div>
                           </td>
