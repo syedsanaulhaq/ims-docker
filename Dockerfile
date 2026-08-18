@@ -14,8 +14,7 @@ RUN npm install --silent
 
 # Copy frontend source and build
 COPY . .
-RUN npm run build && \
-    rm -rf public && mv dist public
+RUN npm run build
 
 # ============================================
 # 🚀 Production Stage - Backend + Frontend
