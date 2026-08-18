@@ -62,8 +62,4 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "invmis-api.cjs"]
 EXPOSE 4173
 
-# Create startup script
-RUN echo '#!/bin/sh\nnpm run prod:start' > start.sh && chmod +x start.sh
 
-# Start the application
-CMD ["./start.sh"]
