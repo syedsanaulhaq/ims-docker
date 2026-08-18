@@ -59,7 +59,7 @@ ENV NODE_ENV=production
 
 # 🚀 Start application with dumb-init
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "invmis-api.cjs"]
-EXPOSE 4173
+CMD ["node", "server/index.cjs"]
+EXPOSE 5000
 
 
