@@ -12,7 +12,8 @@ WORKDIR /app/frontend
 COPY package*.json ./
 RUN npm install --silent
 
-# Copy frontend source and# Build the frontend application
+# Copy frontend source and build
+COPY . .
 RUN npm run build && \
     rm -rf public && mv dist public
 
