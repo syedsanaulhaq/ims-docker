@@ -64,7 +64,7 @@ const createBranchDemandForForwardedShortages = async (transaction, approvalId, 
       INNER JOIN approval_items ai ON ai.request_approval_id = ra.id
       LEFT JOIN item_masters im ON im.id = ai.item_master_id
       WHERE ra.id = @approvalId
-        AND sir.request_type = 'branch'
+        AND sir.request_type IN ('branch', 'individual', 'personal', 'Individual', 'Personal', 'wing', 'organizational', 'Organizational')
         AND ai.decision_type = 'FORWARD_TO_ADMIN'
         AND ISNULL(ai.requested_quantity, 0) > 0
     `);
@@ -138,7 +138,11 @@ const createProcurementRequestFromApproval = async (transaction, approvalId, use
         ai.item_master_id,
         COALESCE(ai.nomenclature, im.nomenclature, ai.custom_item_name) AS nomenclature,
         COALESCE(im.unit, ai.unit, 'units') AS unit,
-        ISNULL(ai.requested_quantity, 0) AS quantity_needed,
+        CASE
+          WHEN ISNULL(ai.requested_quantity, 0) - ISNULL(ai.allocated_quantity, 0) > 0
+            THEN ISNULL(ai.requested_quantity, 0) - ISNULL(ai.allocated_quantity, 0)
+          ELSE ISNULL(ai.requested_quantity, 0)
+        END AS quantity_needed,
         CAST(sir.requester_branch_id AS NVARCHAR(200)) AS branch_name
       FROM request_approvals ra
       INNER JOIN stock_issuance_requests sir ON sir.id = ra.request_id
@@ -1791,6 +1795,54 @@ router.get('/my-approvals', async (req, res) => {
             ORDER BY ai.nomenclature
           `);
         items = itemsResult.recordset || [];
+
+        // Self-healing: if no approval_items exist, populate them from stock_issuance_items
+        if (items.length === 0 && approval.request_id) {
+          console.log(`⚠️ Self-healing in my-approvals: No approval_items for approval ${approval.id}, creating from stock_issuance_items`);
+          const stockItems = await pool.request()
+            .input('requestId', sql.UniqueIdentifier, approval.request_id)
+            .query(`SELECT id, item_master_id, nomenclature, custom_item_name, requested_quantity FROM stock_issuance_items WHERE request_id = @requestId`);
+
+          for (const item of stockItems.recordset) {
+            try {
+              await pool.request()
+                .input('approvalId', sql.UniqueIdentifier, approval.id)
+                .input('itemId', sql.UniqueIdentifier, item.id)
+                .input('itemMasterId', sql.UniqueIdentifier, item.item_master_id || null)
+                .input('nomenclature', sql.NVarChar(sql.MAX), item.nomenclature)
+                .input('customName', sql.NVarChar(sql.MAX), item.custom_item_name)
+                .input('qty', sql.Int, item.requested_quantity)
+                .query(`
+                  IF NOT EXISTS (SELECT 1 FROM approval_items WHERE id = @itemId)
+                  INSERT INTO approval_items 
+                    (id, request_approval_id, item_master_id, nomenclature, custom_item_name, requested_quantity, decision_type, created_at, updated_at)
+                  VALUES 
+                    (@itemId, @approvalId, @itemMasterId, @nomenclature, @customName, @qty, 'PENDING', GETDATE(), GETDATE())
+                `);
+            } catch (itemErr) {
+              console.error(`❌ Self-healing in my-approvals failed for item ${item.nomenclature}:`, itemErr.message);
+            }
+          }
+
+          // Re-query
+          const itemsResult2 = await pool.request()
+            .input('approvalId', sql.UniqueIdentifier, approval.id)
+            .query(`
+              SELECT
+                ai.id as item_id,
+                ai.nomenclature as item_name,
+                ai.custom_item_name,
+                ai.requested_quantity,
+                ai.allocated_quantity as approved_quantity,
+                COALESCE(ai.unit, 'units') as unit,
+                ai.decision_type,
+                ai.rejection_reason
+              FROM approval_items ai
+              WHERE ai.request_approval_id = @approvalId
+              ORDER BY ai.nomenclature
+            `);
+          items = itemsResult2.recordset || [];
+        }
       } catch (itemError) {
         console.log('Could not load items for approval', approval.id, ':', itemError.message);
       }
@@ -1883,6 +1935,17 @@ router.post('/:approvalId/approve', async (req, res) => {
     await transaction.begin();
 
     try {
+      const approvalRowResult = await transaction.request()
+        .input('approvalId', sql.NVarChar, approvalId)
+        .query(`
+          SELECT request_id, COALESCE(is_admin_workflow, 0) as is_admin_workflow
+          FROM request_approvals
+          WHERE id = @approvalId
+        `);
+
+      requestId = approvalRowResult.recordset?.[0]?.request_id || null;
+      const isAdminWorkflow = approvalRowResult.recordset?.[0]?.is_admin_workflow === 1 || approvalRowResult.recordset?.[0]?.is_admin_workflow === true;
+
       // Determine overall status
       const hasReturnActions = item_allocations?.some(a =>
         a.decision_type === 'RETURN' ||
@@ -1897,7 +1960,6 @@ router.post('/:approvalId/approve', async (req, res) => {
       let newApproverId = null;
       let isDynamicStepTransition = false;
       let dynamicTransitionLabel = '';
-      let requestId = null;
 
       if (hasReturnActions) {
         overallStatus = 'returned';
@@ -1915,16 +1977,6 @@ router.post('/:approvalId/approve', async (req, res) => {
       )) {
         overallStatus = 'approved';
       }
-
-      const approvalRowResult = await transaction.request()
-        .input('approvalId', sql.NVarChar, approvalId)
-        .query(`
-          SELECT request_id
-          FROM request_approvals
-          WHERE id = @approvalId
-        `);
-
-      requestId = approvalRowResult.recordset?.[0]?.request_id || null;
 
       // Determine affected workflow lanes from item allocations so mixed-group requests
       // can advance only the touched group lanes.
@@ -1972,6 +2024,88 @@ router.post('/:approvalId/approve', async (req, res) => {
             newApproverId = transition.approverId;
             isDynamicStepTransition = true;
             dynamicTransitionLabel = `Pending Step ${transition.nextStepOrder} of ${transition.totalSteps}`;
+          }
+        } else {
+          // Fallback routing when no dynamic workflow configuration is present
+          if (isAdminWorkflow) {
+            // Sequence fallback along the Admin workflow role chain: DD Admin -> AD Admin-I -> Storekeeper
+            const actorRoles = await getUserWorkflowRoles(pool, userId);
+            const actorRoleSet = new Set((actorRoles || []).map((role) => String(role || '').trim()));
+
+            let preferredRoles = ['DD Admin', 'AD Admin-I', 'AD Admin-II', 'Storekeeper'];
+            if (actorRoleSet.has('DD Admin')) {
+              preferredRoles = ['AD Admin-I', 'AD Admin-II', 'Storekeeper'];
+            } else if (actorRoleSet.has('AD Admin-I') || actorRoleSet.has('AD Admin-II')) {
+              preferredRoles = ['Storekeeper'];
+            } else if (actorRoleSet.has('Storekeeper')) {
+              preferredRoles = [];
+            }
+
+            if (preferredRoles.length > 0) {
+              const adminResult = await transaction.request()
+                .input('r1', sql.NVarChar(100), preferredRoles[0] || null)
+                .input('r2', sql.NVarChar(100), preferredRoles[1] || null)
+                .input('r3', sql.NVarChar(100), preferredRoles[2] || null)
+                .input('r4', sql.NVarChar(100), preferredRoles[3] || null)
+                .input('actorUserId', sql.NVarChar(450), userId)
+                .query(`
+                  SELECT TOP 1 ur.user_id,
+                    CASE
+                      WHEN r.role_name = @r1 THEN 1
+                      WHEN r.role_name = @r2 THEN 2
+                      WHEN r.role_name = @r3 THEN 3
+                      WHEN r.role_name = @r4 THEN 4
+                      ELSE 99
+                    END AS role_priority
+                  FROM ims_user_roles ur
+                  INNER JOIN ims_roles r ON r.id = ur.role_id
+                  INNER JOIN AspNetUsers u ON u.Id = ur.user_id
+                  WHERE ur.is_active = 1
+                    AND r.is_active = 1
+                    AND u.ISACT = 1
+                    AND ur.user_id <> @actorUserId
+                    AND r.role_name IN (@r1, @r2, @r3, @r4)
+                  ORDER BY role_priority ASC, u.FullName ASC
+                `);
+              if (adminResult.recordset.length > 0) {
+                overallStatus = 'pending';
+                newApproverId = adminResult.recordset[0].user_id;
+              }
+            } else {
+              // Final step (Storekeeper) approved it: complete the request!
+              overallStatus = 'approved';
+              newApproverId = null;
+            }
+          } else {
+            // Legacy/standard wing supervisor personal request approval routing (routes directly to Storekeeper)
+            const requestInfo = await transaction.request()
+              .input('reqId', sql.UniqueIdentifier, requestId)
+              .query(`SELECT request_type, requester_wing_id FROM stock_issuance_requests WHERE id = @reqId`);
+            
+            if (requestInfo.recordset.length > 0) {
+              const reqType = String(requestInfo.recordset[0].request_type || '').toLowerCase();
+              const wingId = requestInfo.recordset[0].requester_wing_id;
+              
+              if ((reqType === 'individual' || reqType === 'personal') && wingId) {
+                const storekeeperRes = await transaction.request()
+                  .input('wingId', sql.Int, wingId)
+                  .query(`
+                    SELECT TOP 1 u.Id
+                    FROM AspNetUsers u
+                    INNER JOIN ims_user_roles ur ON u.Id = ur.user_id
+                    INNER JOIN ims_roles r ON ur.role_id = r.id
+                    WHERE u.intWingID = @wingId
+                      AND u.ISACT = 1
+                      AND ur.is_active = 1
+                      AND r.role_name = 'Storekeeper'
+                  `);
+                
+                if (storekeeperRes.recordset.length > 0) {
+                  overallStatus = 'pending';
+                  newApproverId = storekeeperRes.recordset[0].Id;
+                }
+              }
+            }
           }
         }
       }
@@ -2159,7 +2293,7 @@ router.post('/:approvalId/approve', async (req, res) => {
           ? 'forwarded_to_procurement'
           : hasForwardToSupervisor
             ? 'forwarded_to_supervisor'
-            : isDynamicStepTransition
+            : (isDynamicStepTransition || overallStatus === 'pending')
               ? 'approved_step'
               : (hasReturnActions ? 'returned' : overallStatus);
       let historyComment = approval_comments || '';
@@ -2290,6 +2424,25 @@ router.post('/:approvalId/approve', async (req, res) => {
         if (syncRequestId) {
           let sirStatus = 'Pending';
           let sirApprovalStatus = 'Pending Supervisor Review';
+
+          if (overallStatus === 'pending' && !isDynamicStepTransition && newApproverId) {
+            const approverRoleRes = await transaction.request()
+              .input('approverId', sql.NVarChar, newApproverId)
+              .query(`
+                SELECT r.role_name AS Name
+                FROM ims_user_roles ur
+                INNER JOIN ims_roles r ON ur.role_id = r.id
+                WHERE ur.user_id = @approverId
+                  AND ur.is_active = 1
+                  AND r.is_active = 1
+              `);
+            const roles = (approverRoleRes.recordset || []).map(r => r.Name);
+            if (roles.includes('Storekeeper')) {
+              sirApprovalStatus = 'Approved by Supervisor';
+            } else {
+              sirApprovalStatus = 'Pending Supervisor Review';
+            }
+          }
           
           if (isDynamicStepTransition) {
             sirStatus = 'Pending';

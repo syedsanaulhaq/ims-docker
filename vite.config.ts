@@ -19,13 +19,7 @@ export default defineConfig(({ mode }) => {
   server: {
     host: "::",
     port: 8080,
-    // Optimize for better performance when losing focus
-    hmr: {
-      overlay: false,
-      protocol: 'ws',
-      host: 'localhost',
-      port: 8081, // Match the actual port being used
-    },
+    hmr: false,
     watch: {
       // Reduce file watching overhead
       usePolling: false,
@@ -56,9 +50,7 @@ export default defineConfig(({ mode }) => {
       'lucide-react'
     ],
     // Exclude problematic packages from optimization
-    exclude: ['@lovable/gpt-tokenizer'],
-    // Force optimization for lucide-react
-    force: true
+    exclude: ['@lovable/gpt-tokenizer']
   },
   build: {
     // Improve build performance

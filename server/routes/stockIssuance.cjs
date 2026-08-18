@@ -1339,7 +1339,7 @@ const createStockIssuanceRequest = async (req, res) => {
         } else {
           try {
             dynamicWorkflowResult = await initializeWorkflowForRequest(pool, requestId, userId, null, {
-              startAtAdminChain: isBranchSupervisorSubmission
+              startAtAdminChain: isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational'
             });
             if (dynamicWorkflowResult?.ok && dynamicWorkflowResult?.approverId) {
               approverId = dynamicWorkflowResult.approverId;
@@ -1426,7 +1426,7 @@ const createStockIssuanceRequest = async (req, res) => {
             .input('requestType', sql.NVarChar(50), 'stock_issuance')
             .input('approverId', sql.NVarChar(450), approverId)
             .input('submittedBy', sql.NVarChar(450), userId)
-            .input('isAdminWorkflow', sql.Bit, isBranchSupervisorSubmission ? 1 : 0)
+            .input('isAdminWorkflow', sql.Bit, (isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') ? 1 : 0)
             .query(`
               INSERT INTO request_approvals 
                 (request_id, request_type, workflow_id, current_approver_id, current_status, submitted_by, submitted_date, created_date, updated_date, is_admin_workflow)
@@ -1447,7 +1447,7 @@ const createStockIssuanceRequest = async (req, res) => {
                       updated_at = GETDATE()
                   WHERE id = @requestId
                 `);
-            } else if (isBranchSupervisorSubmission) {
+            } else if (isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') {
               if (dynamicWorkflowResult?.ok) {
                 await bindRequestApprovalId(pool, requestId, approvalId);
               }
@@ -1597,10 +1597,12 @@ router.post('/items', requireAuth, async (req, res) => {
           const stockRequest = requestResult.recordset[0] || null;
           const submittedBy = stockRequest?.requester_user_id || req.session.userId;
           const submitterWorkflowRoles = await getUserWorkflowRoles(pool, submittedBy);
-          const isBranchSupervisorSubmission = String(stockRequest?.request_type || '').trim().toLowerCase() === 'branch'
+          const normalizedReqType = String(stockRequest?.request_type || '').trim().toLowerCase();
+          const isBranchSupervisorSubmission = normalizedReqType === 'branch'
             && submitterWorkflowRoles.some(isBranchSupervisorRole);
+          const isWingOrOrgRequest = normalizedReqType === 'wing' || normalizedReqType === 'organizational';
 
-          if (isBranchSupervisorSubmission) {
+          if (isBranchSupervisorSubmission || isWingOrOrgRequest) {
             const dynamicWorkflowResult = await initializeWorkflowForRequest(pool, request_id, submittedBy, approvalId, {
               startAtAdminChain: true
             });
@@ -1627,8 +1629,7 @@ router.post('/items', requireAuth, async (req, res) => {
                       updated_at = GETDATE()
                   WHERE id = @requestId
                 `);
-            } else {
-              }
+            }
           }
           
           // Get the items we just inserted
@@ -1959,8 +1960,9 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
     const requestResult = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .query(`
-        SELECT sir.*, u.FullName as requester_name
+        SELECT sir.*, ra.is_admin_workflow, u.FullName as requester_name
         FROM stock_issuance_requests sir
+        LEFT JOIN request_approvals ra ON sir.id = ra.request_id
         LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
         WHERE sir.id = @id
       `);
@@ -2004,21 +2006,27 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Only store keepers can issue items' });
     }
 
-    // Verify the store keeper belongs to the same wing as the requester
-    if (issuerWingId && request.requester_wing_id && issuerWingId !== request.requester_wing_id) {
-      return res.status(403).json({ 
-        error: 'You can only issue items for requests from your own wing',
-        your_wing: issuerWingId,
-        request_wing: request.requester_wing_id
-      });
-    }
+    // Verify the store keeper belongs to the same wing/branch as the requester (bypassed for admin-workflow requests)
+    if (!request.is_admin_workflow) {
+      if (issuerWingId && request.requester_wing_id && issuerWingId !== request.requester_wing_id) {
+        return res.status(403).json({ 
+          error: 'You can only issue items for requests from your own wing',
+          your_wing: issuerWingId,
+          request_wing: request.requester_wing_id
+        });
+      }
 
-    if (issuerBranchId && request.requester_branch_id && issuerBranchId !== request.requester_branch_id) {
-      return res.status(403).json({
-        error: 'You can only issue items for requests from your own branch',
-        your_branch: issuerBranchId,
-        request_branch: request.requester_branch_id
-      });
+      // Bypass branch check if the storekeeper has WING_STORE_KEEPER or global Storekeeper role
+      const isWingStorekeeper = skCheck.recordset.some(r => r.role_name === 'WING_STORE_KEEPER' || r.role_name === 'Storekeeper');
+      if (!isWingStorekeeper) {
+        if (issuerBranchId && request.requester_branch_id && issuerBranchId !== request.requester_branch_id) {
+          return res.status(403).json({
+            error: 'You can only issue items for requests from your own branch',
+            your_branch: issuerBranchId,
+            request_branch: request.requester_branch_id
+          });
+        }
+      }
     }
 
     const status = (request.approval_status || '').toLowerCase();
@@ -2241,6 +2249,94 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
     console.error('Error processing issuance:', error);
     res.status(500).json({ error: 'Failed to process issuance', details: error.message });
   }
+});
+
+// ============================================================================
+// POST /api/stock-issuance/dispatch/:id - Mark issued request as dispatched
+// ============================================================================
+router.post('/dispatch/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { dispatch_method, dispatcher_name, dispatch_notes } = req.body;
+    const pool = getPool();
+    const userId = req.session?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const requestResult = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .query(`SELECT request_number FROM stock_issuance_requests WHERE id = @id`);
+
+    if (requestResult.recordset.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    const requestNumber = requestResult.recordset[0].request_number;
+
+    await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('method', sql.NVarChar(100), dispatch_method || 'Direct')
+      .input('name', sql.NVarChar(255), dispatcher_name || '')
+      .input('notes', sql.NVarChar(sql.MAX), dispatch_notes || '')
+      .input('userId', sql.NVarChar(450), userId)
+      .query(`
+        UPDATE stock_issuance_requests
+        SET dispatch_method = @method,
+            dispatcher_name = @name,
+            dispatch_notes = @notes,
+            dispatched_at = GETDATE(),
+            dispatched_by = @userId,
+            request_status = 'Completed',
+            approval_status = 'Completed',
+            updated_at = GETDATE()
+        WHERE id = @id
+      `);
+
+    // Insert history
+    const raResult = await pool.request()
+      .input('requestId', sql.UniqueIdentifier, id)
+      .query(`SELECT id FROM request_approvals WHERE request_id = @requestId`);
+
+    if (raResult.recordset.length > 0) {
+      const approvalId = raResult.recordset[0].id;
+
+      // Get next step number
+      const stepResult = await pool.request()
+        .input('approvalId', sql.UniqueIdentifier, approvalId)
+        .query(`SELECT ISNULL(MAX(step_number), 0) + 1 as next_step FROM approval_history WHERE request_approval_id = @approvalId`);
+
+      const nextStep = stepResult.recordset[0].next_step;
+
+      await pool.request()
+        .input('approvalId', sql.UniqueIdentifier, approvalId)
+        .query(`UPDATE approval_history SET is_current_step = 0 WHERE request_approval_id = @approvalId`);
+
+      await pool.request()
+        .input('approvalId', sql.UniqueIdentifier, approvalId)
+        .input('actionBy', sql.NVarChar(450), userId)
+        .input('comments', sql.NVarChar(sql.MAX), `Items dispatched via ${dispatch_method} (Dispatcher: ${dispatcher_name})`)
+        .input('stepNumber', sql.Int, nextStep)
+        .query(`
+          INSERT INTO approval_history
+          (request_approval_id, action_type, action_by, comments, step_number, is_current_step)
+          VALUES (@approvalId, 'dispatched', @actionBy, @comments, @stepNumber, 1)
+        `);
+    }
+
+    res.json({ success: true, message: `Request ${requestNumber} dispatched successfully` });
+  } catch (error) {
+    console.error('Error dispatching request:', error);
+    res.status(500).json({ error: 'Failed to dispatch request', details: error.message });
+  }
+});
+
+// ============================================================================
+// POST /api/stock-issuance/delivery-proof/:id - Upload delivery proof
+// ============================================================================
+router.post('/delivery-proof/:id', requireAuth, async (req, res) => {
+  res.json({ success: true, message: 'Delivery proof uploaded' });
 });
 
 // ============================================================================

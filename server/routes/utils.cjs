@@ -350,6 +350,112 @@ router.get('/wings/:wingId/decs', async (req, res) => {
 });
 
 // ============================================================================
+// GET /api/decs - Get all DECs
+// ============================================================================
+router.get('/decs', async (req, res) => {
+  try {
+    const pool = getPool();
+
+    const result = await pool.request()
+      .query(`
+        SELECT 
+          intAutoID,
+          WingID,
+          DECName,
+          DECAcronym,
+          DECAddress,
+          Location,
+          IS_ACT,
+          DateAdded,
+          DECCode,
+          HODID,
+          HODName,
+          CreatedAt,
+          UpdatedAt,
+          CreatedBy,
+          UpdatedBy,
+          Version
+        FROM DEC_MST 
+        WHERE IS_ACT = 1
+        ORDER BY DECName
+      `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('Error fetching all DECs:', error);
+    res.status(500).json({ error: 'Failed to fetch DECs', details: error.message });
+  }
+});
+
+// ============================================================================
+// POST /api/stock/check-availability-batch - Batch check availability
+// ============================================================================
+router.post('/stock/check-availability-batch', async (req, res) => {
+  try {
+    const items = req.body.items || [];
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.json({
+        summary: { total_items: 0, available: 0, unavailable: 0 },
+        all_available: true,
+        items: []
+      });
+    }
+
+    const pool = getPool();
+    const results = [];
+    
+    for (const item of items) {
+      const itemMasterId = item.item_master_id;
+      const requestedQty = Number(item.requested_quantity || 1);
+      
+      const qResult = await pool.request()
+        .input('ItemMasterId', sql.NVarChar, itemMasterId)
+        .query(`
+          SELECT 
+            im.nomenclature,
+            ISNULL(main_stock.main_qty, 0) as available_quantity
+          FROM item_masters im
+          LEFT JOIN (
+            SELECT item_master_id, current_quantity as main_qty
+            FROM current_inventory_stock
+            WHERE item_master_id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
+          ) main_stock ON main_stock.item_master_id = im.id
+          WHERE im.id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
+        `);
+        
+      const nomenclature = qResult.recordset[0]?.nomenclature || 'Unknown Item';
+      const availableQty = qResult.recordset[0]?.available_quantity || 0;
+      const canFulfill = availableQty >= requestedQty;
+      
+      results.push({
+        item_master_id: itemMasterId,
+        nomenclature,
+        requested_quantity: requestedQty,
+        available_quantity: availableQty,
+        can_fulfill: canFulfill,
+        availability_status: canFulfill ? 'Sufficient Stock' : `Insufficient Stock (${availableQty} available)`
+      });
+    }
+    
+    const availableCount = results.filter(r => r.can_fulfill).length;
+    const unavailableCount = results.length - availableCount;
+    
+    res.json({
+      summary: {
+        total_items: results.length,
+        available: availableCount,
+        unavailable: unavailableCount
+      },
+      all_available: unavailableCount === 0,
+      items: results
+    });
+  } catch (error) {
+    console.error('Error in check-availability-batch:', error);
+    res.status(500).json({ error: 'Failed to check batch availability', details: error.message });
+  }
+});
+
+// ============================================================================
 // GET /api/health - Health check
 // ============================================================================
 router.get('/health', async (req, res) => {

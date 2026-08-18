@@ -175,6 +175,32 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     role === 'IMS_ADMIN' ||
     role === 'ADMINISTRATOR'
   );
+
+  const hasSupervisorRole = roleNames.some(role =>
+    role === 'BRANCH SUPERVISOR' ||
+    role === 'BRANCH_SUPERVISOR' ||
+    role === 'WING SUPERVISOR' ||
+    role === 'WING_SUPERVISOR' ||
+    role === 'STOREKEEPER' ||
+    role === 'WING_STORE_KEEPER' ||
+    role === 'BRANCH_STORE_KEEPER' ||
+    role === 'CUSTOM_WING_STORE_KEEPER' ||
+    role === 'CUSTOM_BRANCH_STORE_KEEPER'
+  );
+
+  const hasAdminRole = roleNames.some(role =>
+    role === 'DG ADMIN' ||
+    role === 'DG_ADMIN' ||
+    role === 'AD ADMIN-I' ||
+    role === 'AD_ADMIN_I' ||
+    role === 'AD ADMIN-II' ||
+    role === 'AD_ADMIN_II' ||
+    role === 'DD ADMIN' ||
+    role === 'DD_ADMIN' ||
+    role === 'STOREKEEPER' ||
+    role === 'IMS_ADMIN' ||
+    role === 'ADMINISTRATOR'
+  );
   
   // Check if user has any store keeper role (including custom roles)
   const hasStoreKeeperRole = user?.ims_roles?.some(role => 
@@ -386,10 +412,10 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
   const checkPermission = (permissionKey?: string) => {
     if (!permissionKey) return true;
     if (permissionKey === 'approval.approve') {
-      return canApprove || hasApproverRole;
+      return canApprove || hasAdminRole || isSuperAdmin;
     }
     if (permissionKey === 'supervisor.menu.view') {
-      return canViewSupervisorMenu || canApprove || hasApproverRole || isSuperAdmin;
+      return canViewSupervisorMenu || hasSupervisorRole || isSuperAdmin;
     }
     
     switch (permissionKey) {
@@ -422,8 +448,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
       groups.push({ ...personalMenuGroup, items: visiblePersonalItems });
     }
 
-    // Show Supervisor menu only for users with supervisor.menu.view permission, approval.approve, or approver roles
-    if (canViewSupervisorMenu || canApprove || hasApproverRole) {
+    // Show Supervisor menu only for users with supervisor roles
+    if (canViewSupervisorMenu || hasSupervisorRole || isSuperAdmin) {
       const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
       if (visibleSubordinateItems.length > 0) {
         groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
@@ -480,7 +506,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     }
 
     // Show request history menu if user has APPROVAL permissions (approvers only)
-    if (canApprove || hasApproverRole) {
+    if (hasAdminRole || isSuperAdmin) {
       const visibleRequestHistoryItems = requestHistoryMenuGroup.items.filter(item => checkPermission(item.permission));
       if (visibleRequestHistoryItems.length > 0) {
         groups.push({ ...requestHistoryMenuGroup, items: visibleRequestHistoryItems });
@@ -488,7 +514,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     }
 
     // Show admin wing menu for admin-capable approvers.
-    if (canApprove || hasApproverRole || hasAdminApprovalRole || canManageRoles) {
+    if (hasAdminRole || isSuperAdmin || canManageRoles) {
       const visibleAdminWingItems = adminWingMenuGroup.items.filter(item => checkPermission(item.permission));
       if (visibleAdminWingItems.length > 0) {
         groups.push({ ...adminWingMenuGroup, items: visibleAdminWingItems });

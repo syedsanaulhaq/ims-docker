@@ -67,8 +67,14 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
   const [sortBy, setSortBy] = useState<'date' | 'requester'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [allScopedRequests, setAllScopedRequests] = useState<RequestSummary[]>([]);
-  const [activeScopeTab, setActiveScopeTab] = useState<'individual' | 'branch' | 'wing'>('individual');
   const selectedScope = new URLSearchParams(location.search).get('scope') || 'all';
+  const [activeScopeTab, setActiveScopeTab] = useState<'individual' | 'branch' | 'wing'>(() => {
+    if (selectedScope === 'branch' || selectedScope === 'wing') {
+      return selectedScope;
+    }
+    return 'individual';
+  });
+
 
   const statusPriority: Record<string, number> = {
     pending: 1,
@@ -136,7 +142,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       const userId = (user as any)?.user_id || (user as any)?.Id;
       const lanePending = await withTimeout(
         approvalForwardingService.getMyLanePending().catch(() => null),
-        6000,
+        30000,
         null
       );
       const pendingRequestIdSet = new Set(
@@ -150,13 +156,13 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       // Track which backend status each approval came from using precedence
       // so forwarded/rejected/returned is not downgraded to pending.
       const approvalSourceStatus = new Map<string, string>();
-
+ 
       const statusResults = await Promise.all(
         allStatuses.map(async (status) => {
           try {
             const approvals = await withTimeout(
               approvalForwardingService.getMyApprovalsByStatus(userId, status as any),
-              6000,
+              30000,
               [] as RequestApproval[]
             );
             return { status, approvals };
@@ -205,18 +211,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
         const requestId = approval.request_id;
 
         try {
-          const detailResponse = await fetch(`${apiUrl}/api/approvals/${approval.id}`, {
-            credentials: 'include'
-          });
-
-          if (!detailResponse.ok) {
-            console.warn(`Failed to fetch details for approval ${approval.id}`);
-            return null;
-          }
-
-          const detailData = await detailResponse.json();
-          const fullApproval = detailData.data || detailData;
-
+          let fullApproval = approval as any;
           const sourceStatus = approvalSourceStatus.get(requestId) || 'pending';
           const requestStatus = getRequestStatusFromApproval(approval, sourceStatus);
 
@@ -242,8 +237,54 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
             lane_tooltip: '',
             issuance_transfer_status: 'unknown',
             issued_at: null,
-            approval: { ...fullApproval, items: fullApproval.items || [] } as any
+            approval: null
           };
+
+          if (fullApproval.items && fullApproval.request_number) {
+            // OPTIMIZATION PATH: Use direct payload from list API
+            summary.approval = { ...fullApproval, items: fullApproval.items } as any;
+            
+            const items = fullApproval.items || [];
+            summary.total_items = items.length;
+            items.forEach((item: any) => {
+              const itemStatus = item.decision_type || 'PENDING';
+              if (itemStatus === 'APPROVE_FROM_STOCK') {
+                summary.approved_items++;
+              } else if (itemStatus === 'REJECT') {
+                summary.rejected_items++;
+              } else if (itemStatus === 'RETURN') {
+                summary.returned_items++;
+              } else if (itemStatus === 'FORWARD' || itemStatus === 'FORWARD_TO_ADMIN' || itemStatus === 'FORWARD_TO_SUPERVISOR') {
+                summary.forwarded_items++;
+              } else {
+                summary.pending_items++;
+              }
+            });
+            
+            // Set defaults for lanes/issuance to avoid parallel database calls on page load
+            summary.lane_count = 0;
+            summary.completed_lane_count = 0;
+            summary.pending_lane_count = 0;
+            summary.lane_parent_status = 'pending';
+            summary.lane_tooltip = '';
+            summary.issuance_transfer_status = 'unknown';
+            
+            return summary;
+          }
+
+          // FALLBACK PATH: Call detail endpoints if items/request_number are missing
+          const detailResponse = await fetch(`${apiUrl}/api/approvals/${approval.id}`, {
+            credentials: 'include'
+          });
+
+          if (!detailResponse.ok) {
+            console.warn(`Failed to fetch details for approval ${approval.id}`);
+            return null;
+          }
+
+          const detailData = await detailResponse.json();
+          fullApproval = detailData.data || detailData;
+          summary.approval = { ...fullApproval, items: fullApproval.items || [] } as any;
 
           const [issuanceResponse, laneSummary] = await Promise.all([
             fetch(`${apiUrl}/api/stock-issuance/${requestId}`, {
@@ -345,7 +386,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       }
 
       // Split flows by page mode to keep supervisor and admin experiences isolated.
-      const scopedRequests = Array.from(requestMap.values()).filter((request) => {
+      const scopedRequests = Array.from(requestMap.values()).filter(Boolean).filter((request) => {
         const adminWorkflow = isAdminWorkflowRequest(request);
 
         if (viewMode === 'admin') {
@@ -389,6 +430,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
         return pendingRequestIdSet.has(String(r.request_id)) || (r.lane_count || 0) === 0;
       });
 
+      console.log(`[DEBUG] loadDashboardData - uniqueApprovals: ${uniqueApprovals.length}, summaries: ${summaries.filter(Boolean).length}, scopedRequests: ${scopedRequests.length}, pendingFilteredScopedRequests: ${pendingFilteredScopedRequests.length}`);
       setAllScopedRequests(pendingFilteredScopedRequests);
       setDashboardStats(scopedStatusCounts);
     } catch (error) {
@@ -1457,7 +1499,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       )}
 
       {/* Wing Requests Table */}
-      {viewMode === 'admin' && activeScopeTab === 'wing' && (
+      {(viewMode !== 'admin' ? shouldShowScope('wing') : activeScopeTab === 'wing') && (
       <Card className="border border-gray-200">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">

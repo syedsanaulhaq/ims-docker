@@ -53,6 +53,11 @@ export interface RequestApproval {
   rejected_by?: string;
   rejected_date?: string;
   rejection_reason?: string;
+  items?: any[];
+  total_items?: number;
+  request_number?: string;
+  requester_name?: string;
+  has_forwarded_to_admin_history?: boolean;
 }
 
 export interface ApprovalAction {
@@ -306,6 +311,7 @@ class ApprovalForwardingService {
       
       const response = await fetch(url);
       const data = await response.json();
+      console.log(`[DEBUG] getMyApprovalsByStatus URL: ${url}, status: ${response.status}, count: ${Array.isArray(data.data) ? data.data.length : 'not an array'}`);
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch approvals');

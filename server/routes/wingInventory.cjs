@@ -137,7 +137,7 @@ router.get('/:wingId', requireAuth, async (req, res) => {
     }
 
     const invRequest = pool.request();
-    let wingFilter = 'AND sir.request_type = \'wing\'';
+    let wingFilter = 'AND (sir.request_type = \'wing\' OR sir.request_type = \'Organizational\')';
     if (!isAdmin) {
       invRequest.input('wingId', sql.Int, effectiveWingId);
       wingFilter += ' AND sir.requester_wing_id = @wingId';

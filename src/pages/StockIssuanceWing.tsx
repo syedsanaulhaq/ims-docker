@@ -237,7 +237,7 @@ const StockIssuanceWing: React.FC = () => {
 
       try {
         const apiBase = getApiBaseUrl();
-        const response = await fetch(`${apiBase}/api/wing-inventory/${selectedWingId}`, {
+        const response = await fetch(`${apiBase}/wing-inventory/${selectedWingId}`, {
           credentials: 'include'
         });
 
@@ -1049,7 +1049,7 @@ const StockIssuanceWing: React.FC = () => {
               {/* Submit Button */}
               <div className="mt-6">
                 <PermissionGate 
-                  permission="stock_request.create_wing"
+                  permission="stock_request.create"
                   fallback={
                     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
                       <p className="text-sm text-yellow-800">

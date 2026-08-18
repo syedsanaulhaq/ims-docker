@@ -137,15 +137,14 @@ router.get('/approvers', async (req, res) => {
         u.intOfficeID,
         u.intWingID,
         u.intDesignationID,
-        COALESCE(NULLIF(vud.strDesignation, ''), NULLIF(d.strDesignation, ''), '-') as designation,
+        COALESCE(NULLIF(d.strDesignation, ''), '-') as designation,
         o.strOfficeName as officeName,
-        w.WingName as wingName,
-        CONCAT(u.FullName, ' (', COALESCE(NULLIF(vud.strDesignation, ''), NULLIF(d.strDesignation, ''), u.Role), ')') as displayName
+        w.Name as wingName,
+        CONCAT(u.FullName, ' (', COALESCE(NULLIF(d.strDesignation, ''), u.Role), ')') as displayName
       FROM AspNetUsers u
-      LEFT JOIN vw_User_with_designation vud ON CONVERT(NVARCHAR(450), vud.Id) = CONVERT(NVARCHAR(450), u.Id)
       LEFT JOIN tblUserDesignations d ON u.intDesignationID = d.intDesignationID
-      LEFT JOIN Office_MST o ON u.intOfficeID = o.intOfficeID
-      LEFT JOIN Wing_MST w ON u.intWingID = w.intAutoID
+      LEFT JOIN tblOffices o ON u.intOfficeID = o.intOfficeID
+      LEFT JOIN WingsInformation w ON u.intWingID = w.Id
       WHERE u.ISACT = 1
       ORDER BY u.FullName
     `);
@@ -157,54 +156,7 @@ router.get('/approvers', async (req, res) => {
   }
 });
 
-// ============================================================================
-// GET /api/users/:id - Get single user details
-// ============================================================================
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const pool = getPool();
 
-    const result = await pool.request()
-      .input('userId', sql.NVarChar, id)
-      .query(`
-        SELECT 
-          u.Id,
-          u.FullName,
-          u.FatherOrHusbandName,
-          u.CNIC,
-          u.UserName,
-          u.Email,
-          u.PhoneNumber,
-          u.Role,
-          u.intOfficeID,
-          u.intWingID,
-          u.intBranchID,
-          u.intDesignationID,
-          u.Gender,
-          u.AddedOn,
-          u.LastLoggedIn,
-          COALESCE(NULLIF(vud.strDesignation, ''), NULLIF(d.strDesignation, ''), '-') as designation,
-          o.strOfficeName as officeName,
-          w.WingName as wingName
-        FROM AspNetUsers u
-        LEFT JOIN vw_User_with_designation vud ON CONVERT(NVARCHAR(450), vud.Id) = CONVERT(NVARCHAR(450), u.Id)
-        LEFT JOIN tblUserDesignations d ON u.intDesignationID = d.intDesignationID
-        LEFT JOIN Office_MST o ON u.intOfficeID = o.intOfficeID
-        LEFT JOIN Wing_MST w ON u.intWingID = w.intAutoID
-        WHERE u.Id = @userId AND u.ISACT = 1
-      `);
-
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(result.recordset[0]);
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user', details: error.message });
-  }
-});
 
 // ============================================================================
 // GET /api/offices/:officeId/wings - Get wings for an office
@@ -289,7 +241,7 @@ router.get('/wings/:wingId/decs', async (req, res) => {
 // ============================================================================
 // GET /api/aspnet-users/active - Get active AspNet users
 // ============================================================================
-router.get('/aspnet/active', async (req, res) => {
+router.get(['/aspnet/active', '/active'], async (req, res) => {
   try {
     const pool = getPool();
 
@@ -319,10 +271,14 @@ router.get('/aspnet/active', async (req, res) => {
 // ============================================================================
 // GET /api/aspnet-users/filtered - Get AspNet users with detailed info
 // ============================================================================
-router.get('/aspnet/filtered', async (req, res) => {
+router.get(['/aspnet/filtered', '/filtered'], async (req, res) => {
   try {
     const pool = getPool();
-    const { role, office_id, wing_id, branch_id, search } = req.query;
+    const role = req.query.role;
+    const office_id = req.query.office_id || req.query.officeId;
+    const wing_id = req.query.wing_id || req.query.wingId;
+    const branch_id = req.query.branch_id || req.query.branchId;
+    const search = req.query.search;
     const hasBranchFilter = branch_id !== undefined && branch_id !== null && String(branch_id).trim() !== '';
     const sessionBranchId = req.session?.user?.intBranchID || null;
     const effectiveBranchId = hasBranchFilter
@@ -431,13 +387,13 @@ router.get('/aspnet/filtered', async (req, res) => {
         u.intWingID,
         u.intBranchID,
         u.intDesignationID,
-        COALESCE(NULLIF(vud.strDesignation, ''), NULLIF(d.strDesignation, ''), '-') as designation,
-        CAST(NULL AS NVARCHAR(200)) as officeName,
+        COALESCE(NULLIF(d.strDesignation, ''), '-') as designation,
+        o.strOfficeName as officeName,
         w.Name as wingName,
         w.Name as wing_name
       FROM AspNetUsers u
-      LEFT JOIN vw_User_with_designation vud ON CONVERT(NVARCHAR(450), vud.Id) = CONVERT(NVARCHAR(450), u.Id)
       LEFT JOIN tblUserDesignations d ON u.intDesignationID = d.intDesignationID
+      LEFT JOIN tblOffices o ON u.intOfficeID = o.intOfficeID
       LEFT JOIN WingsInformation w ON u.intWingID = w.Id
       WHERE u.ISACT = 1
     `;
@@ -482,6 +438,55 @@ router.get('/aspnet/filtered', async (req, res) => {
   } catch (error) {
     console.error('Error fetching filtered users:', error);
     res.status(500).json({ error: 'Failed to fetch users', details: error.message });
+  }
+});
+
+
+// ============================================================================
+// GET /api/users/:id - Get single user details
+// ============================================================================
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pool = getPool();
+
+    const result = await pool.request()
+      .input('userId', sql.NVarChar, id)
+      .query(`
+        SELECT 
+          u.Id,
+          u.FullName,
+          u.FatherOrHusbandName,
+          u.CNIC,
+          u.UserName,
+          u.Email,
+          u.PhoneNumber,
+          u.Role,
+          u.intOfficeID,
+          u.intWingID,
+          u.intBranchID,
+          u.intDesignationID,
+          u.Gender,
+          u.AddedOn,
+          u.LastLoggedIn,
+          COALESCE(NULLIF(d.strDesignation, ''), '-') as designation,
+          o.strOfficeName as officeName,
+          w.Name as wingName
+        FROM AspNetUsers u
+        LEFT JOIN tblUserDesignations d ON u.intDesignationID = d.intDesignationID
+        LEFT JOIN tblOffices o ON u.intOfficeID = o.intOfficeID
+        LEFT JOIN WingsInformation w ON u.intWingID = w.Id
+        WHERE u.Id = @userId AND u.ISACT = 1
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.recordset[0]);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user', details: error.message });
   }
 });
 

@@ -685,6 +685,9 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
     // If user clicked pending, show items with PENDING decision type
     // Also include forwarded states because these are still pending decisions for current approver stage.
     if (activeFilter === 'pending') {
+      if (isDecisionStage) {
+        return request.items;
+      }
       return request.items.filter((item: any) => 
         ['', 'PENDING', 'FORWARD_TO_ADMIN', 'FORWARD_TO_SUPERVISOR', 'FORWARD_TO_PROCUREMENT'].includes(
           normalizeDecisionType(item.decision_type)
@@ -783,11 +786,7 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
   };
 
   const shouldShowProcurementForward = () => {
-    const normalizedRequestType = String(request?.request_type || '').trim().toLowerCase();
-    const normalizedScopeType = String(request?.scope_type || (request as any)?.approval?.scope_type || '').trim().toLowerCase();
-    const isProcurementManagedRequest = ['branch', 'individual', 'personal'].includes(normalizedRequestType) || ['branch', 'individual', 'personal'].includes(normalizedScopeType);
-    const hasOutOfStockItem = request?.items?.some((item: any) => isOutOfStock(item)) ?? false;
-    return viewMode === 'admin' && isProcurementManagedRequest && hasOutOfStockItem;
+    return viewMode === 'admin' || isAdminWorkflowRoleUser;
   };
 
   const getForwardAdminLabel = (suffix = '') => suffix ? `Forward to Admin${suffix}` : 'Forward to Admin';
@@ -1332,7 +1331,8 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                                   const approvedQuantity = (
                                     decisionValue === 'approve_wing' ||
                                     decisionValue === 'forward_admin' ||
-                                    decisionValue === 'forward_supervisor'
+                                    decisionValue === 'forward_supervisor' ||
+                                    decisionValue === 'forward_procurement'
                                   ) ? getEditableQuantity(item) : 0;
                                   handleItemDecisionChange(itemId, decisionValue, approvedQuantity);
                                 }}
@@ -1343,9 +1343,9 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="approve_wing">Approve</SelectItem>
-                                  {(!isAdmin || isAdminWorkflowContext) && (
-                                    <SelectItem value="forward_admin">{getForwardAdminLabel()}</SelectItem>
-                                  )}
+                                   {(!isAdmin || isAdminWorkflowContext || isAdminWorkflowRoleUser) && (
+                                     <SelectItem value="forward_admin">{getForwardAdminLabel()}</SelectItem>
+                                   )}
                                   {shouldShowProcurementForward() && (
                                     <SelectItem value="forward_procurement">{getForwardProcurementLabel()}</SelectItem>
                                   )}
@@ -1467,7 +1467,7 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                       ✓ {isAdminWorkflowContext ? 'Approve' : (isAdmin ? 'Approve from Admin Stock' : 'Approve from Wing')}
                     </span>
                   </SelectItem>
-                  {(!isAdmin || isAdminWorkflowContext) && (
+                  {(!isAdmin || isAdminWorkflowContext || isAdminWorkflowRoleUser) && (
                   <SelectItem value="forward_admin">
                     <span className="flex items-center gap-2">
                       ⏭ {isAdminWorkflowContext ? `Forward to ${getNextForwardRoleLabel(request.items[0])}` : getForwardAdminLabel()}
