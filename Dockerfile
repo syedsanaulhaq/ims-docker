@@ -10,7 +10,7 @@ WORKDIR /app/frontend
 
 # Install frontend dependencies
 COPY package*.json ./
-RUN npm ci --silent
+RUN npm install --silent
 
 # Copy frontend source and build
 COPY . .
@@ -32,7 +32,7 @@ RUN mkdir -p /app/uploads /var/log/invmis && \
 
 # 📦 Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production --silent && \
+RUN npm install --omit=dev --silent && \
     npm cache clean --force
 
 # 📋 Copy application files
