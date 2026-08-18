@@ -50,10 +50,12 @@ echo -e "${GREEN}✅ Pre-deployment checks passed${NC}"
 # 🔄 Create backup
 echo -e "${YELLOW}💾 Creating backup...${NC}"
 mkdir -p $BACKUP_DIR
-if docker compose -f $COMPOSE_FILE ps | grep -q "Up"; then
+if docker compose -f $COMPOSE_FILE ps invmis-api | grep -q "Up"; then
     echo -e "${YELLOW}📦 Backing up running containers...${NC}"
-    docker compose -f $COMPOSE_FILE exec invmis-api sh -c "mkdir -p /app/backup && cp -r /app/uploads /app/backup/"
-    docker cp $(docker compose -f $COMPOSE_FILE ps -q invmis-api):/app/backup/ $BACKUP_DIR/backup_$DEPLOY_DATE/
+    docker compose -f $COMPOSE_FILE exec -T invmis-api sh -c "mkdir -p /app/backup && cp -r /app/uploads /app/backup/" || true
+    docker cp $(docker compose -f $COMPOSE_FILE ps -q invmis-api):/app/backup/ $BACKUP_DIR/backup_$DEPLOY_DATE/ || true
+else
+    echo -e "${YELLOW}⏭️  invmis-api container is not fully running, skipping backup...${NC}"
 fi
 
 # 🏗️ Build and deploy
