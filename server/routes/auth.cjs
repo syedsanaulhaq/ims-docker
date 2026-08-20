@@ -754,5 +754,120 @@ router.get('/sso-login', async (req, res) => {
   }
 });
 
+// ====================================================================
+// POST /sso-validate - Validate SSO Token and Establish Session
+// ====================================================================
+router.post('/sso-validate', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const pool = getPool();
+    const config = require('../config/env.cjs');
+
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'Token is required' });
+    }
+
+    // Verify JWT token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.JWT_SECRET);
+    } catch (jwtError) {
+      console.error('❌ JWT verification failed:', jwtError.message);
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    }
+
+    // Extract user info from token
+    const userId = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+      || decoded.sub
+      || decoded.userId
+      || decoded.uid;
+    const userName = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']
+      || decoded.full_name
+      || decoded.name
+      || decoded.unique_name
+      || decoded.user_name;
+    const email = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']
+      || decoded.email;
+    const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+      || decoded.role
+      || 'User';
+
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID not found in token' });
+    }
+
+    // Verify user in database
+    let dbUser = null;
+    try {
+      const result = await pool.request()
+        .input('userId', sql.NVarChar, userId)
+        .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE Id = @userId');
+
+      if (result.recordset.length > 0) {
+        dbUser = result.recordset[0];
+        if (!dbUser.ISACT) {
+          return res.status(403).json({ success: false, error: 'Account inactive' });
+        }
+      } else if (userName) {
+        const byNameResult = await pool.request()
+          .input('username', sql.NVarChar, userName)
+          .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE UserName = @username');
+        if (byNameResult.recordset.length > 0) {
+          dbUser = byNameResult.recordset[0];
+          if (!dbUser.ISACT) {
+            return res.status(403).json({ success: false, error: 'Account inactive' });
+          }
+        }
+      }
+    } catch (dbError) {
+      console.error('⚠️ Database verification error:', dbError.message);
+    }
+    
+    // Create session
+    req.session.userId = dbUser?.Id || userId;
+    req.session.authenticated = true;
+    req.session.user = {
+      Id: dbUser?.Id || userId,
+      FullName: dbUser?.FullName || userName || 'Unknown',
+      CNIC: decoded.cnic || dbUser?.CNIC || null,
+      UserName: userName || decoded.unique_name || decoded.user_name || 'Unknown',
+      Email: dbUser?.Email || email || '',
+      Role: dbUser?.Role || role,
+      intOfficeID: decoded.office_id || null,
+      intWingID: decoded.wing_id || null,
+      intBranchID: null,
+      intDesignationID: decoded.designation_id || null
+    };
+
+    const resolvedBranch = await resolveBranchDetailsFromEmployeeView(pool, {
+      userId: req.session.user.Id,
+      userName: req.session.user.UserName,
+      cnic: decoded.cnic || dbUser?.CNIC || null,
+      fallbackBranchId: decoded.branch_id || dbUser?.intBranchID || null
+    });
+    req.session.user.intBranchID = resolvedBranch.branchId;
+    req.session.user.BranchName = resolvedBranch.branchName;
+    req.session.user.BranchAcron = resolvedBranch.branchAcron;
+
+    await assignDefaultPermissionsToSSOUser(userId);
+    
+    // Get IMS roles and permissions
+    const imsData = await getUserImsData(userId);
+    if (imsData) {
+      req.session.user.ims_roles = imsData.roles;
+      req.session.user.ims_permissions = imsData.permissions;
+      req.session.user.is_super_admin = imsData.is_super_admin;
+    }
+
+    res.json({
+      success: true,
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('❌ SSO Validation Error:', error);
+    res.status(500).json({ success: false, error: 'SSO validation failed', details: error.message });
+  }
+});
+
 
 module.exports = router;
