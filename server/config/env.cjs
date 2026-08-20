@@ -23,7 +23,7 @@ if (process.env.ENV_FILE) {
   loadEnvFile(process.env.ENV_FILE, false);
 } else {
   // 3) Load environment-specific file.
-  loadEnvFile(`.env-${runtimeEnv}`, false);
+  loadEnvFile(`.env.${runtimeEnv}`, false);
 }
 
 // 4) Load SQL Server overrides last (do not override environment variables).
