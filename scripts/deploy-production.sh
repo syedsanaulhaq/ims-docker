@@ -62,6 +62,12 @@ fi
 echo -e "${YELLOW}🏗️  Building production images...${NC}"
 docker compose -f $COMPOSE_FILE build --no-cache
 
+echo -e "${YELLOW}🛑 Stopping services...${NC}"
+docker compose -f $COMPOSE_FILE down
+
+echo -e "${YELLOW}🧹 Removing old frontend volume...${NC}"
+docker volume rm \$(docker volume ls -q | grep frontend) 2>/dev/null || true
+
 echo -e "${YELLOW}🔄 Deploying services...${NC}"
 docker compose -f $COMPOSE_FILE up -d
 
