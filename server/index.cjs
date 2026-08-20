@@ -42,6 +42,10 @@ app.use(requestLogger);
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',

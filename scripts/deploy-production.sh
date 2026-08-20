@@ -50,18 +50,20 @@ echo -e "${GREEN}✅ Pre-deployment checks passed${NC}"
 # 🔄 Create backup
 echo -e "${YELLOW}💾 Creating backup...${NC}"
 mkdir -p $BACKUP_DIR
-if docker-compose -f $COMPOSE_FILE ps | grep -q "Up"; then
+if docker compose -f $COMPOSE_FILE ps invmis-api | grep -q "Up"; then
     echo -e "${YELLOW}📦 Backing up running containers...${NC}"
-    docker-compose -f $COMPOSE_FILE exec invmis-api sh -c "mkdir -p /app/backup && cp -r /app/uploads /app/backup/"
-    docker cp $(docker-compose -f $COMPOSE_FILE ps -q invmis-api):/app/backup/ $BACKUP_DIR/backup_$DEPLOY_DATE/
+    docker compose -f $COMPOSE_FILE exec -T invmis-api sh -c "mkdir -p /app/backup && cp -r /app/uploads /app/backup/" || true
+    docker cp $(docker compose -f $COMPOSE_FILE ps -q invmis-api):/app/backup/ $BACKUP_DIR/backup_$DEPLOY_DATE/ || true
+else
+    echo -e "${YELLOW}⏭️  invmis-api container is not fully running, skipping backup...${NC}"
 fi
 
 # 🏗️ Build and deploy
 echo -e "${YELLOW}🏗️  Building production images...${NC}"
-docker-compose -f $COMPOSE_FILE build --no-cache
+docker compose -f $COMPOSE_FILE build --no-cache
 
 echo -e "${YELLOW}🔄 Deploying services...${NC}"
-docker-compose -f $COMPOSE_FILE up -d
+docker compose -f $COMPOSE_FILE up -d
 
 # ⏳ Wait for services to be healthy
 echo -e "${YELLOW}⏳ Waiting for services to be healthy...${NC}"
@@ -85,7 +87,7 @@ done
 
 if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
     echo -e "${RED}❌ API health check failed. Rolling back...${NC}"
-    docker-compose -f $COMPOSE_FILE logs invmis-api
+    docker compose -f $COMPOSE_FILE logs invmis-api
     exit 1
 fi
 
@@ -98,7 +100,7 @@ for endpoint in "${ENDPOINTS[@]}"; do
         echo -e "${GREEN}✅ $endpoint - OK${NC}"
     else
         echo -e "${RED}❌ $endpoint - FAILED${NC}"
-        echo -e "${YELLOW}⚠️  Check logs: docker-compose -f $COMPOSE_FILE logs invmis-api${NC}"
+        echo -e "${YELLOW}⚠️  Check logs: docker compose -f $COMPOSE_FILE logs invmis-api${NC}"
     fi
 done
 
@@ -112,12 +114,12 @@ echo -e "${BLUE}===================${NC}"
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 echo -e "${BLUE}🌐 Frontend: http://localhost${NC}"
 echo -e "${BLUE}🚀 API: http://localhost:5000${NC}"
-echo -e "${BLUE}📊 Grafana: http://localhost:3000 (admin/admin123)${NC}"
+echo -e "${BLUE}📊 Grafana: http://localhost:3001 (admin/admin123)${NC}"
 echo -e "${BLUE}📈 Prometheus: http://localhost:9090${NC}"
 echo ""
 echo -e "${YELLOW}🔧 Management Commands:${NC}"
-echo -e "${BLUE}  View logs: docker-compose -f $COMPOSE_FILE logs -f${NC}"
-echo -e "${BLUE}  Stop: docker-compose -f $COMPOSE_FILE down${NC}"
-echo -e "${BLUE}  Restart: docker-compose -f $COMPOSE_FILE restart${NC}"
+echo -e "${BLUE}  View logs: docker compose -f $COMPOSE_FILE logs -f${NC}"
+echo -e "${BLUE}  Stop: docker compose -f $COMPOSE_FILE down${NC}"
+echo -e "${BLUE}  Restart: docker compose -f $COMPOSE_FILE restart${NC}"
 echo ""
 echo -e "${GREEN}🎉 InvMIS is now running in production mode!${NC}"

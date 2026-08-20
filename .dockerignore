@@ -1,13 +1,6 @@
 node_modules
-.git
-.gitignore
-.gitattributes
-.venv
-venv
-*.log
-.env.backup.*
 dist
-build
-.antigravity*
-.gemini
-uploads
+.env
+.env.local
+.env.*.local
+.git

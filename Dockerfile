@@ -10,7 +10,7 @@ WORKDIR /app/frontend
 
 # Install frontend dependencies
 COPY package*.json ./
-RUN npm ci --silent
+RUN npm install --silent
 
 # Copy frontend source and build
 COPY . .
@@ -32,7 +32,7 @@ RUN mkdir -p /app/uploads /var/log/invmis && \
 
 # 📦 Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production --silent && \
+RUN npm install --omit=dev --silent && \
     npm cache clean --force
 
 # 📋 Copy application files
@@ -41,7 +41,8 @@ COPY --chown=invmis:invmis . .
 # 🌐 Copy built frontend from build stage
 COPY --from=frontend-builder --chown=invmis:invmis /app/frontend/dist ./public
 
-
+# 🔧 Install additional production tools
+RUN apk add --no-cache dumb-init
 
 # 🏥 Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
@@ -56,5 +57,9 @@ EXPOSE 5000 80
 # 📊 Set production environment
 ENV NODE_ENV=production
 
-# 🚀 Start application
+# 🚀 Start application with dumb-init
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "server/index.cjs"]
+EXPOSE 5000
+
+

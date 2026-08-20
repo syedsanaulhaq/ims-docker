@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     // Properly set NODE_ENV for the application
     'process.env.NODE_ENV': JSON.stringify(mode === 'production' ? 'production' : 'development'),
     // Make VITE_API_URL available
-    'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'http://localhost:3001'),
+    'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || ''),
   },
   server: {
     host: "::",
