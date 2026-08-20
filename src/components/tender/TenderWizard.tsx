@@ -61,7 +61,7 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
       try {
         setLoading(true);
         // Fetch vendors
-        const vendorsRes = await fetch('http://localhost:3001/api/vendors');
+        const vendorsRes = await fetch('/api/vendors');
         const vendorsData = await vendorsRes.json();
         const vendorsList = (vendorsData.vendors || vendorsData || []).map((v: any) => ({
           id: v.id,
@@ -71,7 +71,7 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
         }));
         setVendors(vendorsList);
         // Fetch categories
-        const catsRes = await fetch('http://localhost:3001/api/categories');
+        const catsRes = await fetch('/api/categories');
         const catsData = await catsRes.json();
         const catsList = (Array.isArray(catsData) ? catsData : catsData.categories || []).sort((a: any, b: any) =>
           (a.name || '').localeCompare(b.name || '')
@@ -80,7 +80,7 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
         // Fetch all items
         const allItemsList: ItemData[] = [];
         for (const cat of catsList) {
-          const itemsRes = await fetch(`http://localhost:3001/api/items-master?category_id=${cat.id}`);
+          const itemsRes = await fetch(`/api/items-master?category_id=${cat.id}`);
           if (itemsRes.ok) {
             const itemsData = await itemsRes.json();
             const items = itemsData.items || itemsData || [];
@@ -110,7 +110,7 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
     if (editingId && editingId !== 'new') {
       const fetchTender = async () => {
         try {
-          const res = await fetch(`http://localhost:3001/api/tenders/${editingId}`);
+          const res = await fetch(`/api/tenders/${editingId}`);
           if (res.ok) {
             const data = await res.json();
             setTender({ code: data.code, name: data.name, date: data.date });
@@ -242,8 +242,8 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
 
     try {
       const url = editingId && editingId !== 'new'
-        ? `http://localhost:3001/api/tenders/${editingId}`
-        : 'http://localhost:3001/api/tenders';
+        ? `/api/tenders/${editingId}`
+        : '/api/tenders';
 
       const response = await fetch(url, {
         method: editingId && editingId !== 'new' ? 'PUT' : 'POST',
@@ -473,3 +473,4 @@ const TenderWizard: React.FC<TenderWizardProps> = ({ onComplete, onCancel, editi
 };
 
 export default TenderWizard;
+

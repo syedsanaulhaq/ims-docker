@@ -92,7 +92,7 @@ export default function EditPurchaseOrder() {
   const fetchPODetails = async (poId: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${poId}`);
+      const response = await fetch(`/api/purchase-orders/${poId}`);
       if (!response.ok) throw new Error('Failed to fetch PO details');
       const data = await response.json();
       setPO(data);
@@ -117,7 +117,7 @@ export default function EditPurchaseOrder() {
   // Fetch tender items for adding to PO
   const fetchTenderItems = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/items`);
+      const response = await fetch(`/api/tenders/${tenderId}/items`);
       if (!response.ok) throw new Error('Failed to fetch tender items');
       const data = await response.json();
       setTenderItems(data || []);
@@ -240,7 +240,7 @@ export default function EditPurchaseOrder() {
         }))
       };
       
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${po.id}`, {
+      const response = await fetch(`/api/purchase-orders/${po.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
@@ -619,3 +619,4 @@ export default function EditPurchaseOrder() {
     </div>
   );
 }
+

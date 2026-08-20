@@ -26,7 +26,7 @@ import { officeApi } from "@/services/officeApiClean";
 import { cn } from "@/lib/utils";
 import { Building2, Users, MapPin } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = "";
 
 // Schema exactly matching your SQL Server tenders table with multi-select arrays
 const tenderSchema = z.object({
@@ -880,3 +880,4 @@ const TenderFormFresh2: React.FC = () => {
 };
 
 export default TenderFormFresh2;
+

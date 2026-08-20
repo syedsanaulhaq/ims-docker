@@ -60,9 +60,9 @@ const InitialInventorySetup = () => {
     try {
       // Fetch item masters, categories, and existing inventory stock
       const [itemMastersResponse, categoriesResponse, currentStockResponse] = await Promise.all([
-        fetch('http://localhost:3001/api/item-masters'),
-        fetch('http://localhost:3001/api/categories'),
-        fetch('http://localhost:3001/api/inventory/current-stock')
+        fetch('/api/item-masters'),
+        fetch('/api/categories'),
+        fetch('/api/inventory/current-stock')
       ]);
 
       if (itemMastersResponse.ok) {
@@ -149,7 +149,7 @@ const InitialInventorySetup = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/inventory/initial-setup', {
+      const response = await fetch('/api/inventory/initial-setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -382,3 +382,4 @@ const InitialInventorySetup = () => {
 };
 
 export default InitialInventorySetup;
+

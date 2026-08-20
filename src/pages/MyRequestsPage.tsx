@@ -129,7 +129,7 @@ const MyRequestsPage: React.FC = () => {
               let approvalStatus = '';
               try {
                 const approvalResponse = await fetch(
-                  `http://localhost:3001/api/approvals/request/${request.id}/items`,
+                  `/api/approvals/request/${request.id}/items`,
                   { credentials: 'include' }
                 );
                 if (approvalResponse.ok) {
@@ -151,7 +151,7 @@ const MyRequestsPage: React.FC = () => {
               if (!approvalStatus) {
                 try {
                   const raResponse = await fetch(
-                    `http://localhost:3001/api/approvals/request/${request.id}/status`,
+                    `/api/approvals/request/${request.id}/status`,
                     { credentials: 'include' }
                   );
                   if (raResponse.ok) {
@@ -614,7 +614,7 @@ const MyRequestsPage: React.FC = () => {
                         </div>
                       )}
                       {request.delivery_proof_url && (
-                        <a href={`http://localhost:3001${request.delivery_proof_url}`}
+                        <a href={`${request.delivery_proof_url}`}
                           target="_blank" rel="noreferrer"
                           className="flex items-center gap-1 text-xs text-blue-600 underline">
                           <ImageIcon className="h-3 w-3" /> View signed delivery document

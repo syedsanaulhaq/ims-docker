@@ -65,9 +65,9 @@ export const TenderVendorManagement: React.FC = () => {
     try {
       setLoading(true);
       const [tendersRes, vendorsRes, categoriesRes] = await Promise.all([
-        fetch('http://localhost:3001/api/annual-tenders'),
-        fetch('http://localhost:3001/api/vendors'),
-        fetch('http://localhost:3001/api/categories')
+        fetch('/api/annual-tenders'),
+        fetch('/api/vendors'),
+        fetch('/api/categories')
       ]);
 
       const tendersData = await tendersRes.json();
@@ -90,7 +90,7 @@ export const TenderVendorManagement: React.FC = () => {
 
   const loadTenderAssignments = async (tenderId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/annual-tenders/${tenderId}`);
+      const response = await fetch(`/api/annual-tenders/${tenderId}`);
       const data = await response.json();
       
       // Transform vendors data
@@ -119,7 +119,7 @@ export const TenderVendorManagement: React.FC = () => {
     setIsAssigning(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${selectedTender.id}/assign-vendors`,
+        `/api/annual-tenders/${selectedTender.id}/assign-vendors`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -154,7 +154,7 @@ export const TenderVendorManagement: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/api/vendor-assignments/${assignmentId}`,
+        `/api/vendor-assignments/${assignmentId}`,
         { method: 'DELETE' }
       );
 
@@ -437,3 +437,4 @@ export const TenderVendorManagement: React.FC = () => {
 };
 
 export default TenderVendorManagement;
+

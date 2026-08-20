@@ -44,7 +44,7 @@ const CurrentInventoryStockSetup: React.FC = () => {
   const loadCurrentInventoryStock = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/inventory/current-inventory-stock');
+      const response = await fetch('/api/inventory/current-inventory-stock');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -121,7 +121,7 @@ const CurrentInventoryStockSetup: React.FC = () => {
         current_quantity: item.editedQuantity
       }));
 
-      const response = await fetch('http://localhost:3001/api/inventory/current-inventory-stock/bulk-update', {
+      const response = await fetch('/api/inventory/current-inventory-stock/bulk-update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

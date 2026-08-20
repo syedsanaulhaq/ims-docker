@@ -72,7 +72,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       // Only call backend for real DB notifications (GUID IDs)
       const isGuid = /^[0-9a-fA-F-]{36}$/.test(id);
       if (isGuid) {
-        await fetch(`http://localhost:3001/api/notifications/${id}/read`, {
+        await fetch(`/api/notifications/${id}/read`, {
           method: 'PUT',
           credentials: 'include',
           headers: {
@@ -233,3 +233,4 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     </NotificationContext.Provider>
   );
 };
+

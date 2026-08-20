@@ -88,7 +88,7 @@ export const CategoryItemsManager: React.FC = () => {
       setLoading(true);
       
       // Load items from vw_item_masters_with_categories view
-      const itemsResponse = await fetch('http://localhost:3001/api/item-masters');
+      const itemsResponse = await fetch('/api/item-masters');
       const itemsData = await itemsResponse.json();
       const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.data || itemsData.items || []);
       
@@ -96,7 +96,7 @@ export const CategoryItemsManager: React.FC = () => {
       
       // Load categories directly from API (not just from items)
       try {
-        const categoriesResponse = await fetch('http://localhost:3001/api/categories');
+        const categoriesResponse = await fetch('/api/categories');
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json();
           const categoriesArray = Array.isArray(categoriesData) ? categoriesData : (categoriesData.data || []);
@@ -186,7 +186,7 @@ export const CategoryItemsManager: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/item-masters', {
+      const response = await fetch('/api/item-masters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -213,7 +213,7 @@ export const CategoryItemsManager: React.FC = () => {
       const currentCategoryName = selectedCategory.category_name;
       
       // Reload items from API
-      const itemsResponse = await fetch('http://localhost:3001/api/item-masters');
+      const itemsResponse = await fetch('/api/item-masters');
       const itemsData = await itemsResponse.json();
       const newItemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.data || itemsData.items || []);
       setItems(newItemsArray);
@@ -249,7 +249,7 @@ export const CategoryItemsManager: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/item-masters/${editingItem.id}`, {
+      const response = await fetch(`/api/item-masters/${editingItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -313,7 +313,7 @@ export const CategoryItemsManager: React.FC = () => {
     if (!deleteItem) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/item-masters/${deleteItem.id}`, {
+      const response = await fetch(`/api/item-masters/${deleteItem.id}`, {
         method: 'DELETE'
       });
 
@@ -355,7 +355,7 @@ export const CategoryItemsManager: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/categories', {
+      const response = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -808,3 +808,4 @@ export const CategoryItemsManager: React.FC = () => {
 };
 
 export default CategoryItemsManager;
+

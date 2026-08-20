@@ -61,7 +61,7 @@ const TenderReport: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await fetch(`http://localhost:3001/api/view-tenders/${id}`);
+        const response = await fetch(`/api/view-tenders/${id}`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -382,3 +382,4 @@ const TenderReport: React.FC = () => {
 };
 
 export default TenderReport;
+

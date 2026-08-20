@@ -81,7 +81,7 @@ export const VendorAssignmentManager: React.FC = () => {
   // Load tenders from database
   const loadTenders = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/annual-tenders');
+      const response = await fetch('/api/annual-tenders');
       const data = await response.json();
       setTenders(data);
       if (data.length > 0) {
@@ -95,7 +95,7 @@ export const VendorAssignmentManager: React.FC = () => {
   // Load vendors from database
   const loadVendors = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/vendors');
+      const response = await fetch('/api/vendors');
       const data = await response.json();
       // Handle both array and { vendors: [...] } response formats
       const vendorsArray = Array.isArray(data) ? data : (data.vendors || data.data || []);
@@ -109,7 +109,7 @@ export const VendorAssignmentManager: React.FC = () => {
   // Load items from vw_item_masters_with_categories view via API
   const loadItems = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch('/api/item-masters');
       const data = await response.json();
       const itemsArray = Array.isArray(data) ? data : (data.data || data.items || []);
       
@@ -143,7 +143,7 @@ export const VendorAssignmentManager: React.FC = () => {
   const loadAssignedVendors = async (tenderId: string, categoryId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${tenderId}/category/${categoryId}/assigned-vendors`
+        `/api/annual-tenders/${tenderId}/category/${categoryId}/assigned-vendors`
       );
       if (response.ok) {
         const data = await response.json();
@@ -187,7 +187,7 @@ export const VendorAssignmentManager: React.FC = () => {
       };
       
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${selectedTender.id}/assign-vendors`,
+        `/api/annual-tenders/${selectedTender.id}/assign-vendors`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -471,3 +471,4 @@ export const VendorAssignmentManager: React.FC = () => {
 };
 
 export default VendorAssignmentManager;
+

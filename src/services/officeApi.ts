@@ -39,7 +39,7 @@ export interface ApiDecResponse {
   HODName: string | null;
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '';
 
 class OfficeApiService {
   async getOffices(): Promise<ApiOfficeResponse[]> {
@@ -131,3 +131,4 @@ class OfficeApiService {
 }
 
 export const officeApi = new OfficeApiService();
+

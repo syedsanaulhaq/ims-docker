@@ -85,21 +85,21 @@ const NewStockAcquisitionDashboard: React.FC = () => {
       setLoading(true);
       
       // Fetch acquisition overview stats
-      const statsResponse = await fetch('http://localhost:3001/api/acquisition/dashboard-stats');
+      const statsResponse = await fetch('/api/acquisition/dashboard-stats');
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats(statsData);
       }
 
       // Fetch active tenders
-      const tendersResponse = await fetch('http://localhost:3001/api/acquisition/active-tenders');
+      const tendersResponse = await fetch('/api/acquisition/active-tenders');
       if (tendersResponse.ok) {
         const tendersData = await tendersResponse.json();
         setActiveTenders(tendersData);
       }
 
       // Fetch recent deliveries
-      const deliveriesResponse = await fetch('http://localhost:3001/api/acquisition/recent-deliveries');
+      const deliveriesResponse = await fetch('/api/acquisition/recent-deliveries');
       if (deliveriesResponse.ok) {
         const deliveriesData = await deliveriesResponse.json();
         setRecentDeliveries(deliveriesData);
@@ -371,3 +371,4 @@ const NewStockAcquisitionDashboard: React.FC = () => {
 };
 
 export default NewStockAcquisitionDashboard;
+

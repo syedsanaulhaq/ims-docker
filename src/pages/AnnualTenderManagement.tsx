@@ -71,7 +71,7 @@ export const AnnualTenderManagement: React.FC = () => {
   const loadTenders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/annual-tenders');
+      const response = await fetch('/api/annual-tenders');
       const data = await response.json();
       setTenders(data);
     } catch (error) {
@@ -84,7 +84,7 @@ export const AnnualTenderManagement: React.FC = () => {
 
   const loadItemGroups = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/item-groups');
+      const response = await fetch('/api/item-groups');
       const data = await response.json();
       setItemGroups(data);
     } catch (error) {
@@ -99,7 +99,7 @@ export const AnnualTenderManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/annual-tenders', {
+      const response = await fetch('/api/annual-tenders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,7 +125,7 @@ export const AnnualTenderManagement: React.FC = () => {
 
   const handleViewTender = async (tender: AnnualTender) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/annual-tenders/${tender.id}`);
+      const response = await fetch(`/api/annual-tenders/${tender.id}`);
       const data = await response.json();
       setSelectedTender(data);
       setShowDetailsDialog(true);
@@ -395,3 +395,4 @@ export const AnnualTenderManagement: React.FC = () => {
 };
 
 export default AnnualTenderManagement;
+

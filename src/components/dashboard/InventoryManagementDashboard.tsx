@@ -34,7 +34,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '';
 
 interface InventoryStats {
   inventory: {
@@ -481,3 +481,4 @@ const InventoryManagementDashboard = () => {
 };
 
 export default InventoryManagementDashboard;
+

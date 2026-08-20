@@ -83,7 +83,7 @@ const StockAcquisitionDashboard: React.FC = () => {
       setLoading(true);
       
       // Fetch acquisition overview stats
-      const statsResponse = await fetch('http://localhost:3001/api/acquisition/dashboard-stats');
+      const statsResponse = await fetch('/api/acquisition/dashboard-stats');
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats(statsData);
@@ -94,7 +94,7 @@ const StockAcquisitionDashboard: React.FC = () => {
       }
 
       // Fetch active tenders
-      const tendersResponse = await fetch('http://localhost:3001/api/acquisition/active-tenders');
+      const tendersResponse = await fetch('/api/acquisition/active-tenders');
       if (tendersResponse.ok) {
         const tendersData = await tendersResponse.json();
         setActiveTenders(tendersData);
@@ -103,7 +103,7 @@ const StockAcquisitionDashboard: React.FC = () => {
       }
 
       // Fetch recent deliveries
-      const deliveriesResponse = await fetch('http://localhost:3001/api/acquisition/recent-deliveries');
+      const deliveriesResponse = await fetch('/api/acquisition/recent-deliveries');
       if (deliveriesResponse.ok) {
         const deliveriesData = await deliveriesResponse.json();
         setRecentDeliveries(deliveriesData);
@@ -121,7 +121,7 @@ const StockAcquisitionDashboard: React.FC = () => {
   // Add tender items to stock acquisition
   const addTenderToStockAcquisition = async (tenderId: string, tenderTitle: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/add-to-stock-acquisition`, {
+      const response = await fetch(`/api/tenders/${tenderId}/add-to-stock-acquisition`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -413,3 +413,4 @@ const StockAcquisitionDashboard: React.FC = () => {
 };
 
 export default StockAcquisitionDashboard;
+

@@ -75,7 +75,7 @@ export default function PersonalInventory() {
       setLoading(true);
       setError('');
       
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiBase = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${apiBase}/api/inventory/personal-inventory/${user?.user_id}`, {
         credentials: 'include'
       });
@@ -410,3 +410,4 @@ export default function PersonalInventory() {
     </div>
   );
 }
+

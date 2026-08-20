@@ -1,6 +1,6 @@
 import { ApiResponse } from './api';
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '';
 
 export interface Category {
   id: string;
@@ -394,3 +394,4 @@ export const categoriesLocalService = {
 };
 
 export default categoriesLocalService;
+

@@ -35,8 +35,8 @@ const ItemMasterManagement = () => {
       setError('');
       
       const url = includeDeleted 
-        ? 'http://localhost:3001/api/item-masters?includeDeleted=true'
-        : 'http://localhost:3001/api/item-masters';
+        ? '/api/item-masters?includeDeleted=true'
+        : '/api/item-masters';
       const response = await fetch(url);
       
       if (response.ok) {
@@ -66,7 +66,7 @@ const ItemMasterManagement = () => {
 
     try {
       setDeletingId(itemId);
-      const response = await fetch(`http://localhost:3001/api/item-masters/${itemId}`, {
+      const response = await fetch(`/api/item-masters/${itemId}`, {
         method: 'DELETE'
       });
 
@@ -91,7 +91,7 @@ const ItemMasterManagement = () => {
 
     try {
       setRestoringId(itemId);
-      const response = await fetch(`http://localhost:3001/api/item-masters/${itemId}/restore`, {
+      const response = await fetch(`/api/item-masters/${itemId}/restore`, {
         method: 'POST'
       });
 
@@ -303,7 +303,7 @@ const ItemMasterManagement = () => {
       {/* Debug Info */}
       <div className="mt-6 p-4 bg-gray-100 rounded text-sm">
         <strong>Debug:</strong> 
-        <div>API: http://localhost:3001/api/item-masters</div>
+        <div>API: /api/item-masters</div>
         <div>Items loaded: {items.length} (Showing: {filteredItems.length})</div>
         <div>Show Deleted: {showDeleted ? 'YES' : 'NO'}</div>
         <div>Last update: {new Date().toLocaleTimeString()}</div>
@@ -440,7 +440,7 @@ export default ItemMasterManagement;
       {/* Debug Info */}
       <div className="mt-6 p-4 bg-gray-100 rounded text-sm">
         <strong>Debug:</strong> 
-        <div>API: http://localhost:3001/api/item-masters</div>
+        <div>API: /api/item-masters</div>
         <div>Items loaded: {items.length}</div>
         <div>Last update: {new Date().toLocaleTimeString()}</div>
       </div>

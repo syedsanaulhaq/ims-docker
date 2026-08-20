@@ -64,7 +64,7 @@ export const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:3001/api/inventory/check-availability', {
+      const response = await fetch('/api/inventory/check-availability', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -109,7 +109,7 @@ export const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({
         userName = sessionUser?.user_name;
       }
       
-      const response = await fetch('http://localhost:3001/api/inventory/request-verification', {
+      const response = await fetch('/api/inventory/request-verification', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -398,3 +398,4 @@ export const InventoryCheckModal: React.FC<InventoryCheckModalProps> = ({
 };
 
 export default InventoryCheckModal;
+

@@ -208,7 +208,7 @@ const EditTender: React.FC = () => {
       
       try {
         setLoadingData(true);
-        const response = await fetch(`http://localhost:3001/api/tenders/${id}`);
+        const response = await fetch(`/api/tenders/${id}`);
         if (!response.ok) {
           throw new Error('Failed to load tender');
         }
@@ -264,7 +264,7 @@ const EditTender: React.FC = () => {
 
         // Load tender vendors/bidders
         try {
-          const vendorsResponse = await fetch(`http://localhost:3001/api/tenders/${id}/vendors`);
+          const vendorsResponse = await fetch(`/api/tenders/${id}/vendors`);
           if (vendorsResponse.ok) {
             const vendorsData = await vendorsResponse.json();
             const vendorsList = Array.isArray(vendorsData) ? vendorsData : vendorsData.vendors || [];
@@ -320,7 +320,7 @@ const EditTender: React.FC = () => {
     const fetchInitialData = async () => {
       try {
         // Fetch Item Masters
-        const itemMastersResponse = await fetch('http://localhost:3001/api/item-masters');
+        const itemMastersResponse = await fetch('/api/item-masters');
         if (itemMastersResponse.ok) {
           const itemMastersData = await itemMastersResponse.json();
           // Handle the {success: true, items: [...]} format
@@ -328,14 +328,14 @@ const EditTender: React.FC = () => {
         }
 
         // Fetch Offices
-        const officesResponse = await fetch('http://localhost:3001/api/offices');
+        const officesResponse = await fetch('/api/offices');
         if (officesResponse.ok) {
           const officesData = await officesResponse.json();
           setOffices(Array.isArray(officesData) ? officesData : []);
         }
 
         // Fetch Vendors
-        const vendorsResponse = await fetch('http://localhost:3001/api/vendors');
+        const vendorsResponse = await fetch('/api/vendors');
         if (vendorsResponse.ok) {
           const vendorsData = await vendorsResponse.json();
           if (vendorsData.vendors && Array.isArray(vendorsData.vendors)) {
@@ -367,7 +367,7 @@ const EditTender: React.FC = () => {
         const allWings: Wing[] = [];
         
         for (const officeId of tenderData.office_ids) {
-          const response = await fetch(`http://localhost:3001/api/offices/${officeId}/wings`);
+          const response = await fetch(`/api/offices/${officeId}/wings`);
           if (response.ok) {
             const wingsData = await response.json();
             const wings = Array.isArray(wingsData) ? wingsData : wingsData.data || [];
@@ -409,7 +409,7 @@ const EditTender: React.FC = () => {
         const allDecs: Dec[] = [];
         
         for (const wingId of tenderData.wing_ids) {
-          const response = await fetch(`http://localhost:3001/api/wings/${wingId}/decs`);
+          const response = await fetch(`/api/wings/${wingId}/decs`);
           if (response.ok) {
             const decsData = await response.json();
             const decs = Array.isArray(decsData) ? decsData : decsData.data || [];
@@ -556,7 +556,7 @@ const EditTender: React.FC = () => {
 
   const fetchPendingRequiredItems = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/required-items?status=Pending&limit=500');
+      const res = await fetch('/api/required-items?status=Pending&limit=500');
       if (!res.ok) throw new Error('Failed to fetch required items');
       const data = await res.json();
       setRequiredItemOptions(data.data || []);
@@ -793,7 +793,7 @@ const EditTender: React.FC = () => {
         bidders: bidders
       };
 
-      const response = await fetch(`http://localhost:3001/api/tenders/${id}`, {
+      const response = await fetch(`/api/tenders/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -2066,3 +2066,4 @@ const EditTender: React.FC = () => {
 };
 
 export default EditTender;
+

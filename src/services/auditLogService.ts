@@ -92,7 +92,7 @@ export class AuditLogService {
 
   private async sendToServer(auditLog: AuditLog): Promise<void> {
     try {
-      await fetch('http://localhost:3001/api/audit-logs', {
+      await fetch('/api/audit-logs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

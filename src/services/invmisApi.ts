@@ -29,7 +29,7 @@ export const getApiBaseUrl = () => {
   }
   
   // Default to our current backend server
-  return 'http://localhost:3001/api';
+  return '/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -345,3 +345,4 @@ export const invmisApi = {
 };
 
 export default invmisApi;
+

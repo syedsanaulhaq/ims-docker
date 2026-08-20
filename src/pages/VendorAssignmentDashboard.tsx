@@ -45,7 +45,7 @@ export const VendorAssignmentDashboard: React.FC = () => {
   const loadTenderVendorData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/tenders-vendor-assignments');
+      const response = await fetch('/api/tenders-vendor-assignments');
       if (response.ok) {
         const data = await response.json();
         setTenders(data);
@@ -279,3 +279,4 @@ export const VendorAssignmentDashboard: React.FC = () => {
 };
 
 export default VendorAssignmentDashboard;
+

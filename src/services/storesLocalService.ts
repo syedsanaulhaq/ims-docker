@@ -1,5 +1,5 @@
 // Local stores service for SQL Server backend
-const BASE_URL = 'http://localhost:3001/api';
+const BASE_URL = '/api';
 
 export interface Store {
   id: string;
@@ -87,3 +87,4 @@ export const storesLocalService = {
     return true;
   },
 };
+

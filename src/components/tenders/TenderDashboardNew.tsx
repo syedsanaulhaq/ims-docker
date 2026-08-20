@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = "";
 
 interface Tender {
   id: string;
@@ -332,3 +332,4 @@ const TenderDashboard: React.FC = () => {
 };
 
 export default TenderDashboard;
+

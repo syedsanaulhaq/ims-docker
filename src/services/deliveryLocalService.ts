@@ -1,7 +1,7 @@
 // Unified Delivery/Acquisition Service using SQL Server backend
 // Replaces Supabase-based delivery service
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = '/api';
 
 export interface DeliveryItem {
   id?: string;
@@ -195,3 +195,4 @@ export class DeliveryLocalService {
 }
 
 export default DeliveryLocalService;
+

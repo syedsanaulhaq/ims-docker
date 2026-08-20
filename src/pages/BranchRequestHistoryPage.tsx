@@ -120,7 +120,7 @@ const BranchRequestHistoryPage: React.FC = () => {
   const loadBranchRequestHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/branch-inventory/requests', {
+      const response = await fetch('/api/branch-inventory/requests', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -214,7 +214,7 @@ const BranchRequestHistoryPage: React.FC = () => {
       // 2. Try to get actual approval history from API
       let actualHistory = [];
       try {
-        const response = await fetch(`http://localhost:3001/api/approvals/${request.id}/history`, {
+        const response = await fetch(`/api/approvals/${request.id}/history`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
@@ -593,3 +593,4 @@ const BranchRequestHistoryPage: React.FC = () => {
 };
 
 export default BranchRequestHistoryPage;
+

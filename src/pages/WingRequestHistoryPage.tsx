@@ -63,7 +63,7 @@ const WingRequestHistoryPage: React.FC = () => {
   const loadWingRequestHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/wing-inventory/requests', {
+      const response = await fetch('/api/wing-inventory/requests', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -156,7 +156,7 @@ const WingRequestHistoryPage: React.FC = () => {
       // 2. Try to get actual approval history from API
       let actualHistory = [];
       try {
-        const response = await fetch(`http://localhost:3001/api/approvals/${request.id}/history`, {
+        const response = await fetch(`/api/approvals/${request.id}/history`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',

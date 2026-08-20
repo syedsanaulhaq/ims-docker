@@ -200,7 +200,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
         return true;
       });
 
-      const apiUrl = 'http://localhost:3001';
+      const apiUrl = '';
       const buildSummary = async (approval: RequestApproval): Promise<RequestSummary | null> => {
         const requestId = approval.request_id;
 
@@ -1670,3 +1670,4 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
 };
 
 export default ApprovalDashboardRequestBased;
+

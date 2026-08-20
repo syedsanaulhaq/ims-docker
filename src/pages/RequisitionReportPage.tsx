@@ -325,7 +325,7 @@ const RequisitionReportPage: React.FC = () => {
         }
 
         try {
-          const detailResp = await fetch(`http://localhost:3001/api/approvals/request/${found.id}`, {
+          const detailResp = await fetch(`/api/approvals/request/${found.id}`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
@@ -363,7 +363,7 @@ const RequisitionReportPage: React.FC = () => {
             }
           }
 
-          const detailsResp = await fetch(`http://localhost:3001/api/request-details/${found.id}`, {
+          const detailsResp = await fetch(`/api/request-details/${found.id}`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
@@ -811,3 +811,4 @@ const RequisitionReportPage: React.FC = () => {
 };
 
 export default RequisitionReportPage;
+

@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '';
 
 // Form schema matching the EXACT database tenders table structure
 const tenderSchema = z.object({
@@ -539,3 +539,4 @@ const ContractTenderForm: React.FC = () => {
 };
 
 export default ContractTenderForm;
+

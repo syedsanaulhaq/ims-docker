@@ -78,8 +78,8 @@ const VendorManagementPage = () => {
     try {
       setLoading(true);
       const url = includeDeleted 
-        ? 'http://localhost:3001/api/vendors?includeDeleted=true'
-        : 'http://localhost:3001/api/vendors';
+        ? '/api/vendors?includeDeleted=true'
+        : '/api/vendors';
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -126,8 +126,8 @@ const VendorManagementPage = () => {
       };
 
       const url = editingVendor 
-        ? `http://localhost:3001/api/vendors/${editingVendor.id}`
-        : 'http://localhost:3001/api/vendors';
+        ? `/api/vendors/${editingVendor.id}`
+        : '/api/vendors';
       
       const method = editingVendor ? 'PUT' : 'POST';
 
@@ -184,7 +184,7 @@ const VendorManagementPage = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/vendors/${vendor.id}`, {
+      const response = await fetch(`/api/vendors/${vendor.id}`, {
         method: 'DELETE'
       });
 
@@ -215,7 +215,7 @@ const VendorManagementPage = () => {
 
     try {
       setRestoringId(vendorId);
-      const response = await fetch(`http://localhost:3001/api/vendors/${vendorId}/restore`, {
+      const response = await fetch(`/api/vendors/${vendorId}/restore`, {
         method: 'POST'
       });
 

@@ -46,8 +46,8 @@ const RequestTrackingPage: React.FC = () => {
     try {
       setLoading(true);
       const [detailsResponse, historyResponse] = await Promise.all([
-        fetch(`http://localhost:3001/api/approvals/${approvalId}`),
-        fetch(`http://localhost:3001/api/approvals/${approvalId}/history`)
+        fetch(`/api/approvals/${approvalId}`),
+        fetch(`/api/approvals/${approvalId}/history`)
       ]);
       
       if (!detailsResponse.ok || !historyResponse.ok) {

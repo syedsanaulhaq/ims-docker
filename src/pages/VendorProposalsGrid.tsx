@@ -81,7 +81,7 @@ export const VendorProposalsGrid: React.FC = () => {
 
   const loadTenders = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/annual-tenders');
+      const response = await fetch('/api/annual-tenders');
       const data = await response.json();
       setTenders(data);
       if (data.length > 0) {
@@ -96,7 +96,7 @@ export const VendorProposalsGrid: React.FC = () => {
 
   const loadVendors = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/vendors');
+      const response = await fetch('/api/vendors');
       if (response.ok) {
         const data = await response.json();
         setVendors(data);
@@ -108,7 +108,7 @@ export const VendorProposalsGrid: React.FC = () => {
 
   const loadItems = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch('/api/item-masters');
       if (response.ok) {
         const data = await response.json();
         setItems(data);
@@ -123,7 +123,7 @@ export const VendorProposalsGrid: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/api/annual-tenders/${selectedTender.id}/vendor-proposals?vendorId=${selectedVendor}`
+        `/api/annual-tenders/${selectedTender.id}/vendor-proposals?vendorId=${selectedVendor}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -143,7 +143,7 @@ export const VendorProposalsGrid: React.FC = () => {
     if (!selectedTender) return;
 
     try {
-      const response = await fetch('http://localhost:3001/api/vendor-proposals', {
+      const response = await fetch('/api/vendor-proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ export const VendorProposalsGrid: React.FC = () => {
 
   const handleSavePrice = async (proposal: VendorProposal, newPrice: number) => {
     try {
-      const response = await fetch('http://localhost:3001/api/vendor-proposals', {
+      const response = await fetch('/api/vendor-proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -407,3 +407,4 @@ export const VendorProposalsGrid: React.FC = () => {
 };
 
 export default VendorProposalsGrid;
+

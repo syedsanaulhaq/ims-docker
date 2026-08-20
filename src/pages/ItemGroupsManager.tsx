@@ -80,7 +80,7 @@ export const ItemGroupsManager: React.FC = () => {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/item-groups');
+      const response = await fetch('/api/item-groups');
       const data = await response.json();
       setGroups(data);
     } catch (error) {
@@ -93,7 +93,7 @@ export const ItemGroupsManager: React.FC = () => {
 
   const loadGroupItems = async (groupId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/item-groups/${groupId}/items`);
+      const response = await fetch(`/api/item-groups/${groupId}/items`);
       const data = await response.json();
       setGroupItems(prev => ({ ...prev, [groupId]: data }));
     } catch (error) {
@@ -117,7 +117,7 @@ export const ItemGroupsManager: React.FC = () => {
 
   const loadItems = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch('/api/item-masters');
       if (response.ok) {
         const data = await response.json();
         // Handle different possible response formats
@@ -136,7 +136,7 @@ export const ItemGroupsManager: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/item-groups', {
+      const response = await fetch('/api/item-groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,7 +166,7 @@ export const ItemGroupsManager: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters', {
+      const response = await fetch('/api/item-masters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItemData)
@@ -188,7 +188,7 @@ export const ItemGroupsManager: React.FC = () => {
   const handleDeleteGroup = async (groupId: string) => {
     if (confirm('Are you sure you want to delete this group? Associated items will be removed.')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/item-groups/${groupId}`, {
+        const response = await fetch(`/api/item-groups/${groupId}`, {
           method: 'DELETE'
         });
 
@@ -481,3 +481,4 @@ export const ItemGroupsManager: React.FC = () => {
 };
 
 export default ItemGroupsManager;
+

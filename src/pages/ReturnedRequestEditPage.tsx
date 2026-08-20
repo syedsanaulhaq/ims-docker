@@ -73,7 +73,7 @@ const ReturnedRequestEditPage: React.FC = () => {
     try {
       setIsLoading(true);
       // First, load the returned request information to get the actual request_id
-      const returnedResponse = await fetch('http://localhost:3001/api/approvals/my-returned-requests', {
+      const returnedResponse = await fetch('/api/approvals/my-returned-requests', {
         method: 'GET',
         credentials: 'include',
         headers: {

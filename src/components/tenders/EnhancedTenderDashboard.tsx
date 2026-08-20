@@ -92,7 +92,7 @@ const EnhancedTenderDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:3001/api/tenders');
+      const response = await fetch('/api/tenders');
       if (!response.ok) {
         throw new Error(`Failed to fetch tenders: ${response.status}`);
       }
@@ -115,7 +115,7 @@ const EnhancedTenderDashboard: React.FC = () => {
     try {
       setFinalizingTender(tenderId);
       
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/finalize`, {
+      const response = await fetch(`/api/tenders/${tenderId}/finalize`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ const EnhancedTenderDashboard: React.FC = () => {
 
   const handleViewDetails = async (tender: Tender) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/tenders/${tender.id}`);
+      const response = await fetch(`/api/tenders/${tender.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch tender details');
       }
@@ -174,7 +174,7 @@ const EnhancedTenderDashboard: React.FC = () => {
 
     if (window.confirm('Are you sure you want to delete this tender?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}`, {
+        const response = await fetch(`/api/tenders/${tenderId}`, {
           method: 'DELETE',
         });
         

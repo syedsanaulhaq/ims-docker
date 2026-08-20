@@ -1,7 +1,7 @@
 import { ApiResponse } from './api';
 import { Vendor, CreateVendorRequest, UpdateVendorRequest } from '../types/vendor';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = '/api';
 
 // Local SQL Server vendor service
 export const vendorsLocalService = {
@@ -179,3 +179,4 @@ export const vendorsLocalService = {
     }
   },
 };
+

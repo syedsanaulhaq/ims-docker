@@ -58,7 +58,7 @@ const InitialSetupFresh: React.FC = () => {
       // First try to get current stock, if that fails, get item masters
       let stockResponse;
       try {
-        stockResponse = await fetch('http://localhost:3001/api/inventory/current-stock-detailed');
+        stockResponse = await fetch('/api/inventory/current-stock-detailed');
         if (!stockResponse.ok) {
           throw new Error('Current stock detailed endpoint not available');
         }
@@ -81,8 +81,8 @@ const InitialSetupFresh: React.FC = () => {
       
       // Fallback: Get item masters and create CurrentStock entries
       const [itemMastersResponse, categoriesResponse] = await Promise.all([
-        fetch('http://localhost:3001/api/item-masters'),
-        fetch('http://localhost:3001/api/categories')
+        fetch('/api/item-masters'),
+        fetch('/api/categories')
       ]);
       
       if (!itemMastersResponse.ok) {
@@ -174,7 +174,7 @@ const InitialSetupFresh: React.FC = () => {
       // Try the update endpoint first, if it fails, use initial setup endpoint
       let response;
       try {
-        response = await fetch('http://localhost:3001/api/inventory/update-stock-quantities', {
+        response = await fetch('/api/inventory/update-stock-quantities', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -193,7 +193,7 @@ const InitialSetupFresh: React.FC = () => {
           notes: item.notes
         }));
         
-        response = await fetch('http://localhost:3001/api/inventory/initial-setup', {
+        response = await fetch('/api/inventory/initial-setup', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

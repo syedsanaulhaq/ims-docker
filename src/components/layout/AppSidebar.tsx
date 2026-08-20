@@ -211,7 +211,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/logout', {
+      await fetch('/api/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -748,3 +748,4 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
 };
 
 export default AppSidebar;
+

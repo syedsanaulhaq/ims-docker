@@ -28,7 +28,7 @@ const TenderView: React.FC<TenderViewProps> = ({ tender, onClose }) => {
   useEffect(() => {
     const fetchTenderDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/tenders/${tender.id}`);
+        const response = await fetch(`/api/tenders/${tender.id}`);
         if (response.ok) {
           const data = await response.json();
           setFullTender(data);
@@ -49,7 +49,7 @@ const TenderView: React.FC<TenderViewProps> = ({ tender, onClose }) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/categories');
+        const response = await fetch('/api/categories');
         const categories = await response.json();
         
         // Create a map of category_id -> category_name
@@ -274,3 +274,4 @@ const TenderView: React.FC<TenderViewProps> = ({ tender, onClose }) => {
 };
 
 export default TenderView;
+

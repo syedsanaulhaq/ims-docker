@@ -72,7 +72,7 @@ const AllInventoryItemsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:3001/api/inventory/current-inventory-stock', {
+      const response = await fetch('/api/inventory/current-inventory-stock', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -384,3 +384,4 @@ const AllInventoryItemsPage: React.FC = () => {
 };
 
 export default AllInventoryItemsPage;
+

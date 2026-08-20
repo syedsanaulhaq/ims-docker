@@ -55,7 +55,7 @@ export default function BranchStorekeeperReviewPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:3001/api/stock-issuance/branch-storekeeper/requests', {
+      const response = await fetch('/api/stock-issuance/branch-storekeeper/requests', {
         credentials: 'include',
       });
 
@@ -115,7 +115,7 @@ export default function BranchStorekeeperReviewPage() {
         };
       });
 
-      const response = await fetch(`http://localhost:3001/api/stock-issuance/branch-storekeeper/review/${request.request_id}`, {
+      const response = await fetch(`/api/stock-issuance/branch-storekeeper/review/${request.request_id}`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

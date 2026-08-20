@@ -175,7 +175,7 @@ const ItemsMaster: React.FC = () => {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/item-masters');
+      const response = await fetch('/api/item-masters');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -192,7 +192,7 @@ const ItemsMaster: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/categories');
+      const response = await fetch('/api/categories');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       setCategories(data);
@@ -204,7 +204,7 @@ const ItemsMaster: React.FC = () => {
 
   const fetchSubCategories = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/sub-categories');
+      const response = await fetch('/api/sub-categories');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       setSubCategories(data);
@@ -271,7 +271,7 @@ const ItemsMaster: React.FC = () => {
     if (!confirm(`Are you sure you want to delete "${item.item_name}"?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/item-masters/${item.item_id}`, {
+      const response = await fetch(`/api/item-masters/${item.item_id}`, {
         method: 'DELETE',
       });
 
@@ -312,8 +312,8 @@ const ItemsMaster: React.FC = () => {
     
     try {
       const url = editingItem 
-        ? `http://localhost:3001/api/item-masters/${editingItem.item_id}`
-        : 'http://localhost:3001/api/item-masters';
+        ? `/api/item-masters/${editingItem.item_id}`
+        : '/api/item-masters';
       
       const method = editingItem ? 'PUT' : 'POST';
 

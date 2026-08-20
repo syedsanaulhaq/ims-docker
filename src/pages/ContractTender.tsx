@@ -122,8 +122,8 @@ const ContractTender: React.FC<ContractTenderProps> = ({ initialType }) => {
     try {
       setLoading(true);
       const url = includeDeleted 
-        ? 'http://localhost:3001/api/tenders?includeDeleted=true'
-        : 'http://localhost:3001/api/tenders';
+        ? '/api/tenders?includeDeleted=true'
+        : '/api/tenders';
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -161,7 +161,7 @@ const ContractTender: React.FC<ContractTenderProps> = ({ initialType }) => {
 
     try {
       setFinalizingTender(tenderId);
-      const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/finalize`, {
+      const response = await fetch(`/api/tenders/${tenderId}/finalize`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ const ContractTender: React.FC<ContractTenderProps> = ({ initialType }) => {
     if (window.confirm('Move this tender to trash?')) {
       try {
         setDeletingId(tenderId);
-        const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}`, {
+        const response = await fetch(`/api/tenders/${tenderId}`, {
           method: 'DELETE',
         });
 
@@ -245,7 +245,7 @@ const ContractTender: React.FC<ContractTenderProps> = ({ initialType }) => {
     if (window.confirm('Restore this tender?')) {
       try {
         setRestoringId(tenderId);
-        const response = await fetch(`http://localhost:3001/api/tenders/${tenderId}/restore`, {
+        const response = await fetch(`/api/tenders/${tenderId}/restore`, {
           method: 'POST',
         });
 

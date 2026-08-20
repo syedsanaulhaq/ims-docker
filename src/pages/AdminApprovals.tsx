@@ -76,7 +76,7 @@ const AdminApprovals: React.FC = () => {
   const fetchPendingRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/approvals/admin/pending', {
+      const response = await fetch('/api/approvals/admin/pending', {
         credentials: 'include'
       });
       const data = await response.json();
@@ -90,7 +90,7 @@ const AdminApprovals: React.FC = () => {
 
   const fetchRequestDetails = async (requestId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/approvals/request/${requestId}`, {
+      const response = await fetch(`/api/approvals/request/${requestId}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -116,7 +116,7 @@ const AdminApprovals: React.FC = () => {
         comments
       };
 
-      const response = await fetch(`http://localhost:3001${endpoint}`, {
+      const response = await fetch(`${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -554,3 +554,4 @@ const AdminApprovals: React.FC = () => {
 };
 
 export default AdminApprovals;
+

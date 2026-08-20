@@ -61,7 +61,7 @@ export default function PurchaseOrderDashboard() {
   const fetchPurchaseOrders = async () => {
     try {
       setLoading(true);
-      let query = 'http://localhost:3001/api/purchase-orders';
+      let query = '/api/purchase-orders';
       const params = new URLSearchParams();
 
       // ✅ Include deleted if showDeleted is true
@@ -126,7 +126,7 @@ export default function PurchaseOrderDashboard() {
         data.map(async (po: PurchaseOrder) => {
           if (po.status === 'finalized' || po.status === 'completed') {
             try {
-              const statusResponse = await fetch(`http://localhost:3001/api/purchase-orders/${po.id}/delivery-status`);
+              const statusResponse = await fetch(`/api/purchase-orders/${po.id}/delivery-status`);
               if (statusResponse.ok) {
                 const statusData = await statusResponse.json();
                 return { ...po, deliveryStatus: statusData.deliveryStatus };
@@ -164,7 +164,7 @@ export default function PurchaseOrderDashboard() {
 
     try {
       setDeletingId(id);
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${id}`, {
+      const response = await fetch(`/api/purchase-orders/${id}`, {
         method: 'DELETE'
       });
 
@@ -191,7 +191,7 @@ export default function PurchaseOrderDashboard() {
 
     try {
       setRestoringId(id);
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${id}/restore`, {
+      const response = await fetch(`/api/purchase-orders/${id}/restore`, {
         method: 'POST'
       });
 
@@ -217,7 +217,7 @@ export default function PurchaseOrderDashboard() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/purchase-orders/${id}/finalize`, {
+      const response = await fetch(`/api/purchase-orders/${id}/finalize`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'finalized' })
@@ -706,3 +706,4 @@ export default function PurchaseOrderDashboard() {
     </div>
   );
 }
+
