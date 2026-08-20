@@ -4,12 +4,6 @@
 const getBaseUrl = () => {
   const hostname = window.location.hostname;
   
-  // If running on production server (not localhost)
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // Use the same host with API port 3001
-    return `http://${hostname}:3001`;
-  }
-  
   // Check for environment variable
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
@@ -34,7 +28,7 @@ window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<R
     url = BASE_URL + url;
     } else if (url.includes('localhost:3001')) {
     // Replace localhost:3001 with the configured base URL
-    url = url.replace('', BASE_URL);
+    url = url.replace('http://localhost:3001', BASE_URL);
     }
 
   // Ensure session cookies are sent to backend API unless explicitly overridden.
