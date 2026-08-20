@@ -1,4 +1,4 @@
-USE [InvMISDB];
+USE [InventoryManagementDB];
 GO
 
 -- ==============================================
