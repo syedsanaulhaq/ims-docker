@@ -683,7 +683,7 @@ router.get('/sso-login', async (req, res) => {
     try {
       const result = await pool.request()
         .input('userId', sql.NVarChar, userId)
-        .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE Id = @userId');
+        .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, intOfficeID, intWingID, intDesignationID, ISACT FROM AspNetUsers WHERE Id = @userId');
 
       if (result.recordset.length > 0) {
         dbUser = result.recordset[0];
@@ -694,7 +694,7 @@ router.get('/sso-login', async (req, res) => {
       } else if (userName) {
         const byNameResult = await pool.request()
           .input('username', sql.NVarChar, userName)
-          .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE UserName = @username');
+          .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, intOfficeID, intWingID, intDesignationID, ISACT FROM AspNetUsers WHERE UserName = @username');
         if (byNameResult.recordset.length > 0) {
           dbUser = byNameResult.recordset[0];
           if (!dbUser.ISACT) {
@@ -717,10 +717,10 @@ router.get('/sso-login', async (req, res) => {
       UserName: userName || decoded.unique_name || decoded.user_name || 'Unknown',
       Email: dbUser?.Email || email || '',
       Role: dbUser?.Role || role,
-      intOfficeID: decoded.office_id || null,
-      intWingID: decoded.wing_id || null,
+      intOfficeID: decoded.office_id || dbUser?.intOfficeID || null,
+      intWingID: decoded.wing_id || dbUser?.intWingID || null,
       intBranchID: null,
-      intDesignationID: decoded.designation_id || null
+      intDesignationID: decoded.designation_id || dbUser?.intDesignationID || null
     };
 
     const resolvedBranch = await resolveBranchDetailsFromEmployeeView(pool, {
@@ -801,7 +801,7 @@ router.post('/sso-validate', async (req, res) => {
     try {
       const result = await pool.request()
         .input('userId', sql.NVarChar, userId)
-        .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE Id = @userId');
+        .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, intOfficeID, intWingID, intDesignationID, ISACT FROM AspNetUsers WHERE Id = @userId');
 
       if (result.recordset.length > 0) {
         dbUser = result.recordset[0];
@@ -811,7 +811,7 @@ router.post('/sso-validate', async (req, res) => {
       } else if (userName) {
         const byNameResult = await pool.request()
           .input('username', sql.NVarChar, userName)
-          .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, ISACT FROM AspNetUsers WHERE UserName = @username');
+          .query('SELECT Id, FullName, UserName, CNIC, Email, Role, intBranchID, intOfficeID, intWingID, intDesignationID, ISACT FROM AspNetUsers WHERE UserName = @username');
         if (byNameResult.recordset.length > 0) {
           dbUser = byNameResult.recordset[0];
           if (!dbUser.ISACT) {
@@ -833,10 +833,10 @@ router.post('/sso-validate', async (req, res) => {
       UserName: userName || decoded.unique_name || decoded.user_name || 'Unknown',
       Email: dbUser?.Email || email || '',
       Role: dbUser?.Role || role,
-      intOfficeID: decoded.office_id || null,
-      intWingID: decoded.wing_id || null,
+      intOfficeID: decoded.office_id || dbUser?.intOfficeID || null,
+      intWingID: decoded.wing_id || dbUser?.intWingID || null,
       intBranchID: null,
-      intDesignationID: decoded.designation_id || null
+      intDesignationID: decoded.designation_id || dbUser?.intDesignationID || null
     };
 
     const resolvedBranch = await resolveBranchDetailsFromEmployeeView(pool, {

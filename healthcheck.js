@@ -4,7 +4,7 @@
  * Verifies application health for Docker containers and load balancers
  */
 
-const http = require('http');
+import http from 'http';
 
 const options = {
   hostname: 'localhost',
