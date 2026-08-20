@@ -27,7 +27,9 @@ if (process.env.ENV_FILE) {
 }
 
 // 4) Load SQL Server overrides last (do not override environment variables).
-loadEnvFile('.env.sqlserver', false);
+if (runtimeEnv !== 'production') {
+  loadEnvFile('.env.sqlserver', false);
+}
 
 const config = {
   // Server
