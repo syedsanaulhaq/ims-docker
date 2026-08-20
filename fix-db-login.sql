@@ -16,8 +16,16 @@ GO
 USE [InventoryManagementDB];
 GO
 
--- Map the database user to the server login (fixes orphaned user after restore)
-ALTER USER [invuser] WITH LOGIN = [invuser];
+-- Check if the database user exists. If not, create it!
+IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = 'invuser')
+BEGIN
+    CREATE USER [invuser] FOR LOGIN [invuser];
+END
+ELSE
+BEGIN
+    -- Map the database user to the server login (fixes orphaned user after restore)
+    ALTER USER [invuser] WITH LOGIN = [invuser];
+END
 GO
 
 -- Ensure the user has the necessary permissions
