@@ -34,10 +34,11 @@ async function main() {
       const permissionsResult = await pool.request()
         .input('userId', userId)
         .query(`
-          SELECT DISTINCT rp.permission_key
+          SELECT DISTINCT p.permission_key
           FROM ims_user_roles ur
           INNER JOIN ims_role_permissions rp ON ur.role_id = rp.role_id
-          WHERE ur.user_id = @userId AND ur.is_active = 1
+          INNER JOIN ims_permissions p ON rp.permission_id = p.id
+          WHERE ur.user_id = @userId AND ur.is_active = 1 AND p.is_active = 1
         `);
       console.log('Permissions list:', permissionsResult.recordset.map(p => p.permission_key));
       
