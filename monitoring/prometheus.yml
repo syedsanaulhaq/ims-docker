@@ -27,7 +27,4 @@ scrape_configs:
       - targets: ['localhost:9090']
     scrape_interval: 30s
 
-storage:
-  tsdb:
-    retention.time: 30d
-    retention.size: 10GB
+
