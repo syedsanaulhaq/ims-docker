@@ -300,9 +300,11 @@ const NewProcurementRequest: React.FC = () => {
     setError('Please enter a valid custom item name and quantity');
   };
 
-  const filteredItems = itemsLibrary.filter(item =>
-    item.vItemNomenclature.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredItems = itemsLibrary.filter(item => {
+    const searchLower = searchTerm.toLowerCase().trim();
+    return (item.vItemNomenclature || '').toLowerCase().includes(searchLower) ||
+           (item.vItemCode && item.vItemCode.toLowerCase().includes(searchLower));
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -440,7 +442,10 @@ const NewProcurementRequest: React.FC = () => {
                       filteredItems.map(item => (
                         <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{item.vItemNomenclature}</div>
+                            <div className="font-medium text-sm">
+                              {item.vItemCode ? <span className="text-blue-600 mr-2 font-mono text-xs">[{item.vItemCode}]</span> : null}
+                              {item.vItemNomenclature}
+                            </div>
                             <div className="text-xs text-gray-600 line-clamp-2">
                               Unit: {item.vUnitOfMeasure || 'N/A'}
                             </div>
