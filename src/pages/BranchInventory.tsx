@@ -25,6 +25,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface BranchIssuedItem {
   ledger_id: string;
   request_number: string;
+  item_code?: string;
+  request_id?: string;
   nomenclature: string;
   category_name: string;
   issued_quantity: number;
@@ -43,6 +45,17 @@ interface BranchIssuedItem {
   current_return_status: string;
   status: string;
   issuance_notes: string;
+}
+
+
+interface GroupedInventoryItem {
+  id: string;
+  item_code: string;
+  nomenclature: string;
+  category_name: string;
+  total_issued_quantity: number;
+  total_value: number;
+  details: BranchIssuedItem[];
 }
 
 interface BranchSummary {
@@ -65,6 +78,10 @@ export default function BranchInventory() {
   const { user } = useSession();
   const [items, setItems] = useState<BranchIssuedItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<BranchIssuedItem[]>([]);
+
+  const [groupedItems, setGroupedItems] = useState<GroupedInventoryItem[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+
   const [summary, setSummary] = useState<BranchSummary | null>(null);
   const [userBreakdown, setUserBreakdown] = useState<UserBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +143,7 @@ export default function BranchInventory() {
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.nomenclature.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.item_code && item.item_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
         item.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.issued_to_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -145,7 +163,30 @@ export default function BranchInventory() {
       }
     }
 
+    
     setFilteredItems(filtered);
+
+    // Grouping logic
+    const grouped = filtered.reduce((acc, item) => {
+      const key = item.item_code || item.nomenclature;
+      if (!acc[key]) {
+        acc[key] = {
+          id: key,
+          item_code: item.item_code || '',
+          nomenclature: item.nomenclature,
+          category_name: item.category_name,
+          total_issued_quantity: 0,
+          total_value: 0,
+          details: []
+        };
+      }
+      acc[key].total_issued_quantity += Number(item.issued_quantity) || 0;
+      acc[key].total_value += Number(item.total_value) || 0;
+      acc[key].details.push(item);
+      return acc;
+    }, {} as Record<string, GroupedInventoryItem>);
+
+    setGroupedItems(Object.values(grouped).sort((a, b) => b.total_issued_quantity - a.total_issued_quantity));
   };
 
   const getStatusBadge = (item: BranchIssuedItem) => {
@@ -385,92 +426,135 @@ export default function BranchInventory() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Issued Items ({filteredItems.length})
+            Issued Items ({groupedItems.length} unique)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredItems.length === 0 ? (
+          {groupedItems.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">No items found</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredItems.map((item) => (
-                <div
-                  key={item.ledger_id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-lg">{item.nomenclature}</h3>
-                      <p className="text-sm text-gray-500">Request: {item.request_number}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {item.category_name && (
-                          <Badge variant="outline">
-                            {item.category_name}
-                          </Badge>
+              {groupedItems.map((group) => (
+                <div key={group.id} className="border rounded-xl bg-white shadow-sm overflow-hidden mb-4">
+                  {/* Group Header */}
+                  <div 
+                    className="p-4 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors gap-4"
+                    onClick={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="h-12 w-12 rounded-lg bg-teal-50 flex items-center justify-center flex-shrink-0 border border-teal-100">
+                        <Package className="h-6 w-6 text-teal-600" />
+                      </div>
+                      <div className="space-y-1 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-bold text-lg text-slate-800">{group.nomenclature}</h3>
+                          {group.item_code && (
+                            <Badge variant="outline" className="font-mono text-xs text-blue-600 border-blue-200 bg-blue-50">
+                              {group.item_code}
+                            </Badge>
+                          )}
+                        </div>
+                        {group.category_name && (
+                          <div className="text-sm text-slate-500">{group.category_name}</div>
                         )}
-                        <Badge variant="secondary" className="bg-blue-100">
-                          <Users className="h-3 w-3 mr-1" />
-                          {item.issued_to_name}
-                        </Badge>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      {getStatusBadge(item)}
-                      {item.is_returnable && (
-                        <div className="flex items-center gap-1">
-                          {getReturnStatusIcon(item.current_return_status)}
-                        </div>
-                      )}
+                    
+                    <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
+                      <div className="text-left md:text-right">
+                        <div className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Total Quantity</div>
+                        <div className="text-2xl font-bold text-slate-800">{group.total_issued_quantity}</div>
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 transition-transform duration-200">
+                        {expandedGroupId === group.id ? (
+                          <ChevronUp className="h-5 w-5 text-slate-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-slate-500" />
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Quantity</p>
-                      <p className="font-semibold">{item.issued_quantity}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Issued Date</p>
-                      <p className="font-semibold">{formatDateDMY(item.issued_at)}</p>
-                    </div>
-                  </div>
+                  {/* Expanded Details */}
+                  {expandedGroupId === group.id && (
+                    <div className="bg-slate-50/80 border-t p-4 space-y-4">
+                      <h4 className="font-semibold text-sm text-slate-700 px-2 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-slate-400" />
+                        Issuance History ({group.details.length} records)
+                      </h4>
+                      <div className="space-y-3">
+                        {group.details.map((item) => (
+                          <div key={item.ledger_id} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col lg:flex-row justify-between gap-4">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+                                  <span className="font-mono font-medium text-slate-800">Req: {item.request_number}</span>
+                                  <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-medium border border-blue-100">
+                                    {item.issued_to_name}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    {formatDateDMY(item.issued_at)}
+                                  </span>
+                                  <span className="bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-700">
+                                    Qty: {item.issued_quantity}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {getStatusBadge(item)}
+                                {!!item.is_returnable && getReturnStatusIcon(item.current_return_status)}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/dashboard/request-details/${item.request_id}`);
+                                  }}
+                                  className="h-8 ml-2 bg-white hover:bg-slate-50"
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {!!item.is_returnable && (
+                              <div className="mt-3 text-sm flex gap-4 text-slate-500 bg-slate-50 p-2 rounded-md">
+                                <span><strong>Expected Return:</strong> {item.expected_return_date ? formatDateDMY(item.expected_return_date) : 'N/A'}</span>
+                                {item.actual_return_date && (
+                                  <span><strong>Actual Return:</strong> {formatDateDMY(item.actual_return_date)}</span>
+                                )}
+                              </div>
+                            )}
 
-                  {item.is_returnable && (
-                    <div className="grid grid-cols-2 gap-4 text-sm mt-3 pt-3 border-t">
-                      <div>
-                        <p className="text-gray-500">Expected Return</p>
-                        <p className="font-semibold">
-                          {item.expected_return_date ? formatDateDMY(item.expected_return_date) : 'N/A'}
-                        </p>
+                            {(item.purpose || item.issuance_notes) && (
+                              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                {item.purpose && (
+                                  <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                                    <span className="font-semibold text-slate-600 block text-xs uppercase tracking-wider mb-1">Purpose</span>
+                                    <p className="text-slate-700">{item.purpose}</p>
+                                  </div>
+                                )}
+                                {item.issuance_notes && (
+                                  <div className="bg-amber-50 p-2.5 rounded-md border border-amber-100">
+                                    <span className="font-semibold text-amber-700 block text-xs uppercase tracking-wider mb-1">Notes</span>
+                                    <p className="text-slate-700">{item.issuance_notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      {item.actual_return_date && (
-                        <div>
-                          <p className="text-gray-500">Actual Return</p>
-                          <p className="font-semibold">{formatDateDMY(item.actual_return_date)}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {item.purpose && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-gray-500 text-sm">Purpose</p>
-                      <p className="text-sm mt-1">{item.purpose}</p>
-                    </div>
-                  )}
-
-                  {item.issuance_notes && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-sm">Notes</p>
-                      <p className="text-sm mt-1">{item.issuance_notes}</p>
                     </div>
                   )}
                 </div>
               ))}
-            </div>
+</div>
           )}
         </CardContent>
       </Card>
