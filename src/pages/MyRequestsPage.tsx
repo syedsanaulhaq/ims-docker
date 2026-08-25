@@ -120,7 +120,8 @@ const MyRequestsPage: React.FC = () => {
           const userRequests = data.data.filter((request: any) => {
             const requesterUserId = (request.requester?.user_id || request.requester_user_id || '').toLowerCase();
             const currentUserId = (currentUser.user_id || '').toLowerCase();
-            return requesterUserId === currentUserId;
+            const reqType = (request.request_type || 'individual').toLowerCase();
+            return requesterUserId === currentUserId && (reqType === 'individual' || reqType === 'personal');
           });
           
           const mappedRequests = await Promise.all(
@@ -198,8 +199,8 @@ const MyRequestsPage: React.FC = () => {
               return {
                 id: request.id,
                 request_type: request.request_type || 'Individual',
-                title: request.purpose || 'Stock Issuance Request',
-                description: request.justification || request.purpose || 'Request for inventory items',
+                title: (request.purpose === 'Branch Stock Request' && request.justification) ? request.justification : (request.purpose || 'Stock Issuance Request'),
+                description: (request.purpose === 'Branch Stock Request' && request.justification) ? 'Branch Stock Request' : (request.justification || request.purpose || 'Request for inventory items'),
                 requested_date: request.created_at,
                 submitted_date: request.submitted_at,
                 current_status: effectiveStatus,

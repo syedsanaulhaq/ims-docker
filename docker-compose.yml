@@ -23,6 +23,7 @@ services:
       - SESSION_SECRET=inventory-management-secret-key-2025
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: unless-stopped
 
   frontend:
     build:
@@ -40,3 +41,4 @@ services:
     environment:
       - VITE_API_URL=http://localhost:3001
       - PORT=9090
+    restart: unless-stopped

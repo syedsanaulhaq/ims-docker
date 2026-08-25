@@ -126,6 +126,10 @@ playwright-report/
 test-results/
 pw-e2e-results.json
 query_script.cjs
+scratch/
+test-*.cjs
+stockIssuance-dump*.cjs
 
 # Deployment archives
 *.tar.gz
+

@@ -16,7 +16,8 @@ import {
   Clock,
   User,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye
 } from 'lucide-react';
 import { formatDateDMY } from '@/utils/dateUtils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -142,9 +143,12 @@ export default function PersonalInventory() {
       } else if (filterStatus === 'returnable') {
         filtered = filtered.filter(item => item.is_returnable && item.return_status === 'Not Returned');
       } else if (filterStatus === 'returned') {
-        filtered = filtered.filter(item => item.status === 'Returned');
+        filtered = filtered.filter(item => item.status?.toLowerCase() === 'returned');
       } else if (filterStatus === 'in-use') {
-        filtered = filtered.filter(item => item.status === 'Issued' && item.return_status !== 'Returned');
+        filtered = filtered.filter(item => 
+          ['issued', 'completed', 'dispatched'].includes(item.status?.toLowerCase()) && 
+          item.return_status !== 'Returned'
+        );
       }
     }
 

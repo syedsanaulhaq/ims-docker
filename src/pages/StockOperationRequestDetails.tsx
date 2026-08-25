@@ -78,8 +78,8 @@ const StockOperationRequestDetails: React.FC = () => {
             const mappedRequest: RequestDetails = {
               id: foundRequest.id,
               request_type: foundRequest.request_type || 'Individual',
-              title: foundRequest.purpose || 'Stock Issuance Request',
-              description: foundRequest.justification || foundRequest.purpose || 'Request for inventory items',
+              title: (foundRequest.purpose === 'Branch Stock Request' && foundRequest.justification) ? foundRequest.justification : (foundRequest.purpose || 'Stock Issuance Request'),
+              description: (foundRequest.purpose === 'Branch Stock Request' && foundRequest.justification) ? 'Branch Stock Request' : (foundRequest.justification || foundRequest.purpose || 'Request for inventory items'),
               requested_date: foundRequest.created_at,
               submitted_date: foundRequest.submitted_at,
               current_status: foundRequest.request_status?.toLowerCase() || 'submitted',

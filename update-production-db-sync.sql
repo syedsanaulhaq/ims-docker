@@ -1,12 +1,11 @@
--- =====================================================
--- FIX sp_GetPersonalInventory
--- Aligns procedure with live schema (item_masters.nomenclature,
--- issued_items_ledger + stock_issuance fallback).
--- =====================================================
-
-USE InventoryManagementDB;
+USE [InvMISDB];
 GO
 
+-- ==============================================
+-- 🔄 Syncing local changes to production DB
+-- ==============================================
+
+-- 1. Syncing sp_GetPersonalInventory
 IF OBJECT_ID('dbo.sp_GetPersonalInventory', 'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_GetPersonalInventory;
 GO
@@ -111,9 +110,7 @@ BEGIN
             OR (il2.item_master_id IS NULL AND sii.item_master_id IS NULL)
           )
       )
-    ORDER BY issued_at DESC;
 END;
 GO
 
-PRINT '✅ sp_GetPersonalInventory updated';
-GO
+PRINT '✅ Stored procedure sp_GetPersonalInventory synchronized successfully!';
