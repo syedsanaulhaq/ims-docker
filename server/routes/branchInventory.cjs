@@ -156,10 +156,10 @@ router.get('/:branchId', requireAuth, async (req, res) => {
     }
 
     const invRequest = pool.request();
-    let branchFilter = "AND sir.request_type IN ('branch', 'Organizational')";
+    let branchFilter = "AND sir.request_type = 'branch'";
     if (!isAdmin) {
       invRequest.input('branchId', sql.Int, effectiveBranchId);
-      branchFilter = "AND sir.request_type IN ('branch', 'Organizational') AND sir.requester_branch_id = @branchId";
+      branchFilter = "AND sir.request_type = 'branch' AND sir.requester_branch_id = @branchId";
     }
 
     const result = await invRequest.query(`
