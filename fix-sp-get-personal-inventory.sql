@@ -19,6 +19,7 @@ BEGIN
 
     SELECT
       CAST(il.id AS NVARCHAR(50)) AS ledger_id,
+      CAST(il.request_id AS NVARCHAR(50)) AS request_id,
       il.request_number,
       COALESCE(NULLIF(LTRIM(RTRIM(il.nomenclature)), ''), im.nomenclature, 'Unknown Item') AS nomenclature,
       c.category_name,
@@ -49,11 +50,13 @@ BEGIN
     LEFT JOIN item_masters im ON il.item_master_id = im.id
     LEFT JOIN categories c ON im.category_id = c.id
     WHERE CONVERT(NVARCHAR(450), il.issued_to_user_id) = @UserId
+      AND UPPER(COALESCE(il.request_type, '')) IN ('PERSONAL', 'INDIVIDUAL')
 
     UNION ALL
 
     SELECT
       CAST(sii.id AS NVARCHAR(50)) AS ledger_id,
+      CAST(sir.id AS NVARCHAR(50)) AS request_id,
       sir.request_number,
       COALESCE(im.nomenclature, 'Unknown Item') AS nomenclature,
       c.category_name,
@@ -75,6 +78,8 @@ BEGIN
         ELSE 'Not Returned'
       END AS return_status,
       CASE
+        WHEN COALESCE((SELECT SUM(sri.returned_quantity) FROM stock_return_items sri WHERE sri.original_issuance_item_id = sii.id), 0) >= COALESCE(NULLIF(sii.issued_quantity, 0), NULLIF(sii.approved_quantity, 0), sii.requested_quantity, 1)
+        THEN 'Returned'
         WHEN COALESCE(sir.is_returnable, 0) = 1
           AND TRY_CONVERT(date, sir.expected_return_date) IS NOT NULL
           AND TRY_CONVERT(date, sir.expected_return_date) < CAST(GETDATE() AS DATE)
@@ -83,13 +88,14 @@ BEGIN
         THEN 'Returned'
         ELSE 'Not Returned'
       END AS current_return_status,
-      COALESCE(sii.status, sir.approval_status, sir.request_status, 'Issued') AS status,
+      COALESCE(NULLIF(sii.item_status, ''), sii.status, sir.approval_status, sir.request_status, 'Issued') AS status,
       COALESCE(sir.issuance_notes, '') AS issuance_notes
     FROM stock_issuance_items sii
-    INNER JOIN stock_issuance_requests sir ON sii.stock_issuance_id = sir.id
+    INNER JOIN stock_issuance_requests sir ON COALESCE(sii.request_id, sii.stock_issuance_id) = sir.id
     LEFT JOIN item_masters im ON sii.item_master_id = im.id
     LEFT JOIN categories c ON im.category_id = c.id
     WHERE CONVERT(NVARCHAR(450), sir.requester_user_id) = @UserId
+      AND UPPER(COALESCE(sir.request_type, '')) IN ('PERSONAL', 'INDIVIDUAL')
       AND (
         UPPER(COALESCE(sir.request_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')
         OR UPPER(COALESCE(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')

@@ -49,6 +49,7 @@ BEGIN
     LEFT JOIN item_masters im ON il.item_master_id = im.id
     LEFT JOIN categories c ON im.category_id = c.id
     WHERE CONVERT(NVARCHAR(450), il.issued_to_user_id) = @UserId
+      AND UPPER(COALESCE(il.request_type, '')) IN ('PERSONAL', 'INDIVIDUAL')
 
     UNION ALL
 
@@ -86,13 +87,14 @@ BEGIN
         THEN 'Returned'
         ELSE 'Not Returned'
       END AS current_return_status,
-      COALESCE(sii.status, sir.approval_status, sir.request_status, 'Issued') AS status,
+      COALESCE(NULLIF(sii.item_status, ''), sii.status, sir.approval_status, sir.request_status, 'Issued') AS status,
       COALESCE(sir.issuance_notes, '') AS issuance_notes
     FROM stock_issuance_items sii
     INNER JOIN stock_issuance_requests sir ON COALESCE(sii.request_id, sii.stock_issuance_id) = sir.id
     LEFT JOIN item_masters im ON sii.item_master_id = im.id
     LEFT JOIN categories c ON im.category_id = c.id
     WHERE CONVERT(NVARCHAR(450), sir.requester_user_id) = @UserId
+      AND UPPER(COALESCE(sir.request_type, '')) IN ('PERSONAL', 'INDIVIDUAL')
       AND (
         UPPER(COALESCE(sir.request_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')
         OR UPPER(COALESCE(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')

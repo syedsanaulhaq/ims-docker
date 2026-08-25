@@ -38,9 +38,9 @@ async function tableExists(transaction, tableName) {
 
 async function generateReturnAcquisitionNumber(transaction) {
   const result = await transaction.request().query(`
-    SELECT ISNULL(MAX(CAST(RIGHT(acquisition_number, 6) AS INT)), 0) AS max_num
-    FROM stock_acquisitions
-    WHERE acquisition_number LIKE 'RET-' + CAST(YEAR(GETDATE()) AS VARCHAR) + '%'
+    SELECT ISNULL(MAX(CAST(RIGHT(return_number, 6) AS INT)), 0) AS max_num
+    FROM stock_returns
+    WHERE return_number LIKE 'RET-' + CAST(YEAR(GETDATE()) AS VARCHAR) + '%'
   `);
   const maxNum = result.recordset[0]?.max_num || 0;
   const year = new Date().getFullYear();
@@ -54,35 +54,31 @@ async function generateReturnAcquisitionNumber(transaction) {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { status, limit = 50, offset = 0 } = req.query;
-
     const pool = getPool();
-    const hasSoftDelete = await hasColumn(pool, 'stock_returns', 'is_deleted');
 
     let query = `
       SELECT 
         sr.id,
         sr.return_date,
-        sr.returned_by,
-        sr.verified_by,
-        sr.return_notes,
-        sr.return_status,
+        u.FullName AS returned_by,
+        u2.FullName AS verified_by,
+        sr.remarks AS return_notes,
+        sr.status AS return_status,
         sr.created_at
       FROM stock_returns sr
+      LEFT JOIN AspNetUsers u ON CONVERT(NVARCHAR(450), sr.returned_by) = CONVERT(NVARCHAR(450), u.Id)
+      LEFT JOIN AspNetUsers u2 ON CONVERT(NVARCHAR(450), sr.received_by) = CONVERT(NVARCHAR(450), u2.Id)
       WHERE 1=1
     `;
 
     const request = pool.request();
 
-    if (hasSoftDelete) {
-      query += ` AND sr.is_deleted = 0`;
-    }
-
     if (status && status !== 'all') {
-      query += ` AND sr.return_status = @status`;
+      query += ` AND sr.status = @status`;
       request.input('status', sql.NVarChar, status);
     }
 
-    query += ` ORDER BY sr.return_date DESC, sr.id DESC
+    query += ` ORDER BY sr.return_date DESC, sr.created_at DESC
                OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
 
     request.input('limit', sql.Int, parseInt(limit));
@@ -102,25 +98,24 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-
     const pool = getPool();
-    const hasSoftDelete = await hasColumn(pool, 'stock_returns', 'is_deleted');
 
     // Get return header
     const returnResult = await pool.request()
-      .input('id', sql.Int, parseInt(id))
+      .input('id', sql.UniqueIdentifier, id)
       .query(`
         SELECT 
           sr.id,
           sr.return_date,
-          sr.returned_by,
-          sr.verified_by,
-          sr.return_notes,
-          sr.return_status,
+          u.FullName AS returned_by,
+          u2.FullName AS verified_by,
+          sr.remarks AS return_notes,
+          sr.status AS return_status,
           sr.created_at
         FROM stock_returns sr
+        LEFT JOIN AspNetUsers u ON CONVERT(NVARCHAR(450), sr.returned_by) = CONVERT(NVARCHAR(450), u.Id)
+        LEFT JOIN AspNetUsers u2 ON CONVERT(NVARCHAR(450), sr.received_by) = CONVERT(NVARCHAR(450), u2.Id)
         WHERE sr.id = @id
-        ${hasSoftDelete ? 'AND sr.is_deleted = 0' : ''}
       `);
 
     if (returnResult.recordset.length === 0) {
@@ -129,20 +124,25 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     // Get return items
     const itemsResult = await pool.request()
-      .input('return_id', sql.Int, parseInt(id))
+      .input('return_id', sql.UniqueIdentifier, id)
       .query(`
         SELECT 
           sri.id,
-          sri.return_id,
-          sri.issued_item_id,
-          sri.nomenclature,
-          sri.return_quantity,
-          sri.condition_on_return,
-          sri.damage_description,
+          sri.stock_return_id AS return_id,
+          sri.original_issuance_item_id AS issued_item_id,
+          COALESCE(im.nomenclature, 'Unknown Item') AS nomenclature,
+          sri.returned_quantity AS return_quantity,
+          CASE 
+            WHEN sri.condition_status = 'GOOD' THEN 'Good'
+            WHEN sri.condition_status = 'DAMAGED' THEN 'Damaged'
+            ELSE 'Lost'
+          END AS condition_on_return,
+          sri.condition_remarks AS damage_description,
           sri.created_at
         FROM stock_return_items sri
-        WHERE sri.return_id = @return_id
-        ORDER BY sri.id
+        LEFT JOIN item_masters im ON sri.item_master_id = im.id
+        WHERE sri.stock_return_id = @return_id
+        ORDER BY sri.created_at ASC
       `);
 
     res.json({
@@ -176,33 +176,73 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Return items are required' });
     }
 
-    const finalReturnedBy = returned_by || req.session?.user?.FullName || req.session?.userId || '';
-    if (!finalReturnedBy) {
-      return res.status(400).json({ error: 'Returned by is required' });
-    }
-
     const pool = getPool();
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
-      // Create stock return header
-      const insertHeaderResult = await transaction.request()
-        .input('return_date', sql.Date, return_date || new Date())
-        .input('returned_by', sql.NVarChar(255), finalReturnedBy)
-        .input('verified_by', sql.NVarChar(255), verified_by || null)
-        .input('return_notes', sql.NVarChar(sql.MAX), return_notes || null)
-        .input('return_status', sql.NVarChar(50), return_status || 'Completed')
+      // 1. Get request/issuance details from the first return item to identify wing & requester
+      const firstItem = return_items[0];
+      const issuanceInfoResult = await transaction.request()
+        .input('issuedItemId', sql.UniqueIdentifier, firstItem.issued_item_id)
         .query(`
-          INSERT INTO stock_returns (return_date, returned_by, verified_by, return_notes, return_status, created_at)
-          OUTPUT INSERTED.id
-          VALUES (@return_date, @returned_by, @verified_by, @return_notes, @return_status, GETDATE())
+          SELECT TOP 1 sir.id AS request_id, sir.requester_wing_id, sir.requester_user_id, si.id AS actual_issuance_id
+          FROM stock_issuance_items sii
+          INNER JOIN stock_issuance_requests sir ON sii.request_id = sir.id
+          LEFT JOIN stock_issuances si ON si.id = sii.stock_issuance_id
+          WHERE sii.id = @issuedItemId
         `);
 
-      const returnId = insertHeaderResult.recordset[0].id;
+      if (issuanceInfoResult.recordset.length === 0) {
+        throw new Error('Original issuance request not found');
+      }
+
+      const { request_id, requester_wing_id, requester_user_id, actual_issuance_id } = issuanceInfoResult.recordset[0];
+
+      // 2. Resolve dec_id from requester_wing_id
+      let decId = null;
+      if (requester_wing_id) {
+        const decResult = await transaction.request()
+          .input('wingId', sql.Int, requester_wing_id)
+          .query(`SELECT TOP 1 intAutoID FROM DEC_MST WHERE WingID = @wingId`);
+        decId = decResult.recordset[0]?.intAutoID || null;
+      }
+      
+      if (!decId) {
+        const fallbackDecResult = await transaction.request()
+          .query(`SELECT TOP 1 intAutoID FROM DEC_MST ORDER BY intAutoID ASC`);
+        decId = fallbackDecResult.recordset[0]?.intAutoID || 1;
+      }
+
+      // 3. Generate return number
+      const returnNumber = await generateReturnAcquisitionNumber(transaction);
+      const returnId = uuidv4();
+
+      // 4. Create stock return header in the clean schema
+      await transaction.request()
+        .input('id', sql.UniqueIdentifier, returnId)
+        .input('return_number', sql.NVarChar(50), returnNumber)
+        .input('dec_id', sql.Int, decId)
+        .input('original_issuance_id', sql.UniqueIdentifier, actual_issuance_id || null)
+        .input('returned_by', sql.NVarChar(450), String(requester_user_id || req.session.userId))
+        .input('received_by', sql.NVarChar(450), String(req.session.userId))
+        .input('return_date', sql.Date, return_date || new Date())
+        .input('remarks', sql.NVarChar(500), return_notes || null)
+        .input('status', sql.NVarChar(20), 'PROCESSED')
+        .query(`
+          INSERT INTO stock_returns (
+            id, return_number, dec_id, original_issuance_id, returned_by, received_by,
+            return_date, return_reason, condition_status, status, remarks, created_at, updated_at
+          )
+          VALUES (
+            @id, @return_number, @dec_id, @original_issuance_id, @returned_by, @received_by,
+            @return_date, 'OTHER', 'GOOD', @status, @remarks, GETDATE(), GETDATE()
+          )
+        `);
+
       const isCompleted = (return_status || 'Completed').toString().toLowerCase() === 'completed';
 
-      // Add return items
+      // 5. Add return items in the clean schema
       for (const item of return_items) {
         if (!item.issued_item_id) {
           throw new Error('Each return item must have an issued_item_id');
@@ -211,19 +251,46 @@ router.post('/', requireAuth, async (req, res) => {
           throw new Error(`Invalid return quantity for item ${item.nomenclature || item.issued_item_id}`);
         }
 
-        await transaction.request()
-          .input('return_id', sql.Int, returnId)
-          .input('issued_item_id', sql.NVarChar(255), item.issued_item_id)
-          .input('nomenclature', sql.NVarChar(500), item.nomenclature || '')
-          .input('return_quantity', sql.Int, item.return_quantity)
-          .input('condition_on_return', sql.NVarChar(50), item.condition_on_return || 'Good')
-          .input('damage_description', sql.NVarChar(sql.MAX), item.damage_description || null)
+        // Get details of the stock_issuance_item
+        const itemDetailResult = await transaction.request()
+          .input('issuedItemId', sql.UniqueIdentifier, item.issued_item_id)
           .query(`
-            INSERT INTO stock_return_items (return_id, issued_item_id, nomenclature, return_quantity, condition_on_return, damage_description, created_at)
-            VALUES (@return_id, @issued_item_id, @nomenclature, @return_quantity, @condition_on_return, @damage_description, GETDATE())
+            SELECT TOP 1 item_master_id, unit_price, COALESCE(issued_quantity, approved_quantity, requested_quantity, 0) AS issued_quantity
+            FROM stock_issuance_items
+            WHERE id = @issuedItemId
           `);
 
-        // If completed, update issuance tracking and add stock back to inventory
+        if (itemDetailResult.recordset.length === 0) {
+          throw new Error(`Issuance item details not found for ID ${item.issued_item_id}`);
+        }
+
+        const { item_master_id, unit_price } = itemDetailResult.recordset[0];
+        const unitCost = Number(unit_price || 0);
+        const conditionStatus = item.condition_on_return === 'Good' ? 'GOOD' : (item.condition_on_return === 'Damaged' ? 'DAMAGED' : 'UNUSABLE');
+
+        await transaction.request()
+          .input('id', sql.UniqueIdentifier, uuidv4())
+          .input('stock_return_id', sql.UniqueIdentifier, returnId)
+          .input('item_master_id', sql.UniqueIdentifier, item_master_id)
+          .input('original_issuance_item_id', sql.UniqueIdentifier, item.issued_item_id)
+          .input('returned_quantity', sql.Int, item.return_quantity)
+          .input('condition_status', sql.NVarChar(20), conditionStatus)
+          .input('unit_price', sql.Decimal(15, 4), unitCost)
+          .input('condition_remarks', sql.NVarChar(500), item.damage_description || null)
+          .query(`
+            INSERT INTO stock_return_items (
+              id, stock_return_id, item_master_id, original_issuance_item_id,
+              returned_quantity, accepted_quantity, rejected_quantity,
+              condition_status, unit_price, status, condition_remarks, created_at, updated_at
+            )
+            VALUES (
+              @id, @stock_return_id, @item_master_id, @original_issuance_item_id,
+              @returned_quantity, @returned_quantity, 0,
+              @condition_status, @unit_price, 'PROCESSED', @condition_remarks, GETDATE(), GETDATE()
+            )
+          `);
+
+        // Update inventory tracking and add stock back to inventory if completed
         if (isCompleted) {
           await processReturnInventory(transaction, item, req.session?.userId);
         }
@@ -266,7 +333,6 @@ async function processReturnInventory(transaction, item, processedByUserId) {
 
   const issuedItem = issuanceResult.recordset[0];
   const itemMasterId = issuedItem.item_master_id;
-  const issuedQty = Number(issuedItem.issued_quantity || issuedItem.approved_quantity || issuedItem.requested_quantity || 0);
   const unitCost = Number(issuedItem.unit_price || 0);
 
   if (!itemMasterId) {
@@ -274,7 +340,7 @@ async function processReturnInventory(transaction, item, processedByUserId) {
     return;
   }
 
-  // Update returned_quantity on stock_issuance_items if column exists
+  // Update returned_quantity on stock_issuance_items if column exists (dynamic check)
   const hasReturnedQty = await hasColumn(transaction, 'stock_issuance_items', 'returned_quantity');
   if (hasReturnedQty) {
     await transaction.request()
@@ -359,27 +425,19 @@ router.put('/:id/approve', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { approval_remarks } = req.body;
 
-    const transaction = new sql.Transaction(getPool());
-    await transaction.begin();
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('approval_remarks', sql.NVarChar(sql.MAX), approval_remarks || null)
+      .query(`
+        UPDATE stock_returns 
+        SET status = 'PROCESSED',
+            remarks = COALESCE(NULLIF(@approval_remarks, ''), remarks),
+            updated_at = GETDATE()
+        WHERE id = @id
+      `);
 
-    try {
-      await transaction.request()
-        .input('id', sql.Int, parseInt(id))
-        .input('approval_remarks', sql.NVarChar(sql.MAX), approval_remarks || null)
-        .query(`
-          UPDATE stock_returns 
-          SET return_status = 'Approved',
-              return_notes = COALESCE(NULLIF(@approval_remarks, ''), return_notes),
-              created_at = GETDATE()
-          WHERE id = @id
-        `);
-
-      await transaction.commit();
-      res.json({ success: true, message: 'Stock return approved successfully' });
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    res.json({ success: true, message: 'Stock return approved successfully' });
   } catch (error) {
     console.error('Error approving stock return:', error);
     res.status(500).json({ error: 'Failed to approve stock return' });
@@ -395,12 +453,13 @@ router.put('/:id/reject', requireAuth, async (req, res) => {
     const { rejection_reason } = req.body;
 
     await getPool().request()
-      .input('id', sql.Int, parseInt(id))
+      .input('id', sql.UniqueIdentifier, id)
       .input('rejection_reason', sql.NVarChar(sql.MAX), rejection_reason || null)
       .query(`
         UPDATE stock_returns 
-        SET return_status = 'Rejected',
-            return_notes = COALESCE(NULLIF(@rejection_reason, ''), return_notes)
+        SET status = 'CANCELLED',
+            remarks = COALESCE(NULLIF(@rejection_reason, ''), remarks),
+            updated_at = GETDATE()
         WHERE id = @id
       `);
 
@@ -412,30 +471,23 @@ router.put('/:id/reject', requireAuth, async (req, res) => {
 });
 
 // ============================================================================
-// DELETE /api/stock-returns/:id - Delete stock return (soft delete)
+// DELETE /api/stock-returns/:id - Cancel/Delete stock return
 // ============================================================================
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedBy = req.session?.userId || null;
-
     const pool = getPool();
-    const hasSoftDelete = await hasColumn(pool, 'stock_returns', 'is_deleted');
-
-    if (!hasSoftDelete) {
-      return res.status(400).json({ error: 'Soft delete is not enabled for stock returns' });
-    }
 
     // Check status first
     const checkResult = await pool.request()
-      .input('id', sql.Int, parseInt(id))
-      .query(`SELECT return_status FROM stock_returns WHERE id = @id AND is_deleted = 0`);
+      .input('id', sql.UniqueIdentifier, id)
+      .query(`SELECT status FROM stock_returns WHERE id = @id`);
 
     if (checkResult.recordset.length === 0) {
       return res.status(404).json({ error: 'Stock return not found' });
     }
 
-    if (checkResult.recordset[0].return_status !== 'Pending') {
+    if (checkResult.recordset[0].status !== 'PENDING') {
       return res.status(400).json({ error: 'Can only delete pending stock returns' });
     }
 
@@ -444,29 +496,25 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     try {
       await transaction.request()
-        .input('return_id', sql.Int, parseInt(id))
-        .input('deletedBy', sql.NVarChar(450), deletedBy)
+        .input('return_id', sql.UniqueIdentifier, id)
         .query(`
           UPDATE stock_return_items
-          SET is_deleted = 1,
-              deleted_at = GETDATE(),
-              deleted_by = @deletedBy
-          WHERE return_id = @return_id
+          SET status = 'CANCELLED',
+              updated_at = GETDATE()
+          WHERE stock_return_id = @return_id
         `);
 
       await transaction.request()
-        .input('id', sql.Int, parseInt(id))
-        .input('deletedBy', sql.NVarChar(450), deletedBy)
+        .input('id', sql.UniqueIdentifier, id)
         .query(`
           UPDATE stock_returns
-          SET is_deleted = 1,
-              deleted_at = GETDATE(),
-              deleted_by = @deletedBy
+          SET status = 'CANCELLED',
+              updated_at = GETDATE()
           WHERE id = @id
         `);
 
       await transaction.commit();
-      res.json({ success: true, message: 'Stock return deleted' });
+      res.json({ success: true, message: 'Stock return cancelled successfully' });
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -474,52 +522,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting stock return:', error);
     res.status(500).json({ error: 'Failed to delete stock return' });
-  }
-});
-
-// ============================================================================
-// POST /api/stock-returns/:id/restore - Restore deleted stock return
-// ============================================================================
-router.post('/:id/restore', requireAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const pool = getPool();
-    const transaction = new sql.Transaction(pool);
-
-    await transaction.begin();
-
-    try {
-      const result = await transaction.request()
-        .input('id', sql.Int, parseInt(id))
-        .query(`
-          UPDATE stock_returns
-          SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
-          OUTPUT INSERTED.*
-          WHERE id = @id AND is_deleted = 1
-        `);
-
-      if (result.recordset.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json({ error: 'Deleted stock return not found' });
-      }
-
-      await transaction.request()
-        .input('returnId', sql.Int, parseInt(id))
-        .query(`
-          UPDATE stock_return_items
-          SET is_deleted = 0, deleted_at = NULL, deleted_by = NULL
-          WHERE return_id = @returnId AND is_deleted = 1
-        `);
-
-      await transaction.commit();
-      res.json({ success: true, message: '✅ Stock return restored', stockReturn: result.recordset[0] });
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  } catch (error) {
-    console.error('❌ Error restoring stock return:', error);
-    res.status(500).json({ error: 'Failed to restore stock return' });
   }
 });
 

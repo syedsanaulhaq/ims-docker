@@ -131,6 +131,9 @@ test.describe('End-to-End Personal and Wing Request Workflows', () => {
 
     const personalInvCard = page.locator('.space-y-4 > div').first();
     await expect(personalInvCard).toContainText('Printers Black and White');
+    // Click the item name header to expand the accordion and show the request number detail
+    await personalInvCard.locator('h3', { hasText: 'Printers Black and White' }).click();
+    await page.waitForTimeout(1000);
     await expect(personalInvCard).toContainText(personalRequestNumber);
     console.log('Personal inventory verified successfully!');
   });
@@ -284,6 +287,9 @@ test.describe('End-to-End Personal and Wing Request Workflows', () => {
 
     const wingInvCard = page.locator('.space-y-4 > div').first();
     await expect(wingInvCard).toContainText('Printers Black and White');
+    // Click the item name header to expand the accordion and show the request number detail
+    await wingInvCard.locator('h3', { hasText: 'Printers Black and White' }).click();
+    await page.waitForTimeout(1000);
     await expect(wingInvCard).toContainText(wingRequestNumber);
     console.log('Wing inventory verified successfully!');
   });
@@ -499,6 +505,9 @@ test.describe('End-to-End Personal and Wing Request Workflows', () => {
 
     const personalShortageInvCard = page.locator('.space-y-4 > div').first();
     await expect(personalShortageInvCard).toContainText('Printers Black and White');
+    // Click the item name header to expand the accordion and show the request number detail
+    await personalShortageInvCard.locator('h3', { hasText: 'Printers Black and White' }).click();
+    await page.waitForTimeout(1000);
     await expect(personalShortageInvCard).toContainText(shortageRequestNumber);
     console.log('Personal inventory shortage verified successfully!');
   });

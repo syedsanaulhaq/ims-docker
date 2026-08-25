@@ -211,8 +211,8 @@ const RequestDetailsPage: React.FC = () => {
             const mappedRequest: RequestDetails = {
               id: foundRequest.id,
               request_type: foundRequest.request_type || 'Individual',
-              title: foundRequest.purpose || 'Stock Issuance Request',
-              description: foundRequest.justification || foundRequest.purpose || 'Request for inventory items',
+              title: (foundRequest.purpose === 'Branch Stock Request' && foundRequest.justification) ? foundRequest.justification : (foundRequest.purpose || 'Stock Issuance Request'),
+              description: (foundRequest.purpose === 'Branch Stock Request' && foundRequest.justification) ? 'Branch Stock Request' : (foundRequest.justification || foundRequest.purpose || 'Request for inventory items'),
               requested_date: foundRequest.created_at,
               submitted_date: foundRequest.submitted_at,
               current_status: foundRequest.request_status?.toLowerCase() || 'submitted',
@@ -664,15 +664,17 @@ const RequestDetailsPage: React.FC = () => {
   }
 
   const normalizedRequestType = String(request.request_type || '').trim().toLowerCase();
-  const isWingOrOrganizationalRequest =
-    normalizedRequestType === 'wing' ||
-    normalizedRequestType === 'organizational';
-  const backPath = isWingOrOrganizationalRequest
-    ? '/dashboard/wing-request-history'
-    : '/dashboard/my-requests';
-  const backLabel = isWingOrOrganizationalRequest
-    ? 'Back to Wing Requests'
-    : 'Back to My Requests';
+  
+  let backPath = '/dashboard/my-requests';
+  let backLabel = 'Back to My Requests';
+  
+  if (normalizedRequestType === 'branch') {
+    backPath = '/dashboard/branch-request-history';
+    backLabel = 'Back to Branch Requests';
+  } else if (normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') {
+    backPath = '/dashboard/wing-request-history';
+    backLabel = 'Back to Wing Requests';
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -680,7 +682,13 @@ const RequestDetailsPage: React.FC = () => {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button 
-            onClick={() => navigate(backPath)} 
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate(backPath);
+              }
+            }} 
             variant="outline" 
             size="sm"
           >

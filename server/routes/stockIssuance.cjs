@@ -784,10 +784,10 @@ router.get('/pending/count', async (req, res) => {
 // ============================================================================
 // GET /api/stock-issuance/issued-items - Get issued items (all or by user)
 // ============================================================================
-router.get('/issued-items', async (req, res) => {
+router.get('/issued-items', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
-    const { user_id } = req.query;
+    const { user_id, scope } = req.query;
     const request = pool.request();
     // Prefer request-linked items (current workflow). Fall back to legacy stock_issuances rows.
     let query = `
@@ -816,9 +816,33 @@ router.get('/issued-items', async (req, res) => {
         UPPER(COALESCE(sir.approval_status, sir.request_status, si.status, sii.item_status, sii.status, '')) IN ('APPROVED', 'ISSUED', 'COMPLETED')
       )
       AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
+      AND (
+        COALESCE((SELECT SUM(sri.returned_quantity) FROM stock_return_items sri WHERE sri.original_issuance_item_id = sii.id), 0)
+        <
+        COALESCE(sii.issued_quantity, sii.approved_quantity, sii.requested_quantity, 0)
+      )
     `;
 
-    if (user_id) {
+    if (scope === 'personal') {
+      request.input('userId', sql.NVarChar(450), req.session.userId);
+      query += ` AND sir.request_type IN ('personal', 'Individual') AND CONVERT(NVARCHAR(450), sir.requester_user_id) = @userId`;
+    } else if (scope === 'branch') {
+      const userBranchId = req.session.user?.intBranchID || null;
+      if (userBranchId) {
+        request.input('branchId', sql.Int, userBranchId);
+        query += ` AND (sir.request_type = 'branch' OR (sir.request_type = 'Organizational' AND sir.requester_branch_id = @branchId))`;
+      } else {
+        query += ` AND 1=0`;
+      }
+    } else if (scope === 'wing') {
+      const userWingId = req.session.user?.intWingID || null;
+      if (userWingId) {
+        request.input('wingId', sql.Int, userWingId);
+        query += ` AND (sir.request_type = 'wing' OR (sir.request_type = 'Organizational' AND sir.requester_wing_id = @wingId))`;
+      } else {
+        query += ` AND 1=0`;
+      }
+    } else if (user_id) {
       request.input('userId', sql.NVarChar(450), user_id);
       query += ` AND (
         CONVERT(NVARCHAR(450), sir.requester_user_id) = @userId

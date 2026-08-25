@@ -261,8 +261,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     items: [
       { title: "Dashboard", icon: Home, path: "/personal-dashboard", permission: undefined },
       { title: "Request Form", icon: ShoppingCart, path: "/dashboard/stock-issuance-personal", permission: undefined },
-      ...(!canAccessBranchMenu && hasBranchAssignment ? [
-        { title: "Branch Demand", icon: Building2, path: "/dashboard/stock-issuance-branch", permission: undefined },
+      ...(hasBranchAssignment ? [
+        { title: "Branch Demand", icon: Building2, path: "/dashboard/stock-issuance-branch?mode=demand", permission: undefined },
         { title: "My Branch Demand", icon: ClipboardList, path: "/dashboard/my-branch-demand", permission: undefined },
       ] : []),
       { title: "My Request", icon: ClipboardList, path: "/dashboard/my-requests", permission: undefined },

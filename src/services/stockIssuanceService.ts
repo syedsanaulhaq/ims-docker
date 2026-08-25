@@ -143,9 +143,10 @@ class StockIssuanceService {
     }
   }
 
-  async getIssuedItems(): Promise<any[]> {
+  async getIssuedItems(scope?: string): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/issued-items`, { credentials: 'include' });
+      const url = scope ? `${this.baseUrl}/issued-items?scope=${scope}` : `${this.baseUrl}/issued-items`;
+      const response = await fetch(url, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

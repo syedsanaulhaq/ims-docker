@@ -211,7 +211,12 @@ const PersonalDashboard = () => {
             .catch(() => ({ data: [] }))
         ]);
 
-        setMyRequests(toArray(requestsRes, ['requests', 'data']));
+        const rawRequests = toArray(requestsRes, ['requests', 'data']);
+        const personalRequestsOnly = rawRequests.filter((r: any) => {
+          const reqType = (r.request_type || 'individual').toLowerCase();
+          return reqType === 'individual' || reqType === 'personal';
+        });
+        setMyRequests(personalRequestsOnly);
         setMyIssuedItems(toArray(issuedItemsRes, ['data', 'items']));
         setMyPendingApprovals(toArray(approvalsRes, ['data', 'requests']));
 

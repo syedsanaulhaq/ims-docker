@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getApiBaseUrl } from '../utils/api-config';
 import { useSession } from '../contexts/SessionContext';
 import { generateScopedRequestNumber } from '@/utils/requestNumber';
@@ -80,11 +80,13 @@ const StockIssuanceBranch: React.FC = () => {
   const [myDemands, setMyDemands] = useState<BranchStaffDemand[]>([]);
   const [demandLoading, setDemandLoading] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const forceDemandMode = searchParams.get('mode') === 'demand';
   const branchId = Number((user as any)?.branch_id ?? (user as any)?.intBranchID ?? 0) || 0;
   const branchName = (user as any)?.branch_name || (user as any)?.BranchName || 'Unknown Branch';
   const branchAcronym = (user as any)?.branch_acronym || (user as any)?.BranchAcron || '';
   const roleNames = ((user as any)?.ims_roles || []).map((r: any) => String(r?.role_name || '').toUpperCase().replace(/\s+/g, '_'));
-  const isBranchSupervisor = roleNames.some((role: string) => role === 'BRANCH_SUPERVISOR' || role === 'CUSTOM_BRANCH_SUPERVISOR') || (user as any)?.is_super_admin;
+  const isBranchSupervisor = !forceDemandMode && (roleNames.some((role: string) => role === 'BRANCH_SUPERVISOR' || role === 'CUSTOM_BRANCH_SUPERVISOR') || (user as any)?.is_super_admin);
 
   useEffect(() => {
     fetchItemsLibrary();
@@ -348,7 +350,7 @@ const StockIssuanceBranch: React.FC = () => {
         requester_wing_id: wingId,
         requester_branch_id: branchId,
         requester_user_id: userId || null,
-        purpose: 'Branch Stock Request',
+        purpose: justification,
         urgency_level: priority === 'critical' ? 'High' : priority === 'urgent' ? 'Medium' : 'Normal',
         justification,
         expected_return_date: null,
@@ -539,14 +541,14 @@ const StockIssuanceBranch: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  Staff Demand Inbox ({staffDemands.length})
+                  Branch Inbox ({staffDemands.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {demandLoading ? (
-                  <div className="text-sm text-gray-500">Loading staff demands...</div>
+                  <div className="text-sm text-gray-500">Loading branch inbox...</div>
                 ) : staffDemands.length === 0 ? (
-                  <div className="text-sm text-gray-500">No pending staff demand lines found.</div>
+                  <div className="text-sm text-gray-500">No pending demands found in Branch Inbox.</div>
                 ) : (
                   <div className="space-y-2 max-h-56 overflow-y-auto">
                     {staffDemands.map((demand) => (

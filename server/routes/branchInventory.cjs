@@ -73,8 +73,16 @@ router.get('/requests', requireAuth, async (req, res) => {
         sir.id,
         sir.request_number,
         sir.request_type,
-        COALESCE(sir.purpose, 'Stock Issuance Request') AS title,
-        COALESCE(sir.justification, sir.purpose, '') AS description,
+        CASE 
+          WHEN COALESCE(sir.purpose, '') = 'Branch Stock Request' AND sir.justification IS NOT NULL AND sir.justification <> '' 
+          THEN sir.justification 
+          ELSE COALESCE(sir.purpose, 'Stock Issuance Request') 
+        END AS title,
+        CASE 
+          WHEN COALESCE(sir.purpose, '') = 'Branch Stock Request' AND sir.justification IS NOT NULL AND sir.justification <> '' 
+          THEN 'Branch Stock Request' 
+          ELSE COALESCE(sir.justification, sir.purpose, '') 
+        END AS description,
         sir.created_at AS requested_date,
         sir.submitted_at AS submitted_date,
         u.FullName AS requester_name,
@@ -148,15 +156,16 @@ router.get('/:branchId', requireAuth, async (req, res) => {
     }
 
     const invRequest = pool.request();
-    let branchFilter = 'AND sir.request_type = \'branch\'';
+    let branchFilter = "AND sir.request_type IN ('branch', 'Organizational')";
     if (!isAdmin) {
       invRequest.input('branchId', sql.Int, effectiveBranchId);
-      branchFilter += ' AND sir.requester_branch_id = @branchId';
+      branchFilter = "AND sir.request_type IN ('branch', 'Organizational') AND sir.requester_branch_id = @branchId";
     }
 
     const result = await invRequest.query(`
       SELECT
         sii.id AS ledger_id,
+        sir.id AS request_id,
         sir.request_number,
         COALESCE(im.nomenclature, sii.nomenclature, 'Unknown Item') AS nomenclature,
         c.category_name,
@@ -167,7 +176,7 @@ router.get('/:branchId', requireAuth, async (req, res) => {
         '' AS issued_by_name,
         u.FullName AS issued_to_name,
         u.Id AS issued_to_id,
-        sir.request_type AS purpose,
+        sir.purpose AS purpose,
         sir.request_type,
         COALESCE(sir.is_returnable, 0) AS is_returnable,
         sir.expected_return_date,
@@ -178,6 +187,8 @@ router.get('/:branchId', requireAuth, async (req, res) => {
           ELSE 'Not Returned'
         END AS return_status,
         CASE
+          WHEN COALESCE((SELECT SUM(sri.returned_quantity) FROM stock_return_items sri WHERE sri.original_issuance_item_id = sii.id), 0) >= COALESCE(NULLIF(sii.issued_quantity, 0), NULLIF(sii.approved_quantity, 0), sii.requested_quantity, 1)
+          THEN 'Returned'
           WHEN COALESCE(sir.is_returnable, 0) = 1
             AND sir.expected_return_date IS NOT NULL
             AND sir.expected_return_date < GETDATE()

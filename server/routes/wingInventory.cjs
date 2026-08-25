@@ -137,15 +137,16 @@ router.get('/:wingId', requireAuth, async (req, res) => {
     }
 
     const invRequest = pool.request();
-    let wingFilter = 'AND (sir.request_type = \'wing\' OR sir.request_type = \'Organizational\')';
+    let wingFilter = "AND sir.request_type IN ('wing', 'Organizational')";
     if (!isAdmin) {
       invRequest.input('wingId', sql.Int, effectiveWingId);
-      wingFilter += ' AND sir.requester_wing_id = @wingId';
+      wingFilter = "AND sir.request_type IN ('wing', 'Organizational') AND sir.requester_wing_id = @wingId";
     }
 
     const result = await invRequest.query(`
       SELECT
         sii.id AS ledger_id,
+        sir.id AS request_id,
         sir.request_number,
         COALESCE(im.nomenclature, sii.nomenclature, 'Unknown Item') AS nomenclature,
         c.category_name,
@@ -161,7 +162,7 @@ router.get('/:wingId', requireAuth, async (req, res) => {
         '' AS issued_by_name,
         u.FullName AS issued_to_name,
         u.Id AS issued_to_id,
-        sir.request_type AS purpose,
+        sir.purpose AS purpose,
         sir.request_type,
         COALESCE(sir.is_returnable, 0) AS is_returnable,
         sir.expected_return_date,
@@ -172,6 +173,8 @@ router.get('/:wingId', requireAuth, async (req, res) => {
           ELSE 'Not Returned'
         END AS return_status,
         CASE
+          WHEN COALESCE((SELECT SUM(sri.returned_quantity) FROM stock_return_items sri WHERE sri.original_issuance_item_id = sii.id), 0) >= COALESCE(NULLIF(sii.issued_quantity, 0), NULLIF(sii.approved_quantity, 0), sii.requested_quantity, 1)
+          THEN 'Returned'
           WHEN COALESCE(sir.is_returnable, 0) = 1
             AND sir.expected_return_date IS NOT NULL
             AND sir.expected_return_date < GETDATE()
