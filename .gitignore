@@ -133,3 +133,14 @@ stockIssuance-dump*.cjs
 # Deployment archives
 *.tar.gz
 
+# Local helper scripts and backups
+*.backup
+apply-grouping.cjs
+find-deploy.cjs
+find-history.cjs
+find-modifications.cjs
+fix-commas.cjs
+insert-perm.cjs
+show-inputs.cjs
+restore-production-db.ps1
+
