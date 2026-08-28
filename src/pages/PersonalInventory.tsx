@@ -12,16 +12,14 @@ import {
   AlertTriangle,
   XCircle,
   Search,
-  TrendingUp,
-  Clock,
-  User,
-  ChevronDown,
-  ChevronUp,
-  Eye
+  Eye,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 import { formatDateDMY } from '@/utils/dateUtils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface IssuedItem {
   ledger_id: string;
@@ -46,39 +44,32 @@ interface IssuedItem {
   issuance_notes: string;
 }
 
-
 interface GroupedInventoryItem {
   id: string;
   item_code: string;
   nomenclature: string;
   category_name: string;
   total_issued_quantity: number;
-  total_value: number;
+  total_returned_quantity: number;
+  total_in_use_quantity: number;
   details: IssuedItem[];
-}
-
-interface Summary {
-  total_items: number;
-  total_value: number;
-  returnable_items: number;
-  not_returned: number;
-  overdue: number;
 }
 
 export default function PersonalInventory() {
   const navigate = useNavigate();
   const { user } = useSession();
+  
   const [items, setItems] = useState<IssuedItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<IssuedItem[]>([]);
-
-  const [groupedItems, setGroupedItems] = useState<GroupedInventoryItem[]>([]);
-  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
-
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [filteredGroups, setFilteredGroups] = useState<GroupedInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  // Modal states
+  const [selectedGroup, setSelectedGroup] = useState<GroupedInventoryItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.user_id) {
@@ -87,7 +78,7 @@ export default function PersonalInventory() {
   }, [user]);
 
   useEffect(() => {
-    filterItems();
+    processAndFilterInventory();
   }, [items, searchTerm, filterStatus]);
 
   const fetchPersonalInventory = async () => {
@@ -95,7 +86,7 @@ export default function PersonalInventory() {
       setLoading(true);
       setError('');
       
-      const apiBase = import.meta.env.VITE_API_URL || `${import.meta.env.VITE_API_URL}`;
+      const apiBase = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${apiBase}/api/inventory/personal-inventory/${user?.user_id}`, {
         credentials: 'include'
       });
@@ -113,7 +104,6 @@ export default function PersonalInventory() {
 
       const data = await response.json();
       setItems(data.items || []);
-      setSummary(data.summary);
       
     } catch (err: any) {
       setError(err.message);
@@ -123,97 +113,152 @@ export default function PersonalInventory() {
     }
   };
 
-  const filterItems = () => {
-    let filtered = items;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.nomenclature.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.item_code && item.item_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        item.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (filterStatus !== 'all') {
-      if (filterStatus === 'overdue') {
-        filtered = filtered.filter(item => item.current_return_status === 'Overdue');
-      } else if (filterStatus === 'returnable') {
-        filtered = filtered.filter(item => item.is_returnable && item.return_status === 'Not Returned');
-      } else if (filterStatus === 'returned') {
-        filtered = filtered.filter(item => item.status?.toLowerCase() === 'returned');
-      } else if (filterStatus === 'in-use') {
-        filtered = filtered.filter(item => 
-          ['issued', 'completed', 'dispatched'].includes(item.status?.toLowerCase()) && 
-          item.return_status !== 'Returned'
-        );
-      }
-    }
-
+  const processAndFilterInventory = () => {
+    // 1. Group all items by item_code or nomenclature first
+    const groupedMap: Record<string, GroupedInventoryItem> = {};
     
-    setFilteredItems(filtered);
-
-    // Grouping logic
-    const grouped = filtered.reduce((acc, item) => {
+    items.forEach((item) => {
       const key = item.item_code || item.nomenclature;
-      if (!acc[key]) {
-        acc[key] = {
+      if (!groupedMap[key]) {
+        groupedMap[key] = {
           id: key,
           item_code: item.item_code || '',
           nomenclature: item.nomenclature,
-          category_name: item.category_name,
+          category_name: item.category_name || 'N/A',
           total_issued_quantity: 0,
-          total_value: 0,
+          total_returned_quantity: 0,
+          total_in_use_quantity: 0,
           details: []
         };
       }
-      acc[key].total_issued_quantity += Number(item.issued_quantity) || 0;
-      acc[key].total_value += Number(item.total_value) || 0;
-      acc[key].details.push(item);
-      return acc;
-    }, {} as Record<string, GroupedInventoryItem>);
+      
+      const qty = Number(item.issued_quantity) || 0;
+      groupedMap[key].total_issued_quantity += qty;
+      
+      const isReturned = item.status === 'Returned' || item.current_return_status === 'Returned';
+      if (isReturned) {
+        groupedMap[key].total_returned_quantity += qty;
+      } else {
+        groupedMap[key].total_in_use_quantity += qty;
+      }
+      
+      groupedMap[key].details.push(item);
+    });
 
-    setGroupedItems(Object.values(grouped).sort((a, b) => b.total_issued_quantity - a.total_issued_quantity));
+    // 2. Convert map to list and apply searches/filters
+    const groupedList = Object.values(groupedMap);
+    
+    const filtered = groupedList.filter((group) => {
+      // Search filter
+      const matchesSearch = !searchTerm || 
+        group.nomenclature.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.details.some(d => d.request_number.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      if (!matchesSearch) return false;
+
+      // Status filter
+      if (filterStatus === 'all') return true;
+      
+      const hasOverdue = group.details.some(d => d.current_return_status === 'Overdue');
+      const hasInUse = group.total_in_use_quantity > 0;
+      const isAllReturned = group.total_issued_quantity > 0 && group.total_in_use_quantity === 0;
+
+      if (filterStatus === 'overdue') return hasOverdue;
+      if (filterStatus === 'in-use') return hasInUse && !hasOverdue;
+      if (filterStatus === 'returned') return isAllReturned;
+
+      return true;
+    });
+
+    // Sort by name
+    filtered.sort((a, b) => a.nomenclature.localeCompare(b.nomenclature));
+    setFilteredGroups(filtered);
   };
 
-  const getStatusBadge = (item: IssuedItem) => {
-    if (item.current_return_status === 'Overdue') {
-      return <Badge className="bg-red-500">Overdue</Badge>;
-    }
-    if (item.status === 'Returned') {
-      return <Badge className="bg-green-500">Returned</Badge>;
-    }
-    if (item.status === 'Issued') {
-      return <Badge className="bg-blue-500">In Use</Badge>;
-    }
-    if (item.status === 'Damaged') {
-      return <Badge className="bg-orange-500">Damaged</Badge>;
-    }
-    if (item.status === 'Lost') {
-      return <Badge className="bg-gray-500">Lost</Badge>;
-    }
-    return <Badge>{item.status}</Badge>;
+  // Summary Metrics calculations based on raw items list
+  const getStats = () => {
+    let totalItems = 0;
+    let totalIssued = 0;
+    let totalReturned = 0;
+    let totalInUse = 0;
+    let totalOverdue = 0;
+
+    // Track unique items
+    const uniqueItems = new Set<string>();
+
+    items.forEach(item => {
+      uniqueItems.add(item.item_code || item.nomenclature);
+      const qty = Number(item.issued_quantity) || 0;
+      totalIssued += qty;
+      
+      const isReturned = item.status === 'Returned' || item.current_return_status === 'Returned';
+      if (isReturned) {
+        totalReturned += qty;
+      } else {
+        totalInUse += qty;
+      }
+
+      if (item.current_return_status === 'Overdue') {
+        totalOverdue += qty;
+      }
+    });
+
+    totalItems = uniqueItems.size;
+
+    return {
+      totalItems,
+      totalIssued,
+      totalReturned,
+      totalInUse,
+      totalOverdue
+    };
   };
 
-  const getReturnStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Returned':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'Overdue':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'Not Returned':
-        return <XCircle className="w-4 h-4 text-gray-400" />;
-      default:
-        return null;
+  const stats = getStats();
+
+  const getGroupStatusBadge = (group: GroupedInventoryItem) => {
+    const hasOverdue = group.details.some(d => d.current_return_status === 'Overdue');
+    if (hasOverdue) {
+      return <Badge className="bg-red-100 text-red-800 border-red-300">Overdue</Badge>;
     }
+    if (group.total_in_use_quantity > 0) {
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-300">In Use</Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-800 border-green-300">Returned</Badge>;
+  };
+
+  const getLastUpdated = (group: GroupedInventoryItem) => {
+    if (!group.details || group.details.length === 0) return 'N/A';
+    try {
+      const dates = group.details.map(d => new Date(d.issued_at).getTime()).filter(t => !isNaN(t));
+      if (dates.length === 0) return 'N/A';
+      return formatDateDMY(new Date(Math.max(...dates)).toISOString());
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const getStatusOptions = () => [
+    { value: 'all', label: 'All Items' },
+    { value: 'in-use', label: 'In Use' },
+    { value: 'returned', label: 'Returned' },
+    { value: 'overdue', label: 'Overdue' }
+  ];
+
+  const handleOpenDetails = (group: GroupedInventoryItem) => {
+    setSelectedGroup(group);
+    setIsModalOpen(true);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size="lg" />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-600 mt-2">Loading inventory quantities...</p>
+        </div>
       </div>
     );
   }
@@ -221,24 +266,35 @@ export default function PersonalInventory() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
           <Button
-            variant="ghost"
-            size="icon"
+            variant="outline"
+            size="sm"
             onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">My Personal Inventory</h1>
-            <p className="text-gray-500">Track all items issued to you</p>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Package className="h-6 w-6 text-teal-600" />
+              Personal Inventory
+            </h1>
+            <p className="text-gray-600">Track and manage items issued to your personal account</p>
           </div>
         </div>
-        <Button onClick={() => navigate('/dashboard/stock-issuance-personal')} className="bg-teal-600 hover:bg-teal-700 text-white">
-          <Package className="h-4 w-4 mr-2" />
-          Create Request
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchPersonalInventory} variant="outline" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button onClick={() => navigate('/dashboard/stock-issuance-personal')} className="bg-teal-600 hover:bg-teal-700 text-white">
+            <Package className="h-4 w-4 mr-2" />
+            Create Request
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -249,254 +305,250 @@ export default function PersonalInventory() {
       )}
 
       {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-              <Package className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.total_items}</div>
-              <p className="text-xs text-gray-500 mt-1">Items issued to you</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Account Scope</CardTitle>
-              <User className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Personal</div>
-              <p className="text-xs text-gray-500 mt-1">Issued to your account only</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Returnable</CardTitle>
-              <TrendingUp className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.returnable_items}</div>
-              <p className="text-xs text-gray-500 mt-1">Need to be returned</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Not Returned</CardTitle>
-              <Clock className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.not_returned}</div>
-              <p className="text-xs text-gray-500 mt-1">Still in use</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.overdue}</div>
-              <p className="text-xs text-gray-500 mt-1">Past return date</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Total Items</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.totalItems}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Total Issued</p>
+              <p className="text-2xl font-bold text-purple-600">{stats.totalIssued}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">In Possession</p>
+              <p className="text-2xl font-bold text-green-600">{stats.totalInUse}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Returned</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.totalReturned}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Overdue Items</p>
+              <p className="text-2xl font-bold text-red-600">{stats.totalOverdue}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search by item name, request number, or category..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by item name, request number, or category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('all')}
+            <div className="min-w-[150px]">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
               >
-                All
-              </Button>
-              <Button
-                variant={filterStatus === 'in-use' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('in-use')}
-              >
-                In Use
-              </Button>
-              <Button
-                variant={filterStatus === 'returnable' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('returnable')}
-              >
-                Returnable
-              </Button>
-              <Button
-                variant={filterStatus === 'overdue' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('overdue')}
-              >
-                Overdue
-              </Button>
-              <Button
-                variant={filterStatus === 'returned' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('returned')}
-              >
-                Returned
-              </Button>
+                {getStatusOptions().map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Items List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Issued Items ({groupedItems.length} unique)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {groupedItems.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No items found</p>
+      {/* Flat Inventory Table */}
+      {filteredGroups.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-gray-500">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50 text-teal-600" />
+              <p>No inventory items found</p>
+              {searchTerm && <p className="text-sm mt-2">Try adjusting your search criteria</p>}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {groupedItems.map((group) => (
-                <div key={group.id} className="border rounded-xl bg-white shadow-sm overflow-hidden mb-4">
-                  {/* Group Header */}
-                  <div 
-                    className="p-4 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors gap-4"
-                    onClick={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="h-12 w-12 rounded-lg bg-teal-50 flex items-center justify-center flex-shrink-0 border border-teal-100">
-                        <Package className="h-6 w-6 text-teal-600" />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Inventory Stock Quantities</span>
+              <Badge variant="outline" className="text-teal-600 border-teal-200 bg-teal-50">{filteredGroups.length} items</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-purple-600 uppercase tracking-wider">Issued</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider">Returned</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider font-bold">In Possession</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredGroups.map((group) => (
+                    <tr key={group.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <div>
+                          <div className="font-medium text-gray-900">{group.nomenclature}</div>
+                          <div className="text-sm text-gray-500">{group.item_code}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-700">{group.category_name}</td>
+                      <td className="px-4 py-4 text-right text-sm text-purple-600 font-semibold">
+                        {group.total_issued_quantity}
+                      </td>
+                      <td className="px-4 py-4 text-right text-sm text-blue-600 font-semibold">
+                        {group.total_returned_quantity}
+                      </td>
+                      <td className="px-4 py-4 text-right text-sm text-green-600 font-bold">
+                        {group.total_in_use_quantity}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        {getGroupStatusBadge(group)}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-500">
+                        {getLastUpdated(group)}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <Button variant="outline" size="icon" onClick={() => handleOpenDetails(group)} aria-label="Open item details">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* History Details Modal */}
+      {selectedGroup && (
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex flex-col gap-1">
+                <span className="text-xl font-bold text-gray-900">{selectedGroup.nomenclature}</span>
+                {selectedGroup.item_code && (
+                  <span className="text-sm text-gray-500 font-mono">Code: {selectedGroup.item_code}</span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                Issuance & Return History ({selectedGroup.details.length} records)
+              </h3>
+              
+              <div className="space-y-3">
+                {selectedGroup.details.map((item) => {
+                  const isItemReturned = item.status === 'Returned' || item.current_return_status === 'Returned';
+                  return (
+                    <div key={item.ledger_id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition-shadow">
+                      <div className="flex flex-col sm:flex-row justify-between gap-4">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                            <span className="font-mono font-semibold text-gray-800">Req: {item.request_number}</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatDateDMY(item.issued_at)}
+                            </span>
+                            <span className="bg-slate-100 px-2 py-0.5 rounded font-semibold text-slate-700">
+                              Qty: {item.issued_quantity}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isItemReturned ? (
+                            <Badge className="bg-green-100 text-green-800 border-green-300">Returned</Badge>
+                          ) : item.current_return_status === 'Overdue' ? (
+                            <Badge className="bg-red-100 text-red-800 border-red-300">Overdue</Badge>
+                          ) : (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-300">In Use</Badge>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setIsModalOpen(false);
+                              navigate(`/dashboard/request-details/${item.request_id}`);
+                            }}
+                            className="h-8 ml-2"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Request
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-1 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-bold text-lg text-slate-800">{group.nomenclature}</h3>
-                          {group.item_code && (
-                            <Badge variant="outline" className="font-mono text-xs text-blue-600 border-blue-200 bg-blue-50">
-                              {group.item_code}
-                            </Badge>
+                      
+                      {!!item.is_returnable && (
+                        <div className="mt-3 text-xs flex gap-4 text-gray-500 bg-gray-50 p-2 rounded">
+                          <span><strong>Expected Return:</strong> {item.expected_return_date ? formatDateDMY(item.expected_return_date) : 'N/A'}</span>
+                          {item.actual_return_date && (
+                            <span><strong>Actual Return:</strong> {formatDateDMY(item.actual_return_date)}</span>
                           )}
                         </div>
-                        {group.category_name && (
-                          <div className="text-sm text-slate-500">{group.category_name}</div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
-                      <div className="text-left md:text-right">
-                        <div className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Total Quantity</div>
-                        <div className="text-2xl font-bold text-slate-800">{group.total_issued_quantity}</div>
-                      </div>
-                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 transition-transform duration-200">
-                        {expandedGroupId === group.id ? (
-                          <ChevronUp className="h-5 w-5 text-slate-500" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-slate-500" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                      )}
 
-                  {/* Expanded Details */}
-                  {expandedGroupId === group.id && (
-                    <div className="bg-slate-50/80 border-t p-4 space-y-4">
-                      <h4 className="font-semibold text-sm text-slate-700 px-2 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        Issuance History ({group.details.length} records)
-                      </h4>
-                      <div className="space-y-3">
-                        {group.details.map((item) => (
-                          <div key={item.ledger_id} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex flex-col lg:flex-row justify-between gap-4">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
-                                  <span className="font-mono font-medium text-slate-800">Req: {item.request_number}</span>
-                                  <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-medium border border-blue-100">
-                                    {'Self'}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    {formatDateDMY(item.issued_at)}
-                                  </span>
-                                  <span className="bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-700">
-                                    Qty: {item.issued_quantity}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {getStatusBadge(item)}
-                                {!!item.is_returnable && getReturnStatusIcon(item.current_return_status)}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/dashboard/request-details/${item.request_id}`);
-                                  }}
-                                  className="h-8 ml-2 bg-white hover:bg-slate-50"
-                                >
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View
-                                </Button>
-                              </div>
+                      {(item.purpose || item.issuance_notes) && (
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {item.purpose && (
+                            <div className="bg-gray-50 p-2.5 rounded border border-gray-100">
+                              <span className="font-semibold text-gray-600 block text-xs uppercase tracking-wider mb-1">Purpose</span>
+                              <p className="text-gray-700">{item.purpose}</p>
                             </div>
-                            
-                            {!!item.is_returnable && (
-                              <div className="mt-3 text-sm flex gap-4 text-slate-500 bg-slate-50 p-2 rounded-md">
-                                <span><strong>Expected Return:</strong> {item.expected_return_date ? formatDateDMY(item.expected_return_date) : 'N/A'}</span>
-                                {item.actual_return_date && (
-                                  <span><strong>Actual Return:</strong> {formatDateDMY(item.actual_return_date)}</span>
-                                )}
-                              </div>
-                            )}
-
-                            {(item.purpose || item.issuance_notes) && (
-                              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                {item.purpose && (
-                                  <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
-                                    <span className="font-semibold text-slate-600 block text-xs uppercase tracking-wider mb-1">Purpose</span>
-                                    <p className="text-slate-700">{item.purpose}</p>
-                                  </div>
-                                )}
-                                {item.issuance_notes && (
-                                  <div className="bg-amber-50 p-2.5 rounded-md border border-amber-100">
-                                    <span className="font-semibold text-amber-700 block text-xs uppercase tracking-wider mb-1">Notes</span>
-                                    <p className="text-slate-700">{item.issuance_notes}</p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                          )}
+                          {item.issuance_notes && (
+                            <div className="bg-amber-50 p-2.5 rounded border border-amber-100">
+                              <span className="font-semibold text-amber-800 block text-xs uppercase tracking-wider mb-1">Notes</span>
+                              <p className="text-gray-700">{item.issuance_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-</div>
-          )}
-        </CardContent>
-      </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
