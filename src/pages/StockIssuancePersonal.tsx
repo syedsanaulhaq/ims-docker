@@ -18,8 +18,16 @@ import {
   Calendar,
   Package,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { inventoryLocalService } from '@/services/inventoryLocalService';
 import { categoriesLocalService } from '@/services/categoriesLocalService';
 import erpDatabaseService from '@/services/erpDatabaseService';
@@ -44,6 +52,7 @@ interface InventoryItem {
   minimum_stock_level: number;
   weighted_avg_price: number;
   primary_Location: string;
+  unit?: string;
 }
 
 interface IssuanceItem {
@@ -87,6 +96,51 @@ const StockIssuancePersonal: React.FC = () => {
   const [justification, setJustification] = useState('');
   const [expectedReturnDate, setExpectedReturnDate] = useState('');
   const [isReturnable, setIsReturnable] = useState(true);
+
+  // Stock Availability Modal states
+  const [stockCheckItem, setStockCheckItem] = useState<any | null>(null);
+  const [stockCheckData, setStockCheckData] = useState<any | null>(null);
+  const [stockCheckLoading, setStockCheckLoading] = useState(false);
+  const [stockCheckError, setStockCheckError] = useState<string | null>(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+
+  const branchName = (user as any)?.branch_name || (user as any)?.branchName || 'your branch';
+
+  const handleCheckBranchStock = async (item: any) => {
+    setStockCheckItem(item);
+    setStockCheckLoading(true);
+    setStockCheckError(null);
+    setStockCheckData(null);
+    setIsStockModalOpen(true);
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/inventory/check-availability`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemMasterId: item.item_master_id || item.id,
+          requestedQuantity: 1,
+          branchId: Number(selectedBranchId),
+          inventoryScope: 'branch'
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setStockCheckData(data.data);
+      } else {
+        setStockCheckError(data.error || 'Failed to fetch stock availability');
+      }
+    } catch (err: any) {
+      console.error('Error checking branch stock:', err);
+      setStockCheckError(err.message || 'An error occurred while checking stock');
+    } finally {
+      setStockCheckLoading(false);
+    }
+  };
 
   // Automatically set from logged-in user session
   const selectedOfficeId = user?.office_id?.toString() || '';
@@ -193,7 +247,8 @@ const StockIssuancePersonal: React.FC = () => {
               current_stock: item.current_quantity || 0,
               minimum_stock_level: item.minimum_stock_level || 0,
               weighted_avg_price: 0,
-              primary_Location: 'Warehouse'
+              primary_Location: 'Warehouse',
+              unit: item.unit || item.vUnitOfMeasure || 'Nos.'
             };
           });
 
@@ -719,6 +774,16 @@ const StockIssuancePersonal: React.FC = () => {
                         {!item.description && (
                           <div className="text-xs text-gray-400 italic">No description</div>
                         )}
+                        <div className="text-xs text-gray-600 mt-1 flex items-center gap-3">
+                          <span>Unit: {item.unit || 'Nos.'}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCheckBranchStock(item)}
+                            className="text-teal-600 hover:text-teal-800 hover:underline font-semibold flex items-center gap-1"
+                          >
+                            Check Stock
+                          </button>
+                        </div>
                       </div>
                       <Button
                         size="sm"
@@ -933,6 +998,71 @@ const StockIssuancePersonal: React.FC = () => {
           {/* End Right Column */}
         </div>
       </div>
+
+      <Dialog open={isStockModalOpen} onOpenChange={setIsStockModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-800">
+              <Package className="w-5 h-5" />
+              Stock Availability Check
+            </DialogTitle>
+            <DialogDescription>
+              Check current inventory quantities for this item
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div>
+              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider block">Item Nomenclature</span>
+              <span className="text-base font-semibold text-gray-800">{stockCheckItem?.nomenclature || 'Unknown Item'}</span>
+            </div>
+
+            {stockCheckItem?.item_code && (
+              <div>
+                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider block">Item Code</span>
+                <span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block mt-0.5">{stockCheckItem.item_code}</span>
+              </div>
+            )}
+
+            {stockCheckLoading ? (
+              <div className="flex flex-col items-center justify-center py-6 text-gray-500 gap-2">
+                <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                <span className="text-sm font-medium">Checking inventory...</span>
+              </div>
+            ) : stockCheckError ? (
+              <Alert className="border-red-200 bg-red-50 mt-2">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <AlertDescription className="text-red-700 text-sm">{stockCheckError}</AlertDescription>
+              </Alert>
+            ) : stockCheckData ? (
+              <div className="space-y-3 pt-2">
+                <div className="bg-teal-50 border border-teal-100 p-6 rounded-lg flex flex-col items-center text-center shadow-sm">
+                  <span className="text-sm font-semibold text-teal-800 uppercase tracking-wider">Branch Stock Position</span>
+                  <span className="text-4xl font-extrabold text-teal-900 mt-2">
+                    {stockCheckData.branch_available_quantity ?? 0}
+                  </span>
+                  <span className="text-sm text-teal-700 mt-2 font-medium">
+                    Available in {branchName}
+                  </span>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 flex items-center justify-between text-sm">
+                  <span className="text-gray-500 font-medium">UoM:</span>
+                  <span className="font-semibold text-gray-700">{stockCheckData.unit || stockCheckItem?.unit || 'units'}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">No stock information loaded.</div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-gray-100 mt-4">
+            <Button onClick={() => setIsStockModalOpen(false)} className="bg-teal-600 hover:bg-teal-700 text-white font-medium px-5">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

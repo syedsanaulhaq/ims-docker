@@ -524,6 +524,11 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
   };
 
   const renderTransferBadge = (request: RequestSummary) => {
+    // Only show transfer badge if the request has been approved or completed
+    if (request.request_status !== 'approve_wing' && request.request_status !== 'completed') {
+      return null;
+    }
+
     if (request.issuance_transfer_status === 'issued_to_requester') {
       return (
         <Badge
@@ -536,25 +541,14 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       );
     }
 
-    if (request.issuance_transfer_status === 'pending_issue') {
-      return (
-        <Badge
-          variant="outline"
-          className="text-xs bg-amber-100 text-amber-800 border-amber-300"
-          title="Approved but not yet physically issued by store"
-        >
-          Inventory Transfer: Pending Issue
-        </Badge>
-      );
-    }
-
+    // Default fallback for approved requests is 'Pending Issue'
     return (
       <Badge
         variant="outline"
-        className="text-xs bg-gray-100 text-gray-700 border-gray-300"
-        title="Transfer status unavailable"
+        className="text-xs bg-amber-100 text-amber-800 border-amber-300"
+        title="Approved but not yet physically issued by store"
       >
-        Inventory Transfer: Unknown
+        Inventory Transfer: Pending Issue
       </Badge>
     );
   };

@@ -915,6 +915,107 @@ router.post('/:id/receive', async (req, res) => {
           WHERE id = @id
         `);
 
+      // Reactivate associated required items and stock issuance requests
+      try {
+        const linkedItemsRes = await pool.request()
+          .input('deliveryId', sql.UniqueIdentifier, id)
+          .query(`
+            SELECT DISTINCT ri.id as required_item_id, ri.source_request_id
+            FROM deliveries d
+            INNER JOIN purchase_orders po ON d.po_id = po.id
+            INNER JOIN tender_items ti ON CAST(po.tender_id AS VARCHAR(100)) = CAST(ti.tender_id AS VARCHAR(100))
+            INNER JOIN delivery_items di ON d.id = di.delivery_id AND CAST(di.item_master_id AS VARCHAR(100)) = CAST(ti.item_master_id AS VARCHAR(100))
+            INNER JOIN required_items ri ON CAST(ti.source_required_item_id AS VARCHAR(100)) = CAST(ri.id AS VARCHAR(100))
+            WHERE d.id = @deliveryId
+              AND ri.is_deleted = 0
+              AND ri.status != 'Procured'
+          `);
+
+        for (const item of linkedItemsRes.recordset || []) {
+          const { required_item_id, source_request_id } = item;
+
+          // Mark required item as procured
+          await pool.request()
+            .input('requiredItemId', sql.UniqueIdentifier, required_item_id)
+            .query(`
+              UPDATE required_items
+              SET status = 'Procured',
+                  resolved_at = GETDATE(),
+                  updated_at = GETDATE()
+              WHERE id = @requiredItemId
+            `);
+
+          // Reactivate stock issuance request and approvals
+          if (source_request_id) {
+            const pendingCheck = await pool.request()
+              .input('sourceRequestId', sql.UniqueIdentifier, source_request_id)
+              .query(`
+                SELECT COUNT(*) as pending_count
+                FROM required_items
+                WHERE source_request_id = @sourceRequestId
+                  AND status != 'Procured'
+                  AND is_deleted = 0
+              `);
+
+            const pendingCount = pendingCheck.recordset[0]?.pending_count || 0;
+            if (pendingCount === 0) {
+              await pool.request()
+                .input('sourceRequestId', sql.UniqueIdentifier, source_request_id)
+                .query(`
+                  UPDATE stock_issuance_requests
+                  SET approval_status = 'Forwarded to Admin',
+                      updated_at = GETDATE()
+                  WHERE id = @sourceRequestId
+                `);
+
+              const approvalRes = await pool.request()
+                .input('sourceRequestId', sql.UniqueIdentifier, source_request_id)
+                .query(`
+                  UPDATE request_approvals
+                  SET current_status = 'forwarded_to_admin',
+                      updated_date = GETDATE(),
+                      approval_comments = 'All requested items procured and received in stock.'
+                  OUTPUT inserted.id
+                  WHERE request_id = @sourceRequestId
+                `);
+
+              const approvalId = approvalRes.recordset[0]?.id;
+              if (approvalId) {
+                await pool.request()
+                  .input('approvalId', sql.UniqueIdentifier, approvalId)
+                  .query(`
+                    UPDATE approval_history
+                    SET is_current_step = 0
+                    WHERE request_approval_id = @approvalId
+                  `);
+
+                const stepRes = await pool.request()
+                  .input('approvalId', sql.UniqueIdentifier, approvalId)
+                  .query(`
+                    SELECT COALESCE(MAX(step_number), 0) as max_step 
+                    FROM approval_history 
+                    WHERE request_approval_id = @approvalId
+                  `);
+                const nextStep = (stepRes.recordset[0]?.max_step || 0) + 1;
+
+                await pool.request()
+                  .input('approvalId', sql.UniqueIdentifier, approvalId)
+                  .input('action_by', sql.NVarChar, received_by)
+                  .input('comments', sql.NVarChar, 'Items procured and received in stock. Request reactivated for allotment.')
+                  .input('step_number', sql.Int, nextStep)
+                  .query(`
+                    INSERT INTO approval_history
+                    (request_approval_id, action_type, action_by, comments, step_number, is_current_step, forwarded_to)
+                    VALUES (@approvalId, 'forwarded_to_admin', @action_by, @comments, @step_number, 1, NULL)
+                  `);
+              }
+            }
+          }
+        }
+      } catch (workflowError) {
+        console.error('❌ Failed to update procurement workflow status on delivery receive:', workflowError);
+      }
+
       res.json({ 
         success: true,
         acquisition_id: acquisitionId,

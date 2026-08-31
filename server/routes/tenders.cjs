@@ -189,6 +189,23 @@ router.post('/', upload.fields([
 
         itemInsertQuery += ') ' + itemValuesQuery + ')';
         await itemRequest.query(itemInsertQuery);
+
+        if (item.source_required_item_id) {
+          await transaction.request()
+            .input('requiredItemId', sql.UniqueIdentifier, item.source_required_item_id)
+            .input('tenderId', sql.UniqueIdentifier, tenderId)
+            .input('tenderType', sql.NVarChar, tender_type)
+            .input('tenderRef', sql.NVarChar, tenderData.reference_number || tenderData.title || '')
+            .query(`
+              UPDATE required_items
+              SET status = 'In Tender',
+                  tender_id = @tenderId,
+                  tender_type = @tenderType,
+                  tender_reference = @tenderRef,
+                  updated_at = GETDATE()
+              WHERE id = @requiredItemId AND status != 'Procured'
+            `);
+        }
       }
     }
 
@@ -649,7 +666,8 @@ router.put('/:id', async (req, res) => {
           const itemFields = [
             'item_master_id', 'nomenclature', 'quantity', 'quantity_received',
             'estimated_unit_price', 'actual_unit_price', 'total_amount',
-            'specifications', 'remarks', 'status'
+            'specifications', 'remarks', 'status',
+            'source_required_item_id', 'source_required_item_ids'
           ];
 
           for (const field of itemFields) {
@@ -677,6 +695,23 @@ router.put('/:id', async (req, res) => {
 
           itemInsertQuery += ') ' + itemValuesQuery + ')';
           await itemRequest.query(itemInsertQuery);
+
+          if (item.source_required_item_id) {
+            await transaction.request()
+              .input('requiredItemId', sql.UniqueIdentifier, item.source_required_item_id)
+              .input('tenderId', sql.UniqueIdentifier, id)
+              .input('tenderType', sql.NVarChar, tender_type)
+              .input('tenderRef', sql.NVarChar, tenderData.reference_number || tenderData.title || '')
+              .query(`
+                UPDATE required_items
+                SET status = 'In Tender',
+                    tender_id = @tenderId,
+                    tender_type = @tenderType,
+                    tender_reference = @tenderRef,
+                    updated_at = GETDATE()
+                WHERE id = @requiredItemId AND status != 'Procured'
+              `);
+          }
         }
       }
     }

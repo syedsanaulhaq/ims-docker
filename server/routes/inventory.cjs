@@ -775,7 +775,7 @@ router.post('/check-availability', async (req, res) => {
           @RequestedQuantity as requested_quantity,
           ISNULL(wing_stock.wing_qty, 0) as wing_available_quantity,
           ISNULL(branch_stock.branch_qty, 0) as branch_available_quantity,
-          ISNULL(admin_stock.admin_qty, 0) as admin_available_quantity,
+          COALESCE(main_stock.main_qty, admin_stock.admin_qty, 0) as admin_available_quantity,
           CASE
             WHEN @InventoryScope = 'wing' THEN ISNULL(wing_stock.wing_qty, 0)
             WHEN @InventoryScope = 'branch' THEN ISNULL(branch_stock.branch_qty, 0)
@@ -826,16 +826,28 @@ router.post('/check-availability', async (req, res) => {
           GROUP BY item_master_id
         ) wing_stock ON wing_stock.item_master_id = im.id
         LEFT JOIN (
-          SELECT sw.item_master_id, SUM(sw.available_quantity) as branch_qty
-          FROM stock_wing sw
-          INNER JOIN (
-            SELECT DISTINCT intWingID as wing_id
-            FROM AspNetUsers
-            WHERE intBranchID = @BranchId
-              AND intWingID IS NOT NULL
-          ) branch_wings ON branch_wings.wing_id = sw.wing_id
-          WHERE sw.item_master_id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
-          GROUP BY sw.item_master_id
+          SELECT 
+            sii.item_master_id,
+            SUM(
+              COALESCE(NULLIF(sii.issued_quantity, 0), NULLIF(sii.approved_quantity, 0), sii.requested_quantity, 0)
+              - COALESCE(ret.returned_qty, 0)
+            ) as branch_qty
+          FROM stock_issuance_items sii
+          INNER JOIN stock_issuance_requests sir ON sii.request_id = sir.id
+          LEFT JOIN (
+            SELECT original_issuance_item_id, SUM(returned_quantity) as returned_qty
+            FROM stock_return_items
+            GROUP BY original_issuance_item_id
+          ) ret ON ret.original_issuance_item_id = sii.id
+          WHERE sir.requester_branch_id = @BranchId
+            AND (
+              UPPER(COALESCE(sir.request_status, '')) IN ('ISSUED', 'COMPLETED')
+              OR UPPER(COALESCE(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED')
+            )
+            AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
+            AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
+            AND sii.item_master_id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
+          GROUP BY sii.item_master_id
         ) branch_stock ON branch_stock.item_master_id = im.id
         WHERE im.id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
       `);
@@ -990,8 +1002,8 @@ router.get('/stock/:itemMasterId', async (req, res) => {
           im.specifications,
           im.description,
           COALESCE(wing_total.total_wing_qty, 0) as wing_available_quantity,
-          COALESCE(admin_stock.admin_qty, 0) as admin_available_quantity,
-          COALESCE(admin_stock.admin_qty, 0) as available_quantity
+          COALESCE(cis.current_quantity, admin_stock.admin_qty, 0) as admin_available_quantity,
+          COALESCE(cis.current_quantity, admin_stock.admin_qty, 0) as available_quantity
         FROM item_masters im
         LEFT JOIN (
           SELECT item_master_id, SUM(available_quantity) as total_wing_qty
@@ -1004,6 +1016,7 @@ router.get('/stock/:itemMasterId', async (req, res) => {
           FROM stock_admin
           WHERE item_master_id = @itemId
         ) admin_stock ON admin_stock.item_master_id = im.id
+        LEFT JOIN current_inventory_stock cis ON cis.item_master_id = im.id
         WHERE im.id = @itemId
       `);
 

@@ -186,9 +186,12 @@ class StockIssuanceService {
   }
 
   // Get approved requests for processing
-  async getApprovedRequests(): Promise<any[]> {
+  async getApprovedRequests(storeType?: string): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/requests?status=Approved`, { credentials: 'include' });
+      const url = storeType 
+        ? `${this.baseUrl}/requests?status=Approved&storeType=${storeType}`
+        : `${this.baseUrl}/requests?status=Approved`;
+      const response = await fetch(url, { credentials: 'include' });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
