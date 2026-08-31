@@ -17,8 +17,16 @@ import {
   Calendar,
   Package,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { inventoryLocalService } from '@/services/inventoryLocalService';
 import { categoriesLocalService } from '@/services/categoriesLocalService';
 import erpDatabaseService from '@/services/erpDatabaseService';
@@ -43,6 +51,7 @@ interface InventoryItem {
   minimum_stock_level: number;
   weighted_avg_price: number;
   primary_Location: string;
+  unit?: string;
 }
 
 interface ScopedInventoryRow {
@@ -93,6 +102,69 @@ const StockIssuanceWing: React.FC = () => {
   const [selectedWingId, setSelectedWingId] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
+
+  // Stock Availability Modal states
+  const [stockCheckItem, setStockCheckItem] = useState<any | null>(null);
+  const [stockCheckData, setStockCheckData] = useState<any | null>(null);
+  const [stockCheckLoading, setStockCheckLoading] = useState(false);
+  const [stockCheckError, setStockCheckError] = useState<string | null>(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+
+  const getActiveScopeName = () => {
+    if (selectedBranchId && selectedBranchId !== 'ALL_BRANCHES') {
+      const dec = decs.find(d => d.intAutoID.toString() === selectedBranchId);
+      return dec ? dec.DECName : 'Selected Branch';
+    }
+    if (selectedWingId) {
+      const wing = wings.find(w => w.Id.toString() === selectedWingId);
+      return wing ? wing.Name : 'Selected Wing';
+    }
+    return 'Selected Wing/Branch';
+  };
+
+  const handleCheckStock = async (item: any) => {
+    if (!selectedWingId) {
+      setError('Please select a wing first to check stock availability');
+      return;
+    }
+    
+    setStockCheckItem(item);
+    setStockCheckLoading(true);
+    setStockCheckError(null);
+    setStockCheckData(null);
+    setIsStockModalOpen(true);
+
+    const isBranchScope = selectedBranchId && selectedBranchId !== 'ALL_BRANCHES';
+    
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/inventory/check-availability`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemMasterId: item.item_master_id || item.id,
+          requestedQuantity: 1,
+          branchId: isBranchScope ? Number(selectedBranchId) : undefined,
+          wingId: Number(selectedWingId),
+          inventoryScope: isBranchScope ? 'branch' : 'wing'
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setStockCheckData(data.data);
+      } else {
+        setStockCheckError(data.error || 'Failed to fetch stock availability');
+      }
+    } catch (err: any) {
+      console.error('Error checking stock:', err);
+      setStockCheckError(err.message || 'An error occurred while checking stock');
+    } finally {
+      setStockCheckLoading(false);
+    }
+  };
 
   // Form fields - WING REQUEST (Organizational only)
   const [requestType] = useState<'Individual' | 'Organizational'>('Organizational');
@@ -307,7 +379,8 @@ const StockIssuanceWing: React.FC = () => {
             current_stock: item.current_quantity || item.intCurrentStock || 0,
             minimum_stock_level: item.intMinimumLevel || 0,
             weighted_avg_price: item.fltUnitPrice || 0,
-            primary_Location: item.strStockLocation || 'Main Warehouse'
+            primary_Location: item.strStockLocation || 'Main Warehouse',
+            unit: item.unit || item.vUnitOfMeasure || 'Nos.'
           }));
 
         setInventoryItems(transformedItems);
@@ -895,6 +968,16 @@ const StockIssuanceWing: React.FC = () => {
                       <div className="text-xs text-gray-500">
                         Location: {item.primary_Location}
                       </div>
+                      <div className="text-xs text-gray-600 mt-1 flex items-center gap-3">
+                        <span>Unit: {item.unit || 'Nos.'}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCheckStock(item)}
+                          className="text-teal-600 hover:text-teal-800 hover:underline font-semibold flex items-center gap-1"
+                        >
+                          Check Stock
+                        </button>
+                      </div>
                       <div className={`inline-flex items-center px-2 py-0.5 rounded mt-1 text-xs font-medium ${getInventoryQtyBadgeClass(getWingInventoryQty(item))}`}>
                         Wing Inventory Qty: {getWingInventoryQty(item)}
                       </div>
@@ -1080,6 +1163,76 @@ const StockIssuanceWing: React.FC = () => {
           {/* End Right Column */}
         </div>
       </div>
+
+      <Dialog open={isStockModalOpen} onOpenChange={setIsStockModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-800">
+              <Package className="w-5 h-5" />
+              Stock Availability Check
+            </DialogTitle>
+            <DialogDescription>
+              Check current inventory quantities for this item
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div>
+              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider block">Item Nomenclature</span>
+              <span className="text-base font-semibold text-gray-800">{stockCheckItem?.nomenclature || 'Unknown Item'}</span>
+            </div>
+
+            {stockCheckItem?.item_code && (
+              <div>
+                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider block">Item Code</span>
+                <span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block mt-0.5">{stockCheckItem.item_code}</span>
+              </div>
+            )}
+
+            {stockCheckLoading ? (
+              <div className="flex flex-col items-center justify-center py-6 text-gray-500 gap-2">
+                <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                <span className="text-sm font-medium">Checking inventory...</span>
+              </div>
+            ) : stockCheckError ? (
+              <Alert className="border-red-200 bg-red-50 mt-2">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <AlertDescription className="text-red-700 text-sm">{stockCheckError}</AlertDescription>
+              </Alert>
+            ) : stockCheckData ? (
+              <div className="space-y-3 pt-2">
+                <div className="bg-teal-50 border border-teal-100 p-6 rounded-lg flex flex-col items-center text-center shadow-sm">
+                  <span className="text-sm font-semibold text-teal-800 uppercase tracking-wider">
+                    {selectedBranchId && selectedBranchId !== 'ALL_BRANCHES' ? 'Branch Stock Position' : 'Wing Stock Position'}
+                  </span>
+                  <span className="text-4xl font-extrabold text-teal-900 mt-2">
+                    {selectedBranchId && selectedBranchId !== 'ALL_BRANCHES' 
+                      ? (stockCheckData.branch_available_quantity ?? 0)
+                      : (stockCheckData.wing_available_quantity ?? 0)
+                    }
+                  </span>
+                  <span className="text-sm text-teal-700 mt-2 font-medium">
+                    Available in {getActiveScopeName()}
+                  </span>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 flex items-center justify-between text-sm">
+                  <span className="text-gray-500 font-medium">UoM:</span>
+                  <span className="font-semibold text-gray-700">{stockCheckData.unit || stockCheckItem?.unit || 'units'}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">No stock information loaded.</div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-gray-100 mt-4">
+            <Button onClick={() => setIsStockModalOpen(false)} className="bg-teal-600 hover:bg-teal-700 text-white font-medium px-5">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

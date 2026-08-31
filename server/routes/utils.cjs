@@ -624,4 +624,61 @@ router.get('/my-notifications', requireAuth, async (req, res) => {
 });
 
 
+
+// ============================================================================
+// PUT /api/notifications/:id/read - Mark notification as read
+// ============================================================================
+router.put('/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.session?.userId;
+    const pool = getPool();
+
+    if (!pool) {
+      return res.json({ success: false, error: 'Database not available' });
+    }
+
+    await pool.request()
+      .input('NotificationId', sql.UniqueIdentifier, id)
+      .input('UserId', sql.NVarChar, userId)
+      .query(`
+        UPDATE Notifications 
+        SET IsRead = 1, ReadAt = GETDATE()
+        WHERE Id = @NotificationId AND UserId = @UserId
+      `);
+
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('❌ Error marking notification as read:', error);
+    res.status(500).json({ success: false, error: 'Failed to update notification', details: error.message });
+  }
+});
+
+// ============================================================================
+// PUT /api/notifications/read-all - Mark all user notifications as read
+// ============================================================================
+router.put('/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    const pool = getPool();
+
+    if (!pool) {
+      return res.json({ success: false, error: 'Database not available' });
+    }
+
+    await pool.request()
+      .input('UserId', sql.NVarChar, userId)
+      .query(`
+        UPDATE Notifications 
+        SET IsRead = 1, ReadAt = GETDATE()
+        WHERE UserId = @UserId AND IsRead = 0
+      `);
+
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('❌ Error marking all notifications as read:', error);
+    res.status(500).json({ success: false, error: 'Failed to update notifications', details: error.message });
+  }
+});
+
 module.exports = router;

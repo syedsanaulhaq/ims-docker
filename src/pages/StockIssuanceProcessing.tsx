@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import { getApiBaseUrl } from '@/services/invmisApi';
 import { stockIssuanceService } from '@/services/stockIssuanceService';
@@ -10,6 +11,12 @@ import {
   FileText, Send, Eye, Upload, X, Image, ChevronDown,
   ClipboardCheck, Car, UserCheck, ArrowRight, RefreshCw
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const API = () => getApiBaseUrl();
 
@@ -74,16 +81,42 @@ const StockIssuanceProcessing: React.FC = () => {
 
   // issue first then dispatch
   const [issuanceNotes, setIssuanceNotes] = useState('');
+  const [searchParams] = useSearchParams();
+  const storeType = searchParams.get('storeType') || undefined;
 
-  useEffect(() => { fetchRequests(); }, []);
+  // request details popup state
+  const [detailsRequest, setDetailsRequest] = useState<any | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const handleViewDetails = async (reqId: string) => {
+    setDetailsLoading(true);
+    setDetailsOpen(true);
+    try {
+      const response = await fetch(`${API()}/stock-issuance/${reqId}`, { credentials: 'include' });
+      const data = await response.json();
+      if (data && data.request) {
+        setDetailsRequest(data);
+      } else {
+        setError('Failed to load request details');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError('Failed to load details: ' + err.message);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchRequests(); }, [storeType]);
 
   const fetchRequests = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await stockIssuanceService.getApprovedRequests();
+      const data = await stockIssuanceService.getApprovedRequests(storeType);
       // Also fetch dispatched/issued requests still pending receipt
-      const allRes = await fetch(`${API()}/stock-issuance/requests?status=Issued`, { credentials: 'include' });
+      const allRes = await fetch(`${API()}/stock-issuance/requests?status=Issued${storeType ? `&storeType=${storeType}` : ''}`, { credentials: 'include' });
       const allData = await allRes.json();
       const extra = allData.success ? allData.data : [];
 
@@ -251,7 +284,12 @@ const StockIssuanceProcessing: React.FC = () => {
                 {/* Card header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                   <div>
-                    <h3 className="font-bold text-gray-900">{req.request_number}</h3>
+                    <button
+                      onClick={() => handleViewDetails(req.id)}
+                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left text-base block focus:outline-none"
+                    >
+                      {req.request_number}
+                    </button>
                     <p className="text-xs text-gray-400">{req.updated_at ? format(new Date(req.updated_at), 'dd MMM yyyy, HH:mm') : ''}</p>
                   </div>
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${statusColor(req.approval_status)}`}>
@@ -451,6 +489,165 @@ const StockIssuanceProcessing: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Request Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FileText className="h-6 w-6 text-blue-600" />
+              Request Details - {detailsRequest?.request?.request_number || 'Loading...'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailsLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <LoadingSpinner />
+            </div>
+          ) : detailsRequest ? (
+            <div className="space-y-6 mt-4">
+              {/* Metadata grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
+                <div>
+                  <span className="font-semibold text-gray-500 block mb-1">Requester</span>
+                  <span className="text-gray-900 font-medium">{detailsRequest.request.requester_name}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block mb-1">Date Submitted</span>
+                  <span className="text-gray-900 font-medium">
+                    {detailsRequest.request.submitted_at 
+                      ? formatDateDMY(detailsRequest.request.submitted_at) 
+                      : formatDateDMY(detailsRequest.request.created_at)}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block mb-1">Wing / Office</span>
+                  <span className="text-gray-900 font-medium">
+                    {detailsRequest.request.wing_name || 'N/A'} {detailsRequest.request.office_name ? `/ ${detailsRequest.request.office_name}` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block mb-1">Urgency Level</span>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    detailsRequest.request.urgency_level === 'Urgent' 
+                      ? 'bg-red-100 text-red-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {detailsRequest.request.urgency_level || 'Normal'}
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="font-semibold text-gray-500 block mb-1">Purpose</span>
+                  <span className="text-gray-900 font-medium block whitespace-pre-wrap">{detailsRequest.request.purpose}</span>
+                </div>
+                {detailsRequest.request.justification && (
+                  <div className="md:col-span-2">
+                    <span className="font-semibold text-gray-500 block mb-1">Justification</span>
+                    <span className="text-gray-900 font-medium block whitespace-pre-wrap">{detailsRequest.request.justification}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Items Section */}
+              <div>
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Package className="h-5 w-5 text-gray-500" />
+                  Requested Items
+                </h4>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-gray-700 uppercase font-semibold">
+                      <tr>
+                        <th className="px-4 py-3">Nomenclature</th>
+                        <th className="px-4 py-3 text-center">Requested Qty</th>
+                        <th className="px-4 py-3 text-center">Approved Qty</th>
+                        <th className="px-4 py-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {detailsRequest.items?.map((item: any, idx: number) => (
+                        <tr key={item.id || idx}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{item.nomenclature || item.custom_item_name}</td>
+                          <td className="px-4 py-3 text-center font-medium text-gray-600">{item.requested_quantity}</td>
+                          <td className="px-4 py-3 text-center font-bold text-emerald-600">{item.approved_quantity ?? '-'}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor(item.item_status || 'Pending')}`}>
+                              {item.item_status || 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Approval Timeline */}
+              <div>
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-gray-500" />
+                  Approval Timeline
+                </h4>
+                <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200">
+                  {detailsRequest.approval_history?.map((history: any, idx: number) => {
+                    const isAwaiting = history.action === 'pending' || history.action === 'Pending';
+                    const isRejected = history.action === 'Rejected' || history.action === 'rejected';
+                    const isApproved = history.action === 'Approved' || history.action === 'approved';
+                    const isSubmitted = history.action === 'Submitted' || history.action === 'submitted';
+                    const isIssued = history.action === 'Issued' || history.action === 'issued';
+
+                    let badgeColor = 'bg-gray-100 text-gray-700';
+                    if (isAwaiting) badgeColor = 'bg-yellow-100 text-yellow-800';
+                    else if (isRejected) badgeColor = 'bg-red-100 text-red-800';
+                    else if (isApproved) badgeColor = 'bg-green-100 text-green-800';
+                    else if (isSubmitted) badgeColor = 'bg-blue-100 text-blue-800';
+                    else if (isIssued) badgeColor = 'bg-teal-100 text-teal-800';
+
+                    return (
+                      <div key={idx} className="flex gap-4 relative items-start">
+                        <div className={`h-7 w-7 rounded-full border-2 flex items-center justify-center bg-white z-10 ${
+                          isAwaiting ? 'border-yellow-400 text-yellow-500' :
+                          isRejected ? 'border-red-400 text-red-500' :
+                          isApproved ? 'border-green-400 text-green-500' :
+                          isIssued ? 'border-teal-400 text-teal-500' : 'border-blue-400 text-blue-500'
+                        }`}>
+                          <div className={`h-2.5 w-2.5 rounded-full ${
+                            isAwaiting ? 'bg-yellow-500' :
+                            isRejected ? 'bg-red-500' :
+                            isApproved ? 'bg-green-500' :
+                            isIssued ? 'bg-teal-500' : 'bg-blue-500'
+                          }`} />
+                        </div>
+                        <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-sm">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                            <span className="font-semibold text-gray-900">{history.actor_name}</span>
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeColor}`}>
+                              {history.action}
+                            </span>
+                          </div>
+                          {history.timestamp && (
+                            <span className="text-xs text-gray-400 block mb-1">
+                              {format(new Date(history.timestamp), 'MMM dd, yyyy HH:mm')}
+                            </span>
+                          )}
+                          <p className="text-gray-600 leading-relaxed font-normal">{history.comments}</p>
+                          {history.forwarded_to_name && (
+                            <div className="text-xs text-gray-500 mt-2 font-medium">
+                              ⏭ Forwarded to: <span className="text-gray-900 font-semibold">{history.forwarded_to_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">Failed to load request details</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -90,11 +90,23 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     localStorage.setItem(storageKey, JSON.stringify(updated));
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     const storageKey = `notifications_${user?.Id || (user as any)?.user_id}`;
     setNotifications(prev => 
       prev.map(n => ({ ...n, isRead: true }))
     );
+    
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/read-all`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
     
     // Update localStorage
     const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');

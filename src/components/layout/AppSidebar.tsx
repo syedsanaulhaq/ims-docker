@@ -138,11 +138,17 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     role === 'WING STORE KEEPER' ||
     role === 'CUSTOM_WING_STORE_KEEPER'
   );
+  const hasAdminStorekeeperRole = roleNames.some(role =>
+    role === 'STOREKEEPER' ||
+    role === 'STORE KEEPER' ||
+    role === 'WORKFLOW_STOREKEEPER'
+  );
   const hasScopedOperationalRole =
     hasBranchSupervisorRole ||
     hasBranchStorekeeperRole ||
     hasWingSupervisorRole ||
-    hasWingStorekeeperRole;
+    hasWingStorekeeperRole ||
+    hasAdminStorekeeperRole;
   const canAccessBranchMenu = isSuperAdmin || hasBranchSupervisorRole || hasBranchStorekeeperRole;
   const hasBranchAssignment = !!((user as any)?.branch_id || (user as any)?.intBranchID || 0);
   const hasApproverRole = roleNames.some(role =>
@@ -233,10 +239,12 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
       isWingSupervisor: !!user?.ims_permissions?.some(p => p.permission_key === 'wing.supervisor'),
       hasBranchSupervisorRole,
       hasBranchStorekeeperRole,
+      hasWingStorekeeperRole,
+      hasAdminStorekeeperRole,
       hasStoreKeeperRole: hasStoreKeeperRole,
       isSuperAdmin: user?.is_super_admin
     });
-  }, [user, hasStoreKeeperRole, hasBranchSupervisorRole, hasBranchStorekeeperRole]);
+  }, [user, hasStoreKeeperRole, hasBranchSupervisorRole, hasBranchStorekeeperRole, hasWingStorekeeperRole, hasAdminStorekeeperRole]);
 
   const handleLogout = async () => {
     try {
@@ -306,17 +314,33 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     ]
   };
 
-  // STORE KEEPER MENU - For wing store keepers
-  const storeKeeperMenuGroup: MenuGroup = {
-    label: "Store Keeper Menu",
+  // ADMIN STOREKEEPER MENU - For admin store keepers
+  const adminStorekeeperMenuGroup: MenuGroup = {
+    label: "Admin Storekeeper",
+    icon: Warehouse,
+    items: [
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=admin", permission: undefined },
+    ]
+  };
+
+  // BRANCH STOREKEEPER MENU - For branch store keepers
+  const branchStorekeeperMenuGroup: MenuGroup = {
+    label: "Branch Storekeeper",
     icon: Warehouse,
     items: [
       ...(hasBranchStorekeeperRole ? [
         { title: "Branch Request Review", icon: ClipboardList, path: "/dashboard/branch-storekeeper-review", permission: undefined },
       ] : []),
-      { title: "Forwarded Verifications", icon: Eye, path: "/dashboard/store-keeper-verifications", permission: undefined },
-      { title: "Wing Inventory", icon: Package, path: "/dashboard/wing-inventory", permission: undefined },
-      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing", permission: undefined },
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=branch", permission: undefined },
+    ]
+  };
+
+  // WING STOREKEEPER MENU - For wing store keepers
+  const wingStorekeeperMenuGroup: MenuGroup = {
+    label: "Wing Storekeeper",
+    icon: Warehouse,
+    items: [
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=wing", permission: undefined },
     ]
   };
 
@@ -472,11 +496,27 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
       }
     }
 
-    // Show store keeper menu if user is wing store keeper (by permission or role)
-    if (canAccessStoreKeeperMenu) {
-      const visibleStoreKeeperItems = storeKeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleStoreKeeperItems.length > 0) {
-        groups.push({ ...storeKeeperMenuGroup, items: visibleStoreKeeperItems });
+    // Show Admin Storekeeper menu if user has role or is Super Admin
+    if (isSuperAdmin || hasAdminStorekeeperRole) {
+      const visibleItems = adminStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+      if (visibleItems.length > 0) {
+        groups.push({ ...adminStorekeeperMenuGroup, items: visibleItems });
+      }
+    }
+
+    // Show Branch Storekeeper menu if user has role or is Super Admin
+    if (isSuperAdmin || hasBranchStorekeeperRole) {
+      const visibleItems = branchStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+      if (visibleItems.length > 0) {
+        groups.push({ ...branchStorekeeperMenuGroup, items: visibleItems });
+      }
+    }
+
+    // Show Wing Storekeeper menu if user has role, permission or is Super Admin
+    if (isSuperAdmin || hasWingStorekeeperRole || isWingStoreKeeper) {
+      const visibleItems = wingStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+      if (visibleItems.length > 0) {
+        groups.push({ ...wingStorekeeperMenuGroup, items: visibleItems });
       }
     }
 

@@ -159,7 +159,7 @@ export const ApprovalForwarding: React.FC<ApprovalForwardingProps> = ({
         // 2. The current approver (not someone who already acted and forwarded) AND
         // 3. The request status is still 'pending' (not approved/rejected/finalized)
         const isCurrentApprover = approvalData.current_approver_id === user.user_id;
-        const isPending = approvalData.current_status === 'pending';
+        const isPending = ['pending', 'forwarded_to_admin', 'forwarded_to_supervisor'].includes(approvalData.current_status);
         
         if (userInWorkflow && isCurrentApprover && isPending) {
           setUserPermissions({
@@ -385,7 +385,7 @@ export const ApprovalForwarding: React.FC<ApprovalForwardingProps> = ({
     );
   }
 
-  const canTakeAction = approval.current_status === 'pending';
+  const canTakeAction = ['pending', 'forwarded_to_admin', 'forwarded_to_supervisor'].includes(approval.current_status);
   const currentUserCanFinalize = availableForwarders.some(f => f.can_finalize);
   const parentStatusBadgeClass =
     laneSummary?.parent_status === 'approved'
@@ -405,13 +405,13 @@ export const ApprovalForwarding: React.FC<ApprovalForwardingProps> = ({
             Approval Status
           </h3>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            approval.current_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            ['pending', 'forwarded_to_admin', 'forwarded_to_supervisor'].includes(approval.current_status) ? 'bg-yellow-100 text-yellow-800' :
             approval.current_status === 'approved' ? 'bg-green-100 text-green-800' :
             approval.current_status === 'rejected' ? 'bg-red-100 text-red-800' :
             approval.current_status === 'finalized' ? 'bg-blue-100 text-blue-800' :
             'bg-gray-100 text-gray-800'
           }`}>
-            {approval.current_status.toUpperCase()}
+            {approval.current_status.toUpperCase().replace(/_/g, ' ')}
           </span>
         </div>
         

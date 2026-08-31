@@ -15,6 +15,7 @@ const {
   WORKFLOW_ROLE_NAMES,
   resolveItemMasterGroupNumber
 } = require('../utils/workflowEngine.cjs');
+const { notifyRequestUpdate } = require('../utils/notifications.cjs');
 
 const WORKFLOW_ROLE_FILTER_SQL = WORKFLOW_ROLE_NAMES
   .map((_, index) => `@role${index}`)
@@ -1263,6 +1264,9 @@ router.post('/supervisor/approve', requireAuth, requirePermission('stock_request
           FROM AspNetUsers WHERE Id = @actorId
         `);
 
+      // Trigger approval notification
+      await notifyRequestUpdate(transaction, requestId, 'APPROVED', { actorName: 'Supervisor', actorId: supervisorId, comments });
+
       await transaction.commit();
       console.log(`✅ Supervisor approved request ${requestId}`);
       res.json({ success: true, message: 'Request approved successfully', action: 'approved' });
@@ -1391,6 +1395,9 @@ router.post('/supervisor/forward', requireAuth, requirePermission('stock_request
           FROM AspNetUsers WHERE Id = @actorId
         `);
 
+      // Trigger forward notification
+      await notifyRequestUpdate(transaction, requestId, 'FORWARDED', { actorName: 'Supervisor', actorId: supervisorId, comments: forwardingReason });
+
       await transaction.commit();
       console.log(`✅ Supervisor forwarded request ${requestId} to admin`);
       res.json({
@@ -1453,6 +1460,9 @@ router.post('/supervisor/reject', requireAuth, requirePermission('stock_request.
           SELECT @requestId, @actorId, FullName, Role, @action, @newStatus, @comments
           FROM AspNetUsers WHERE Id = @actorId
         `);
+
+      // Trigger rejection notification
+      await notifyRequestUpdate(transaction, requestId, 'REJECTED', { actorName: 'Supervisor', actorId: supervisorId, comments });
 
       await transaction.commit();
       console.log(`✅ Supervisor rejected request ${requestId}`);
@@ -1530,6 +1540,9 @@ router.post('/admin/approve', requireAuth, requirePermission('stock_request.appr
           FROM AspNetUsers WHERE Id = @actorId
         `);
 
+      // Trigger approval notification
+      await notifyRequestUpdate(transaction, requestId, 'APPROVED', { actorName: 'Admin', actorId: adminId, comments });
+
       await transaction.commit();
       console.log(`✅ Admin approved request ${requestId}`);
       res.json({ success: true, message: 'Request approved successfully', action: 'approved' });
@@ -1587,6 +1600,9 @@ router.post('/admin/reject', requireAuth, requirePermission('stock_request.rejec
           SELECT @requestId, @actorId, FullName, Role, @action, @newStatus, @comments
           FROM AspNetUsers WHERE Id = @actorId
         `);
+
+      // Trigger rejection notification
+      await notifyRequestUpdate(transaction, requestId, 'REJECTED', { actorName: 'Admin', actorId: adminId, comments });
 
       await transaction.commit();
       console.log(`✅ Admin rejected request ${requestId}`);
@@ -2481,9 +2497,24 @@ router.post('/:approvalId/approve', async (req, res) => {
               WHERE id = @syncRequestId
             `);
           
-          console.log(`📋 Synced stock_issuance_requests approval_status to '${sirApprovalStatus}' for request:`, syncRequestId);
         }
       }
+      // Trigger request update notification
+      const actionName = overallStatus === 'approved' || isDynamicStepTransition || overallStatus === 'pending'
+        ? 'APPROVED'
+        : overallStatus === 'rejected'
+          ? 'REJECTED'
+          : overallStatus === 'returned'
+            ? 'RETURNED'
+            : hasForwardActions
+              ? 'FORWARDED'
+              : 'APPROVED';
+
+      await notifyRequestUpdate(transaction, requestId, actionName, {
+        actorName: actualApproverName,
+        actorId: userId,
+        comments: approval_comments
+      });
 
       await transaction.commit();
 

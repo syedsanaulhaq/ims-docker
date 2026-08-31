@@ -8,6 +8,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { getPool, sql } = require('../db/connection.cjs');
 const { initializeWorkflowForRequest, bindRequestApprovalId, getUserWorkflowRoles } = require('../utils/workflowEngine.cjs');
+const { notifyRequestUpdate } = require('../utils/notifications.cjs');
 
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
@@ -170,7 +171,7 @@ router.get('/', async (req, res) => {
 router.get('/requests', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
-    const { status, wing_id, requester_id, includeDeleted, request_type } = req.query;
+    const { status, wing_id, requester_id, includeDeleted, request_type, storeType } = req.query;
     const userId = req.session?.userId;
 
     // Production can lag behind schema updates. Detect optional columns dynamically
@@ -279,31 +280,70 @@ router.get('/requests', requireAuth, async (req, res) => {
       }
     }
 
-    // Auto-filter by store keeper's wing when fetching approved requests for issuance
-    // The store keeper should only see requests from their own wing
-    if (status === 'Approved' && userId && !wing_id) {
-      const userWingResult = await pool.request()
-        .input('userId', sql.NVarChar(450), userId)
-        .query(`SELECT u.intWingID as WingId FROM AspNetUsers u WHERE u.Id = @userId`);
-      
-      if (userWingResult.recordset.length > 0 && userWingResult.recordset[0].WingId) {
-        const userWingId = userWingResult.recordset[0].WingId;
-        
-        // Check if this user is a wing store keeper
-        const skCheck = await pool.request()
+    // Auto-filter by store keeper's wing/branch/admin depending on storeType
+    if (storeType === 'admin') {
+      conditions.push(`(
+        sir.request_type IN ('branch', 'wing', 'Organizational')
+        OR (
+          sir.request_type = 'Individual'
+          AND (
+            sir.requester_wing_id = 19
+            OR sir.requester_branch_id = '169'
+            OR sir.issuance_source = 'admin_store'
+            OR sir.approval_status = 'Approved by Admin'
+          )
+        )
+      )`);
+    } else if (storeType === 'branch') {
+      conditions.push("sir.request_type = 'Individual'");
+      if (userId) {
+        const userBranchResult = await pool.request()
           .input('userId', sql.NVarChar(450), userId)
-          .query(`
-            SELECT ir.role_name
-            FROM ims_user_roles ur
-            INNER JOIN ims_roles ir ON ur.role_id = ir.id
-            WHERE ur.user_id = @userId
-              AND ir.is_active = 1
-              AND (ir.role_name LIKE '%STORE_KEEPER%' OR ir.role_name = 'CUSTOM_WING_STORE_KEEPER')
-          `);
-        
-        if (skCheck.recordset.length > 0) {
+          .query(`SELECT u.intBranchID as BranchId FROM AspNetUsers u WHERE u.Id = @userId`);
+        if (userBranchResult.recordset.length > 0 && userBranchResult.recordset[0].BranchId) {
+          const userBranchId = userBranchResult.recordset[0].BranchId;
+          conditions.push('CONVERT(NVARCHAR(100), sir.requester_branch_id) = @autoBranchId');
+          request = request.input('autoBranchId', sql.NVarChar(100), String(userBranchId));
+        }
+      }
+    } else if (storeType === 'wing') {
+      conditions.push("sir.request_type = 'Individual'");
+      if (userId) {
+        const userWingResult = await pool.request()
+          .input('userId', sql.NVarChar(450), userId)
+          .query(`SELECT u.intWingID as WingId FROM AspNetUsers u WHERE u.Id = @userId`);
+        if (userWingResult.recordset.length > 0 && userWingResult.recordset[0].WingId) {
+          const userWingId = userWingResult.recordset[0].WingId;
           conditions.push('CONVERT(NVARCHAR(100), sir.requester_wing_id) = @autoWingId');
           request = request.input('autoWingId', sql.NVarChar(100), String(userWingId));
+        }
+      }
+    } else {
+      // Fallback/Legacy auto-filtering
+      if (status === 'Approved' && userId && !wing_id) {
+        const userWingResult = await pool.request()
+          .input('userId', sql.NVarChar(450), userId)
+          .query(`SELECT u.intWingID as WingId FROM AspNetUsers u WHERE u.Id = @userId`);
+        
+        if (userWingResult.recordset.length > 0 && userWingResult.recordset[0].WingId) {
+          const userWingId = userWingResult.recordset[0].WingId;
+          
+          // Check if this user is a wing store keeper
+          const skCheck = await pool.request()
+            .input('userId', sql.NVarChar(450), userId)
+            .query(`
+              SELECT ir.role_name
+              FROM ims_user_roles ur
+              INNER JOIN ims_roles ir ON ur.role_id = ir.id
+              WHERE ur.user_id = @userId
+                AND ir.is_active = 1
+                AND (ir.role_name LIKE '%STORE_KEEPER%' OR ir.role_name = 'CUSTOM_WING_STORE_KEEPER')
+            `);
+          
+          if (skCheck.recordset.length > 0) {
+            conditions.push('CONVERT(NVARCHAR(100), sir.requester_wing_id) = @autoWingId');
+            request = request.input('autoWingId', sql.NVarChar(100), String(userWingId));
+          }
         }
       }
     }
@@ -1343,9 +1383,8 @@ const createStockIssuanceRequest = async (req, res) => {
           && submitterWorkflowRoles.some(isBranchSupervisorRole);
         const isBranchStorekeeperSubmission = normalizedRequestType === 'branch'
           && submitterWorkflowRoles.some(isBranchStorekeeperRole);
-        const startsAtBranchStorekeeper = normalizedRequestType === 'branch'
-          && !isBranchSupervisorSubmission
-          && !isBranchStorekeeperSubmission;
+        // Branch requests should go directly to central admin workflow steps/roles, not starting at branch storekeeper
+        const startsAtBranchStorekeeper = false;
 
         // Always use the same workflow initialization path for all request types
         // (personal, wing, organizational) so routing starts at the configured first step.
@@ -1363,7 +1402,7 @@ const createStockIssuanceRequest = async (req, res) => {
         } else {
           try {
             dynamicWorkflowResult = await initializeWorkflowForRequest(pool, requestId, userId, null, {
-              startAtAdminChain: isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational'
+              startAtAdminChain: normalizedRequestType === 'branch' || isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational'
             });
             if (dynamicWorkflowResult?.ok && dynamicWorkflowResult?.approverId) {
               approverId = dynamicWorkflowResult.approverId;
@@ -1373,7 +1412,7 @@ const createStockIssuanceRequest = async (req, res) => {
         }
 
         // Fallback to legacy routing if dynamic workflow is not configured/resolvable.
-        if (!approverId && isBranchSupervisorSubmission) {
+        if (!approverId && (isBranchSupervisorSubmission || normalizedRequestType === 'branch')) {
           approverId = await findFirstAdminChainApprover(pool, userId);
         }
 
@@ -1450,7 +1489,7 @@ const createStockIssuanceRequest = async (req, res) => {
             .input('requestType', sql.NVarChar(50), 'stock_issuance')
             .input('approverId', sql.NVarChar(450), approverId)
             .input('submittedBy', sql.NVarChar(450), userId)
-            .input('isAdminWorkflow', sql.Bit, (isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') ? 1 : 0)
+            .input('isAdminWorkflow', sql.Bit, (normalizedRequestType === 'branch' || isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') ? 1 : 0)
             .query(`
               INSERT INTO request_approvals 
                 (request_id, request_type, workflow_id, current_approver_id, current_status, submitted_by, submitted_date, created_date, updated_date, is_admin_workflow)
@@ -1471,7 +1510,7 @@ const createStockIssuanceRequest = async (req, res) => {
                       updated_at = GETDATE()
                   WHERE id = @requestId
                 `);
-            } else if (isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') {
+            } else if (normalizedRequestType === 'branch' || isBranchSupervisorSubmission || normalizedRequestType === 'wing' || normalizedRequestType === 'organizational') {
               if (dynamicWorkflowResult?.ok) {
                 await bindRequestApprovalId(pool, requestId, approvalId);
               }
@@ -1540,6 +1579,9 @@ const createStockIssuanceRequest = async (req, res) => {
         console.error('❌ Failed to create approval record:', approvalError.message);
       }
 
+      // Trigger request submission notification
+      notifyRequestUpdate(pool, requestId, 'SUBMITTED', { actorId: requester_user_id || req.session.userId });
+
       res.status(201).json({ 
         success: true, 
         request_id: requestId,
@@ -1549,7 +1591,12 @@ const createStockIssuanceRequest = async (req, res) => {
         }
       });
     } catch (err) {
-      await transaction.rollback();
+      console.error('❌ Original error in createStockIssuanceRequest:', err);
+      try {
+        await transaction.rollback();
+      } catch (rollbackErr) {
+        console.error('❌ Failed to roll back transaction:', rollbackErr.message);
+      }
       throw err;
     }
   } catch (error) {
@@ -2253,6 +2300,9 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
 
       await transaction.commit();
 
+      // Trigger request issuance notification
+      notifyRequestUpdate(pool, id, 'ISSUED', { actorName: issuerName });
+
       res.json({
         success: true,
         message: `Items issued successfully for request ${request.request_number} by ${issuerName}`,
@@ -2348,6 +2398,8 @@ router.post('/dispatch/:id', requireAuth, async (req, res) => {
           VALUES (@approvalId, 'dispatched', @actionBy, @comments, @stepNumber, 1)
         `);
     }
+    // Trigger request dispatch notification
+    notifyRequestUpdate(pool, id, 'DISPATCHED', { actorName: dispatcher_name });
 
     res.json({ success: true, message: `Request ${requestNumber} dispatched successfully` });
   } catch (error) {
@@ -2404,6 +2456,9 @@ router.post('/acknowledge/:id', requireAuth, async (req, res) => {
             updated_at = GETDATE()
         WHERE id = @id
       `);
+
+    // Trigger request acknowledgment notification
+    notifyRequestUpdate(pool, id, 'ACKNOWLEDGED', { actorName: 'Requester' });
 
     res.json({ success: true, message: 'Receipt acknowledged. Request completed.' });
   } catch (error) {
