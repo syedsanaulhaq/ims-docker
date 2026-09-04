@@ -23,7 +23,8 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 
 interface InventoryItem {
@@ -118,17 +119,20 @@ const InventoryDashboard: React.FC = () => {
     });
   };
 
-  // Category-wise distribution for pie chart
+  // Category-wise distribution for pie chart (only include categories with stock > 0)
   const categoryDistribution = inventory.reduce((acc, item) => {
     const category = item.category_name || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = { name: category, value: 0 };
     }
-    acc[category].value += item.current_quantity;
+    acc[category].value += (item.current_quantity || 0);
     return acc;
   }, {} as Record<string, { name: string; value: number }>);
 
-  const pieChartData = Object.values(categoryDistribution);
+  // Filter out 0-value categories and sort descending by quantity
+  const pieChartData = Object.values(categoryDistribution)
+    .filter(c => c.value > 0)
+    .sort((a, b) => b.value - a.value);
 
   // Top 10 items by quantity for bar chart
   const topItemsData = [...inventory]
@@ -281,30 +285,97 @@ const InventoryDashboard: React.FC = () => {
         </Card>
 
         {/* Category Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quantity by Category</CardTitle>
+        <Card className="col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-base font-bold text-gray-800">
+              <span>Quantity by Category</span>
+              <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                {pieChartData.length} {pieChartData.length === 1 ? 'Category' : 'Categories'}
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieChartData.length === 0 ? (
+              <div className="text-gray-500 text-center py-16">
+                No stock available across categories
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                {/* Donut Chart with minAngle to make small slices visible */}
+                <div className="w-full md:w-1/2 h-[260px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        minAngle={18}
+                        dataKey="value"
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length > 0) {
+                            const data = payload[0];
+                            const total = pieChartData.reduce((sum, c) => sum + c.value, 0);
+                            const pct = total > 0 ? ((Number(data.value) / total) * 100).toFixed(1) : '0';
+                            return (
+                              <div className="bg-white p-3 border rounded-lg shadow-lg text-xs z-50">
+                                <p className="font-bold text-gray-800">{data.name}</p>
+                                <p className="text-blue-600 font-semibold mt-1">
+                                  {Number(data.value).toLocaleString()} units ({pct}%)
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Detailed Category Progress Breakdown */}
+                <div className="w-full md:w-1/2 space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+                  {pieChartData.map((cat, index) => {
+                    const total = pieChartData.reduce((sum, c) => sum + c.value, 0);
+                    const pct = total > 0 ? (cat.value / total) * 100 : 0;
+                    const color = COLORS[index % COLORS.length];
+
+                    return (
+                      <div key={cat.name} className="p-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100/80 transition-colors">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <div className="flex items-center gap-2 font-medium text-gray-800 truncate max-w-[140px]" title={cat.name}>
+                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                            <span className="truncate">{cat.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-gray-900">{cat.value.toLocaleString()}</span>
+                            <span className="text-gray-500 text-[11px] ml-1">({pct < 0.1 ? '<0.1%' : `${pct.toFixed(1)}%`})</span>
+                          </div>
+                        </div>
+                        {/* Mini Share Bar */}
+                        <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.max(pct, 2)}%`, 
+                              backgroundColor: color 
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

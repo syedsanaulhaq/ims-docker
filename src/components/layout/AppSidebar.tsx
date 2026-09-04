@@ -141,7 +141,10 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
   const hasAdminStorekeeperRole = roleNames.some(role =>
     role === 'STOREKEEPER' ||
     role === 'STORE KEEPER' ||
-    role === 'WORKFLOW_STOREKEEPER'
+    role === 'WORKFLOW_STOREKEEPER' ||
+    role === 'ADMIN_STOREKEEPER' ||
+    role === 'ADMIN STOREKEEPER' ||
+    role === 'ADMIN_STORE_KEEPER'
   );
   const hasScopedOperationalRole =
     hasBranchSupervisorRole ||
@@ -209,13 +212,10 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
   );
   
   // Check if user has any store keeper role (including custom roles)
-  const hasStoreKeeperRole = user?.ims_roles?.some(role => 
-    role.role_name === 'WING_STORE_KEEPER' || 
-    role.role_name === 'BRANCH_STORE_KEEPER' ||
-    role.role_name === 'CUSTOM_WING_STORE_KEEPER' ||
-    role.role_name === 'CUSTOM_BRANCH_STORE_KEEPER' ||
-    role.role_name.includes('STORE_KEEPER')
-  ) || false;
+  const hasStoreKeeperRole = user?.ims_roles?.some(role => {
+    const rName = String(role.role_name || '').toUpperCase();
+    return rName.includes('STOREKEEPER') || rName.includes('STORE_KEEPER') || rName.includes('STORE KEEPER');
+  }) || false;
   
   // Store keeper can view the menu if they have the permission OR the role
   const canAccessStoreKeeperMenu = isWingStoreKeeper || hasStoreKeeperRole;

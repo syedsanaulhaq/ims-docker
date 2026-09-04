@@ -2193,18 +2193,33 @@ router.post('/:approvalId/approve', async (req, res) => {
           newApproverId = adminResult.recordset[0].user_id;
         }
       } else if (hasForwardToSupervisor && !newApproverId) {
-        // Find a WING_SUPERVISOR user
-        const supResult = await transaction.request()
+        // 1. Try finding direct supervisor from viw_employee_with_supervisor for the requester
+        const directSup = await transaction.request()
+          .input('approvalIdParam', sql.NVarChar, approvalId)
           .query(`
-            SELECT TOP 1 ur.user_id
-            FROM ims_user_roles ur
-            INNER JOIN ims_roles r ON r.id = ur.role_id
-            WHERE r.role_name = 'WING_SUPERVISOR'
-            AND ur.user_id != '${userId}'
-            ORDER BY ur.user_id
+            SELECT TOP 1 bossUser.Id as user_id
+            FROM request_approvals ra
+            INNER JOIN AspNetUsers u ON ra.submitted_by = u.Id
+            INNER JOIN viw_employee_with_supervisor s ON s.CNIC = u.CNIC
+            INNER JOIN AspNetUsers bossUser ON s.BossCNIC = bossUser.CNIC
+            WHERE ra.id = @approvalIdParam AND bossUser.Id != '${userId}'
           `);
-        if (supResult.recordset.length > 0) {
-          newApproverId = supResult.recordset[0].user_id;
+        if (directSup.recordset.length > 0 && directSup.recordset[0].user_id) {
+          newApproverId = directSup.recordset[0].user_id;
+        } else {
+          // Fallback: Find a WING_SUPERVISOR user
+          const supResult = await transaction.request()
+            .query(`
+              SELECT TOP 1 ur.user_id
+              FROM ims_user_roles ur
+              INNER JOIN ims_roles r ON r.id = ur.role_id
+              WHERE r.role_name = 'WING_SUPERVISOR'
+              AND ur.user_id != '${userId}'
+              ORDER BY ur.user_id
+            `);
+          if (supResult.recordset.length > 0) {
+            newApproverId = supResult.recordset[0].user_id;
+          }
         }
       }
 

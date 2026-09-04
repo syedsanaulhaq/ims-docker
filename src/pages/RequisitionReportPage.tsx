@@ -135,6 +135,9 @@ const RequisitionReportPage: React.FC = () => {
 
         let currentUserId = '';
         let currentUserDesignation = '-';
+        let isSuperAdmin = false;
+        let userWingId = '';
+        let userBranchId = '';
 
         try {
           const sessionResp = await fetch(`${getApiBaseUrl()}/auth/session`, {
@@ -145,12 +148,24 @@ const RequisitionReportPage: React.FC = () => {
 
           if (sessionResp.ok) {
             const sessionData = await sessionResp.json();
+            const sessionInfo = sessionData?.session || sessionData?.user || {};
             currentUserId = String(
-              sessionData?.session?.user_id ||
-              sessionData?.session?.userId ||
-              sessionData?.user?.id ||
+              sessionInfo?.user_id ||
+              sessionInfo?.userId ||
+              sessionInfo?.id ||
               ''
             ).trim();
+
+            userWingId = sessionInfo?.wing_id ? String(sessionInfo.wing_id).trim() : '';
+            userBranchId = sessionInfo?.branch_id ? String(sessionInfo.branch_id).trim() : '';
+
+            isSuperAdmin = Boolean(
+              sessionInfo?.is_super_admin ||
+              sessionInfo?.ims_roles?.some((r: any) => {
+                const roleName = String(typeof r === 'string' ? r : r?.role_name || '').toUpperCase();
+                return roleName.includes('SUPER_ADMIN') || roleName.includes('ADMINISTRATOR') || roleName === 'STOREKEEPER';
+              })
+            );
 
             if (currentUserId) {
               const designationResp = await fetch(`${getApiBaseUrl()}/auth/designation/${currentUserId}`, {
@@ -166,7 +181,7 @@ const RequisitionReportPage: React.FC = () => {
             }
           }
         } catch (sessionOrDesignationError) {
-          }
+        }
 
         if (!currentUserId) {
           throw new Error('Unable to resolve logged-in user session');
@@ -192,7 +207,7 @@ const RequisitionReportPage: React.FC = () => {
             });
           }
         } catch (requestsError) {
-          }
+        }
 
         if (Object.keys(byId).length === 0) {
           try {
@@ -213,7 +228,7 @@ const RequisitionReportPage: React.FC = () => {
               });
             }
           } catch (legacyError) {
-            }
+          }
         }
 
         if (Object.keys(byId).length === 0) {
@@ -235,18 +250,36 @@ const RequisitionReportPage: React.FC = () => {
               }
             }
           } catch (myReqError) {
-            }
+          }
         }
 
         const allRequests = Object.values(byId);
-        const myRequests = allRequests.filter((r: any) => {
-          if (!currentUserId) return false;
-          const requesterId = String(r?.requester_user_id || r?.requester?.user_id || '').trim();
-          return requesterId === currentUserId;
-        });
+        
+        // Scope visibility: Super Admins view all, Supervisors view owned + supervised wing/branch requests
+        let requestsToShow: any[] = [];
+        if (isSuperAdmin) {
+          requestsToShow = allRequests;
+        } else {
+          requestsToShow = allRequests.filter((r: any) => {
+            if (!currentUserId) return false;
+
+            const requesterId = String(r?.requester_user_id || r?.requester?.user_id || '').trim();
+            const isMyRequest = requesterId === currentUserId;
+
+            const supervisorId = String(r?.supervisor_id || r?.current_approver_id || '').trim();
+            const isSupervisedByMe = supervisorId === currentUserId;
+
+            const reqWingId = String(r?.requester_wing_id || r?.wing?.wing_id || '').trim();
+            const isInMyWing = Boolean(userWingId && reqWingId && reqWingId === userWingId);
+
+            const reqBranchId = String(r?.requester_branch_id || r?.branch?.branch_id || '').trim();
+            const isInMyBranch = Boolean(userBranchId && reqBranchId && reqBranchId === userBranchId);
+
+            return isMyRequest || isSupervisedByMe || isInMyWing || isInMyBranch;
+          });
+        }
 
         if (!requestId) {
-          const requestsToShow = myRequests.length > 0 ? myRequests : allRequests;
           const options = requestsToShow
             .sort((a: any, b: any) => {
               const dateA = new Date(a.submitted_at || a.created_at || 0).getTime();
@@ -277,7 +310,7 @@ const RequisitionReportPage: React.FC = () => {
           return;
         }
 
-        const found = (myRequests.length > 0 ? myRequests : allRequests).find((r: any) => r.id === requestId);
+        const found = requestsToShow.find((r: any) => String(r.id) === String(requestId)) || allRequests.find((r: any) => String(r.id) === String(requestId));
 
         if (!found) {
           console.error(`Request not found: ${requestId} | currentUserId: ${currentUserId} | myRequests: ${myRequests.length} | allRequests: ${allRequests.length}`);

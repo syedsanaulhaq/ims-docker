@@ -1017,9 +1017,34 @@ router.get('/:id', requireAuth, async (req, res) => {
         WHERE sii.request_id = @requestId
       `);
 
-    // Get wing supervisor(s) for approval workflow info
+    // Get direct supervisor from viw_employee_with_supervisor first, fallback to wing supervisor
     let supervisor = null;
-    if (request.requester_wing_id) {
+    if (request.requester_user_id) {
+      const directSupervisorResult = await pool.request()
+        .input('requesterId', sql.NVarChar(450), request.requester_user_id)
+        .query(`
+          SELECT TOP 1 
+            bossUser.Id as user_id,
+            s.BossName as supervisor_name,
+            bossUser.Role as role_name,
+            bossUser.Email
+          FROM viw_employee_with_supervisor s
+          INNER JOIN AspNetUsers u ON s.CNIC = u.CNIC
+          INNER JOIN AspNetUsers bossUser ON s.BossCNIC = bossUser.CNIC
+          WHERE u.Id = @requesterId AND bossUser.Id IS NOT NULL
+        `);
+
+      if (directSupervisorResult.recordset.length > 0) {
+        supervisor = {
+          user_id: directSupervisorResult.recordset[0].user_id,
+          name: directSupervisorResult.recordset[0].supervisor_name,
+          role: directSupervisorResult.recordset[0].role_name || 'Supervisor',
+          email: directSupervisorResult.recordset[0].Email
+        };
+      }
+    }
+
+    if (!supervisor && request.requester_wing_id) {
       const supervisorResult = await pool.request()
         .input('wingId', sql.Int, request.requester_wing_id)
         .query(`
@@ -1428,6 +1453,23 @@ const createStockIssuanceRequest = async (req, res) => {
           }
         }
 
+        if (!approverId) {
+          // 1. First priority: Check direct employee supervisor from viw_employee_with_supervisor
+          const directSupervisor = await pool.request()
+            .input('requesterId', sql.NVarChar(450), userId)
+            .query(`
+              SELECT TOP 1 bossUser.Id as user_id, s.BossName as FullName
+              FROM viw_employee_with_supervisor s
+              INNER JOIN AspNetUsers u ON s.CNIC = u.CNIC
+              INNER JOIN AspNetUsers bossUser ON s.BossCNIC = bossUser.CNIC
+              WHERE u.Id = @requesterId AND bossUser.Id IS NOT NULL AND bossUser.Id != @requesterId
+            `);
+
+          if (directSupervisor.recordset.length > 0 && directSupervisor.recordset[0].user_id) {
+            approverId = directSupervisor.recordset[0].user_id;
+          }
+        }
+
         if (!approverId && wingId) {
           const supervisorResult = await pool.request()
             .input('wingId', sql.Int, wingId)
@@ -1459,6 +1501,7 @@ const createStockIssuanceRequest = async (req, res) => {
           } else {
             const fallbackResult = await pool.request()
               .input('wingId', sql.Int, wingId)
+              .input('requesterId', sql.NVarChar(450), userId)
               .query(`
                 SELECT TOP 1 u.Id as user_id
                 FROM AspNetUsers u
@@ -1466,6 +1509,7 @@ const createStockIssuanceRequest = async (req, res) => {
                 INNER JOIN AspNetRoles r ON ur.RoleId = r.Id
                 LEFT JOIN tblUserDesignations ud ON u.intDesignationID = ud.intDesignationID
                 WHERE u.intWingID = @wingId
+                  AND u.Id != @requesterId
                   AND (r.Name LIKE '%Admin%' OR r.Name LIKE '%DG%' OR r.Name LIKE '%ADG%'
                        OR r.Name LIKE '%Manager%' OR r.Name LIKE '%Director%' OR r.Name LIKE '%HoD%')
                 ORDER BY

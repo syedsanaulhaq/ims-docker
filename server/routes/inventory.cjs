@@ -1052,9 +1052,9 @@ router.get('/current-stock', requireGlobalInventoryAccess, async (req, res) => {
 
     let query = `
       SELECT 
-        cis.id,
-        cis.item_master_id,
-        cis.current_quantity,
+        COALESCE(cis.id, im.id) as id,
+        im.id as item_master_id,
+        ISNULL(cis.current_quantity, 0) as current_quantity,
         cis.last_transaction_date,
         cis.last_transaction_type,
         cis.last_updated,
@@ -1064,10 +1064,10 @@ router.get('/current-stock', requireGlobalInventoryAccess, async (req, res) => {
         im.specifications,
         c.category_name,
         c.description as category_description
-      FROM current_inventory_stock cis
-      INNER JOIN item_masters im ON cis.item_master_id = im.id
+      FROM item_masters im
+      LEFT JOIN current_inventory_stock cis ON im.id = cis.item_master_id
       LEFT JOIN categories c ON im.category_id = c.id
-      WHERE 1=1
+      WHERE (im.is_deleted = 0 OR im.is_deleted IS NULL)
     `;
 
     let request = pool.request();
@@ -1083,7 +1083,7 @@ router.get('/current-stock', requireGlobalInventoryAccess, async (req, res) => {
     }
 
     if (low_stock === 'true') {
-      query += ` AND cis.current_quantity < 10`;
+      query += ` AND (cis.current_quantity IS NULL OR cis.current_quantity < 10)`;
     }
 
     query += ` ORDER BY cis.last_transaction_date DESC, im.nomenclature`;
@@ -1114,15 +1114,18 @@ router.get('/current-stock/summary', requireGlobalInventoryAccess, async (req, r
 
     const result = await pool.request().query(`
       SELECT 
-        COUNT(DISTINCT cis.item_master_id) as total_items,
-        SUM(cis.current_quantity) as total_quantity,
-        COUNT(DISTINCT c.id) as total_categories,
-        (SELECT COUNT(*) FROM current_inventory_stock WHERE current_quantity < 10) as low_stock_items,
+        (SELECT COUNT(*) FROM item_masters) as total_items,
+        (SELECT ISNULL(SUM(current_quantity), 0) FROM current_inventory_stock) as total_quantity,
+        (SELECT COUNT(DISTINCT id) FROM categories) as total_categories,
+        (
+          SELECT COUNT(*) 
+          FROM item_masters im 
+          LEFT JOIN current_inventory_stock cis ON im.id = cis.item_master_id 
+          WHERE (im.is_deleted = 0 OR im.is_deleted IS NULL) 
+            AND (cis.current_quantity IS NULL OR cis.current_quantity < 10)
+        ) as low_stock_items,
         (SELECT COUNT(*) FROM stock_acquisitions WHERE UPPER(ISNULL(status, '')) = 'COMPLETED') as total_acquisitions,
-        MAX(cis.last_updated) as last_updated
-      FROM current_inventory_stock cis
-      INNER JOIN item_masters im ON cis.item_master_id = im.id
-      LEFT JOIN categories c ON im.category_id = c.id
+        (SELECT MAX(last_updated) FROM current_inventory_stock) as last_updated
     `);
 
     res.json({
