@@ -41,25 +41,14 @@ COPY --chown=invmis:invmis . .
 # 🌐 Copy built frontend from build stage
 COPY --from=frontend-builder --chown=invmis:invmis /app/frontend/dist ./public
 
-# 🔧 Install additional production tools
-RUN apk add --no-cache dumb-init
-
-# 🏥 Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node healthcheck.js || exit 1
-
-# 👤 Switch to non-root user
-USER invmis
-
 # 🌐 Expose ports
 EXPOSE 5000 80
 
 # 📊 Set production environment
 ENV NODE_ENV=production
 
-# 🚀 Start application with dumb-init
-ENTRYPOINT ["dumb-init", "--"]
+# 🚀 Start application directly with node
 CMD ["node", "server/index.cjs"]
-EXPOSE 5000
+
 
 
