@@ -94,6 +94,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/sub-categories', categoryRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/inventory-stock', inventoryRoutes); // Alias for legacy frontend calls
+app.use('/inventory', inventoryRoutes); // Alias for frontend calls without /api prefix
 app.use('/api/stock-issuance', stockIssuanceRoutes);
 app.use('/api/stock-acquisitions', stockAcquisitionsRoutes);
 app.use('/api/reports', reportsRoutes);
@@ -129,9 +130,12 @@ async function startServer() {
     await initializePool();
 
     // Start listening
-    app.listen(config.PORT, () => {
+    const server = app.listen(config.PORT, () => {
       console.log(`✅ Server listening on port ${config.PORT}`);
     });
+
+    // Keep process alive
+    setInterval(() => {}, 1000 * 60 * 60);
   } catch (err) {
     console.error('❌ Failed to start server:', err);
     process.exit(1);

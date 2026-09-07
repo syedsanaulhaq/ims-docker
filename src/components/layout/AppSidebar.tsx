@@ -267,15 +267,15 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Personal",
     icon: User,
     items: [
-      { title: "Dashboard", icon: Home, path: "/personal-dashboard", permission: undefined },
-      { title: "Request Form", icon: ShoppingCart, path: "/dashboard/stock-issuance-personal", permission: undefined },
+      { title: "Dashboard", icon: Home, path: "/personal-dashboard", permission: 'personal.dashboard.view' },
+      { title: "Request Form", icon: ShoppingCart, path: "/dashboard/stock-issuance-personal", permission: 'personal.request.create' },
       ...(hasBranchAssignment ? [
-        { title: "Branch Demand", icon: Building2, path: "/dashboard/stock-issuance-branch?mode=demand", permission: undefined },
-        { title: "My Branch Demand", icon: ClipboardList, path: "/dashboard/my-branch-demand", permission: undefined },
+        { title: "Branch Demand", icon: Building2, path: "/dashboard/stock-issuance-branch?mode=demand", permission: 'branch.demand.create' },
+        { title: "My Branch Demand", icon: ClipboardList, path: "/dashboard/my-branch-demand", permission: 'branch.demand.view' },
       ] : []),
-      { title: "My Request", icon: ClipboardList, path: "/dashboard/my-requests", permission: undefined },
-      { title: "Stock Return", icon: Undo2, path: "/dashboard/stock-return", permission: undefined },
-      { title: "My Inventory", icon: Package, path: "/dashboard/personal-inventory", permission: undefined },
+      { title: "My Request", icon: ClipboardList, path: "/dashboard/my-requests", permission: 'personal.request.view_own' },
+      { title: "Stock Return", icon: Undo2, path: "/dashboard/stock-return", permission: 'personal.return.create' },
+      { title: "My Inventory", icon: Package, path: "/dashboard/personal-inventory", permission: 'personal.inventory.view_own' },
     ]
   };
 
@@ -283,43 +283,43 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Supervisor",
     icon: Users,
     items: [
-      { title: "Supervisor Dashboard", icon: CheckCircle, path: "/dashboard/supervisor-approval-dashboard", permission: 'supervisor.menu.view' },
-      { title: "Requisition Report", icon: FileText, path: "/dashboard/requisition-report", permission: undefined },
+      { title: "Supervisor Dashboard", icon: CheckCircle, path: "/dashboard/supervisor-approval-dashboard", permission: 'approval.supervisor.approve' },
+      { title: "Requisition Report", icon: FileText, path: "/dashboard/requisition-report", permission: 'requisition.report.view' },
     ]
   };
 
-  // WING MENU - For wing supervisors
+  // WING MENU - For wing supervisors and members
   const wingMenuGroup: MenuGroup = {
     label: "Wing Menu",
     icon: Building2,
     items: [
-      { title: "Wing Dashboard", icon: BarChart3, path: "/dashboard/wing-dashboard", permission: 'wing.supervisor' },
-      { title: "Wing Request History", icon: History, path: "/dashboard/wing-request-history", permission: 'wing.supervisor' },
-      { title: "Request Items", icon: ShoppingCart, path: "/procurement/new-request", permission: undefined },
-      { title: "Wing Inventory", icon: Warehouse, path: "/dashboard/wing-inventory", permission: 'wing.supervisor' },
-      { title: "Wing Members", icon: Users, path: "/dashboard/wing-members", permission: 'wing.supervisor' },
+      { title: "Wing Dashboard", icon: BarChart3, path: "/dashboard/wing-dashboard", permission: 'wing.dashboard.view' },
+      { title: "Wing Request History", icon: History, path: "/dashboard/wing-request-history", permission: 'wing.demand.view' },
+      { title: "Request Items", icon: ShoppingCart, path: "/procurement/new-request", permission: 'wing.demand.create' },
+      { title: "Wing Inventory", icon: Warehouse, path: "/dashboard/wing-inventory", permission: 'wing.inventory.view' },
+      { title: "Wing Members", icon: Users, path: "/dashboard/wing-members", permission: 'wing.members.view' },
     ]
   };
 
-  // BRANCH MENU - For branch supervisors and branch storekeepers
+  // BRANCH MENU - For branch supervisors and branch staff
   const branchMenuGroup: MenuGroup = {
     label: "Branch Menu",
     icon: Building2,
     items: [
-      { title: "Branch Dashboard", icon: BarChart3, path: "/dashboard/branch-dashboard", permission: undefined },
-      { title: "Branch Request History", icon: History, path: "/dashboard/branch-request-history", permission: undefined },
-      { title: "Request Items", icon: ShoppingCart, path: "/dashboard/stock-issuance-branch", permission: undefined },
-      { title: "Branch Inventory", icon: Warehouse, path: "/dashboard/branch-inventory", permission: undefined },
-      { title: "Branch Members", icon: Users, path: "/dashboard/branch-members", permission: undefined },
+      { title: "Branch Dashboard", icon: BarChart3, path: "/dashboard/branch-dashboard", permission: 'branch.dashboard.view' },
+      { title: "Branch Request History", icon: History, path: "/dashboard/branch-request-history", permission: 'branch.demand.view' },
+      { title: "Request Items", icon: ShoppingCart, path: "/dashboard/stock-issuance-branch", permission: 'branch.demand.create' },
+      { title: "Branch Inventory", icon: Warehouse, path: "/dashboard/branch-inventory", permission: 'branch.inventory.view' },
+      { title: "Branch Members", icon: Users, path: "/dashboard/branch-members", permission: 'branch.members.view' },
     ]
   };
 
-  // ADMIN STOREKEEPER MENU - For admin store keepers
+  // ADMIN STOREKEEPER MENU - For central admin store keepers
   const adminStorekeeperMenuGroup: MenuGroup = {
     label: "Admin Storekeeper",
     icon: Warehouse,
     items: [
-      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=admin", permission: undefined },
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=admin", permission: 'issuance.admin.process' },
     ]
   };
 
@@ -328,10 +328,8 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Branch Storekeeper",
     icon: Warehouse,
     items: [
-      ...(hasBranchStorekeeperRole ? [
-        { title: "Branch Request Review", icon: ClipboardList, path: "/dashboard/branch-storekeeper-review", permission: undefined },
-      ] : []),
-      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=branch", permission: undefined },
+      { title: "Branch Request Review", icon: ClipboardList, path: "/dashboard/branch-storekeeper-review", permission: 'branch.storekeeper.review' },
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=branch", permission: 'branch.issuance.process' },
     ]
   };
 
@@ -340,7 +338,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Wing Storekeeper",
     icon: Warehouse,
     items: [
-      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=wing", permission: undefined },
+      { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=wing", permission: 'wing.issuance.process' },
     ]
   };
 
@@ -349,10 +347,10 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Meta Data Menu",
     icon: Database,
     items: [
-      { title: "Item Master", icon: Package, path: "/dashboard/item-master", permission: 'inventory.manage' },
-      { title: "Categories", icon: Boxes, path: "/dashboard/categories", permission: 'inventory.manage' },
-      { title: "Sub-Categories", icon: Boxes, path: "/dashboard/sub-categories", permission: 'inventory.manage' },
-      { title: "Vendor Management", icon: Building2, path: "/dashboard/vendors", permission: 'procurement.manage' },
+      { title: "Item Master", icon: Package, path: "/dashboard/item-master", permission: 'metadata.items.manage' },
+      { title: "Categories", icon: Boxes, path: "/dashboard/categories", permission: 'metadata.categories.manage' },
+      { title: "Sub-Categories", icon: Boxes, path: "/dashboard/sub-categories", permission: 'metadata.subcategories.manage' },
+      { title: "Vendor Management", icon: Building2, path: "/dashboard/vendors", permission: 'metadata.vendors.manage' },
     ]
   };
 
@@ -361,10 +359,10 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Inventory Menu",
     icon: Package,
     items: [
-      { title: "Inventory Dashboard", icon: BarChart3, path: "/dashboard/inventory-dashboard", permission: 'inventory.view' },
-      { title: "Opening Balance Entry", icon: Package, path: "/dashboard/opening-balance-entry", permission: 'inventory.manage' },
-      { title: "Stock Quantities", icon: BarChart3, path: "/dashboard/inventory-stock-quantities", permission: 'inventory.view' },
-      { title: "Stock Alerts", icon: AlertTriangle, path: "/dashboard/inventory-alerts", permission: 'inventory.view' },
+      { title: "Inventory Dashboard", icon: BarChart3, path: "/dashboard/inventory-dashboard", permission: 'inventory.dashboard.view' },
+      { title: "Opening Balance Entry", icon: Package, path: "/dashboard/opening-balance-entry", permission: 'inventory.opening_balance.entry' },
+      { title: "Stock Quantities", icon: BarChart3, path: "/dashboard/inventory-stock-quantities", permission: 'inventory.stock.view' },
+      { title: "Stock Alerts", icon: AlertTriangle, path: "/dashboard/inventory-alerts", permission: 'inventory.alerts.view' },
     ]
   };
 
@@ -373,11 +371,11 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Procurement Menu",
     icon: Building2,
     items: [
-      { title: "Contract/Tender", icon: FileText, path: "/dashboard/contract-tender", permission: 'procurement.manage' },
-      { title: "Annual Tenders", icon: FileText, path: "/dashboard/contract-tender?type=annual-tender", permission: 'procurement.manage' },
-      { title: "Petty Purchase", icon: ShoppingCart, path: "/dashboard/spot-purchases", permission: 'procurement.manage' },
-      { title: "Required Items", icon: ClipboardList, path: "/dashboard/required-items", permission: 'procurement.manage' },
-      { title: "Review Requests", icon: CheckCircle, path: "/procurement/admin-review", permission: 'procurement.approve' },
+      { title: "Contract/Tender", icon: FileText, path: "/dashboard/contract-tender", permission: 'procurement.tenders.manage' },
+      { title: "Annual Tenders", icon: FileText, path: "/dashboard/contract-tender?type=annual-tender", permission: 'procurement.annual_tenders.manage' },
+      { title: "Petty Purchase", icon: ShoppingCart, path: "/dashboard/spot-purchases", permission: 'procurement.petty_purchase.manage' },
+      { title: "Required Items", icon: ClipboardList, path: "/dashboard/required-items", permission: 'procurement.required_items.view' },
+      { title: "Review Requests", icon: CheckCircle, path: "/procurement/admin-review", permission: 'procurement.requests.review' },
     ]
   };
 
@@ -386,195 +384,268 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Stock Issuance Menu",
     icon: Warehouse,
     items: [
-      { title: "Issuance Dashboard", icon: BarChart3, path: "/dashboard/stock-issuance-dashboard", permission: 'issuance.view' },
-      { title: "Process Issuance", icon: ArrowRightLeft, path: "/dashboard/stock-issuance-processing", permission: 'issuance.process' },
-      { title: "Historical Entry", icon: FileText, path: "/dashboard/historical-issuance", permission: 'issuance.process' },
-      { title: "Historical Issuances", icon: FileText, path: "/dashboard/issuances", permission: 'issuance.view' },
-      { title: "Stock Transactions", icon: ArrowRightLeft, path: "/dashboard/stock-transactions", permission: 'issuance.view' },
+      { title: "Issuance Dashboard", icon: BarChart3, path: "/dashboard/stock-issuance-dashboard", permission: 'issuance.dashboard.view' },
+      { title: "Process Issuance", icon: ArrowRightLeft, path: "/dashboard/stock-issuance-processing", permission: 'issuance.admin.process' },
+      { title: "Historical Entry", icon: FileText, path: "/dashboard/historical-issuance", permission: 'issuance.historical.entry' },
+      { title: "Historical Issuances", icon: FileText, path: "/dashboard/issuances", permission: 'issuance.history.view' },
+      { title: "Stock Transactions", icon: ArrowRightLeft, path: "/dashboard/stock-transactions", permission: 'issuance.transactions.view' },
     ]
   };
 
-  // REQUEST HISTORY MENU - For approvers
+  // REQUEST HISTORY MENU - For approvers and managers
   const requestHistoryMenuGroup: MenuGroup = {
     label: "Request History",
     icon: FileText,
     items: [
-      { title: "Future Request", icon: CheckCircle, path: "/dashboard/requests-history/future", permission: 'approval.approve' },
-      { title: "Rejected Request", icon: XCircle, path: "/dashboard/requests-history/rejected", permission: 'approval.approve' },
-      { title: "Pending Request", icon: Clock, path: "/dashboard/requests-history/pending", permission: 'approval.approve' },
+      { title: "Future Request", icon: CheckCircle, path: "/dashboard/requests-history/future", permission: 'approval.history.view' },
+      { title: "Rejected Request", icon: XCircle, path: "/dashboard/requests-history/rejected", permission: 'approval.history.view' },
+      { title: "Pending Request", icon: Clock, path: "/dashboard/requests-history/pending", permission: 'approval.history.view' },
     ]
   };
 
   // ADMIN APPROVAL MENU - For admin chain approvers
   const adminWingMenuGroup: MenuGroup = {
-    label: "Admin",
+    label: "Admin Approvals",
     icon: Shield,
     items: [
-      { title: "Admin Dashboard", icon: BarChart3, path: "/dashboard/approval-dashboard-request-based-admin", permission: 'approval.approve' },
-      { title: "Personal Requests", icon: User, path: "/dashboard/approval-dashboard-request-based-admin?scope=personal", permission: 'approval.approve' },
-      { title: "Branch Requests", icon: Building2, path: "/dashboard/approval-dashboard-request-based-admin?scope=branch", permission: 'approval.approve' },
-      { title: "Wing Requests", icon: Users, path: "/dashboard/approval-dashboard-request-based-admin?scope=wing", permission: 'approval.approve' },
-      { title: "Workflow Config", icon: Settings, path: "/dashboard/workflow-admin", permission: 'roles.manage' },
+      { title: "Admin Dashboard", icon: BarChart3, path: "/dashboard/approval-dashboard-request-based-admin", permission: 'approval.admin.approve' },
+      { title: "Personal Requests", icon: User, path: "/dashboard/approval-dashboard-request-based-admin?scope=personal", permission: 'approval.admin.approve' },
+      { title: "Branch Requests", icon: Building2, path: "/dashboard/approval-dashboard-request-based-admin?scope=branch", permission: 'approval.admin.approve' },
+      { title: "Wing Requests", icon: Users, path: "/dashboard/approval-dashboard-request-based-admin?scope=wing", permission: 'approval.admin.approve' },
+      { title: "Workflow Config", icon: Settings, path: "/dashboard/workflow-admin", permission: 'workflow.config.manage' },
     ]
   };
 
-  // ADMIN MENU - For super admins
+  // SUPER ADMIN MENU - For super admins
   const adminMenuGroup: MenuGroup = {
     label: "Super Admin Menu",
     icon: Shield,
     items: [
       { title: "Admin Dashboard", icon: BarChart3, path: "/dashboard", permission: 'admin.super' },
-      { title: "Workflow Config", icon: Settings, path: "/dashboard/workflow-admin", permission: 'admin.super' },
+      { title: "Workflow Config", icon: Settings, path: "/dashboard/workflow-admin", permission: 'workflow.config.manage' },
       { title: "Roles & Permissions", icon: Shield, path: "/settings/roles", permission: 'roles.manage' },
       { title: "User Management", icon: Users, path: "/settings/users", permission: 'users.assign_roles' },
-      { title: "System Settings", icon: Settings, path: "/dashboard/inventory-settings", permission: 'admin.super' },
-      { title: "Reports & Analytics", icon: BarChart3, path: "/dashboard/reports", permission: 'reports.view' },
+      { title: "System Settings", icon: Settings, path: "/dashboard/inventory-settings", permission: 'settings.manage' },
+      { title: "Reports & Analytics", icon: BarChart3, path: "/dashboard/reports", permission: 'reports.view_all' },
     ]
   };
+
+  const effectiveIsSuperAdmin = Boolean(
+    isSuperAdmin ||
+    user?.is_super_admin ||
+    permissionKeys.has('admin.super') ||
+    roleNames.includes('IMS_SUPER_ADMIN') ||
+    roleNames.includes('SUPER_ADMIN') ||
+    roleNames.includes('SUPER ADMIN')
+  );
+
+  const isImsAdmin = Boolean(
+    roleNames.includes('IMS_ADMIN') ||
+    roleNames.includes('ADMINISTRATOR') ||
+    roleNames.includes('IMS ADMINISTRATOR') ||
+    roleNames.includes('DG ADMIN') ||
+    roleNames.includes('DD ADMIN')
+  );
 
   // Helper to check permission
   const checkPermission = (permissionKey?: string) => {
     if (!permissionKey) return true;
-    if (permissionKey === 'approval.approve') {
-      return canApprove || hasAdminRole || isSuperAdmin;
+    if (effectiveIsSuperAdmin) return true;
+    if (isImsAdmin && (
+      permissionKey.startsWith('issuance.') ||
+      permissionKey.startsWith('branch.') ||
+      permissionKey.startsWith('wing.') ||
+      permissionKey.startsWith('inventory.') ||
+      permissionKey.startsWith('procurement.') ||
+      permissionKey.startsWith('approval.') ||
+      permissionKey.startsWith('metadata.') ||
+      permissionKey.startsWith('personal.')
+    )) return true;
+
+    const lowerKey = permissionKey.toLowerCase();
+    if (permissionKeys.has(lowerKey)) return true;
+
+    const altMap: Record<string, string[]> = {
+      // Personal
+      'personal.dashboard.view': ['issuance.view_own', 'stock_request.view_own'],
+      'personal.request.create': ['issuance.request', 'stock_request.create'],
+      'personal.request.view_own': ['issuance.view', 'stock_request.view_own'],
+      'personal.inventory.view_own': ['inventory.view_personal'],
+      'personal.return.create': ['issuance.request'],
+      // Branch
+      'branch.dashboard.view': ['branch.supervisor', 'branch.storekeeper'],
+      'branch.inventory.view': ['branch.supervisor', 'branch.storekeeper', 'inventory.view_wing'],
+      'branch.inventory.manage': ['branch.supervisor', 'branch.storekeeper'],
+      'branch.demand.create': ['branch.supervisor', 'stock_request.create'],
+      'branch.demand.view': ['branch.supervisor', 'stock_request.view_wing'],
+      'branch.storekeeper.review': ['branch.storekeeper'],
+      'branch.issuance.process': ['branch.storekeeper', 'issuance.process'],
+      'branch.members.view': ['branch.supervisor'],
+      // Wing
+      'wing.dashboard.view': ['wing.supervisor'],
+      'wing.inventory.view': ['wing.supervisor', 'inventory.manage_store_keeper', 'inventory.view_wing'],
+      'wing.inventory.manage': ['wing.supervisor', 'inventory.manage_store_keeper', 'inventory.edit_wing'],
+      'wing.demand.create': ['wing.supervisor', 'procurement.request'],
+      'wing.demand.view': ['wing.supervisor', 'stock_request.view_wing'],
+      'wing.issuance.process': ['inventory.manage_store_keeper', 'issuance.process'],
+      'wing.members.view': ['wing.supervisor'],
+      // Inventory
+      'inventory.dashboard.view': ['inventory.view', 'inventory.view_all'],
+      'inventory.stock.view': ['inventory.view', 'inventory.view_all'],
+      'inventory.stock.adjust': ['inventory.manage', 'inventory.edit_all'],
+      'inventory.opening_balance.entry': ['inventory.manage', 'inventory.edit_all'],
+      'inventory.alerts.view': ['inventory.view', 'inventory.view_all'],
+      // Procurement
+      'procurement.tenders.manage': ['procurement.manage', 'tender.create', 'tender.manage', 'procurement.view'],
+      'procurement.annual_tenders.manage': ['procurement.manage', 'tender.create'],
+      'procurement.petty_purchase.manage': ['procurement.manage'],
+      'procurement.required_items.view': ['procurement.manage', 'procurement.view'],
+      'procurement.requests.review': ['procurement.manage', 'procurement.approve'],
+      // Issuance
+      'issuance.dashboard.view': ['issuance.view', 'issuance.process'],
+      'issuance.admin.process': ['issuance.process'],
+      'issuance.historical.entry': ['issuance.process'],
+      'issuance.history.view': ['issuance.view'],
+      'issuance.transactions.view': ['issuance.view'],
+      // Approvals
+      'approval.supervisor.approve': ['approval.approve', 'supervisor.menu.view', 'stock_request.approve_supervisor'],
+      'approval.admin.approve': ['approval.approve', 'stock_request.approve_admin'],
+      'approval.history.view': ['approval.approve'],
+      'requisition.report.view': ['approval.approve', 'reports.view', 'reports.view_own'],
+      // Metadata
+      'metadata.items.manage': ['items.manage', 'inventory.manage'],
+      'metadata.categories.manage': ['categories.manage', 'inventory.manage'],
+      'metadata.subcategories.manage': ['categories.manage', 'inventory.manage'],
+      'metadata.vendors.manage': ['vendor.manage', 'procurement.manage'],
+      // Admin
+      'roles.manage': ['roles.manage'],
+      'users.assign_roles': ['users.assign_roles'],
+      'workflow.config.manage': ['roles.manage', 'admin.super'],
+      'settings.manage': ['admin.super'],
+      'reports.view_all': ['reports.view', 'reports.view_all']
+    };
+
+    const alts = altMap[lowerKey] || [];
+    for (const alt of alts) {
+      if (permissionKeys.has(alt.toLowerCase())) return true;
     }
-    if (permissionKey === 'supervisor.menu.view') {
-      return canViewSupervisorMenu || hasSupervisorRole || isSuperAdmin;
+
+    // Role-based fallbacks for existing roles
+    if (lowerKey.startsWith('personal.')) return true;
+    if (lowerKey.startsWith('branch.')) {
+      if (hasBranchSupervisorRole || hasBranchStorekeeperRole) return true;
     }
-    
-    switch (permissionKey) {
-      case 'inventory.view': return hasCentralInventoryViewPermission || isSuperAdmin;
-      case 'inventory.manage': return hasCentralInventoryManagePermission || isSuperAdmin;
-      case 'inventory.manage_store_keeper': return isWingStoreKeeper;
-      case 'procurement.view': return canViewProcurement;
-      case 'procurement.manage': return canManageProcurement;
-      case 'procurement.request': return canRequestProcurement;
-      case 'issuance.request': return canRequestIssuance;
-      case 'issuance.process': return canProcessIssuance;
-      case 'issuance.view': return canRequestIssuance || canProcessIssuance;
-      case 'approval.approve': return canApprove;
-      case 'roles.manage': return canManageRoles;
-      case 'users.assign_roles': return canAssignRoles;
-      case 'reports.view': return canViewReports;
-      case 'wing.supervisor': return isWingSupervisor;
-      case 'admin.super': return isSuperAdmin;
-      default: return false;
+    if (lowerKey.startsWith('wing.')) {
+      if (hasWingSupervisorRole || hasWingStorekeeperRole) return true;
     }
+    if (lowerKey.startsWith('approval.')) {
+      if (hasApproverRole || hasAdminRole || hasSupervisorRole) return true;
+    }
+    if (lowerKey.startsWith('inventory.')) {
+      if (hasCentralInventoryViewPermission || hasCentralInventoryManagePermission || hasAdminRole) return true;
+    }
+    if (lowerKey.startsWith('procurement.')) {
+      if (canViewProcurement || canManageProcurement) return true;
+    }
+    if (lowerKey.startsWith('issuance.')) {
+      if (canProcessIssuance || hasAdminStorekeeperRole) return true;
+    }
+    if (lowerKey.startsWith('metadata.')) {
+      if (canManageInventory || canManageProcurement || hasAdminRole) return true;
+    }
+    if (lowerKey.startsWith('admin.') || lowerKey === 'roles.manage' || lowerKey === 'users.assign_roles') {
+      if (effectiveIsSuperAdmin || canManageRoles) return true;
+    }
+
+    return false;
   };
 
   // Filter menu groups and items based on permissions
   const getVisibleMenuGroups = () => {
     const groups: MenuGroup[] = [];
 
-    // Always show personal menu
+    // 1. Personal Menu (Always visible)
     const visiblePersonalItems = personalMenuGroup.items.filter(item => checkPermission(item.permission));
     if (visiblePersonalItems.length > 0) {
       groups.push({ ...personalMenuGroup, items: visiblePersonalItems });
     }
 
-    // Show Supervisor menu only for users with supervisor roles
-    if (canViewSupervisorMenu || hasSupervisorRole || isSuperAdmin) {
-      const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleSubordinateItems.length > 0) {
-        groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
-      }
+    // 2. Supervisor Menu
+    const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleSubordinateItems.length > 0) {
+      groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
     }
 
-    // Show wing menu if user is wing supervisor
-    if (isWingSupervisor) {
-      const visibleWingItems = wingMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleWingItems.length > 0) {
-        groups.push({ ...wingMenuGroup, items: visibleWingItems });
-      }
+    // 3. Wing Menu
+    const visibleWingItems = wingMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleWingItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasWingSupervisorRole || isWingSupervisor || permissionKeys.has('wing.dashboard.view'))) {
+      groups.push({ ...wingMenuGroup, items: visibleWingItems });
     }
 
-    // Show branch menu only to branch supervisors, branch storekeepers, and super admins.
-    if (canAccessBranchMenu) {
-      const visibleBranchItems = branchMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleBranchItems.length > 0) {
-        groups.push({ ...branchMenuGroup, items: visibleBranchItems });
-      }
+    // 4. Branch Menu
+    const visibleBranchItems = branchMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleBranchItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || canAccessBranchMenu || permissionKeys.has('branch.dashboard.view'))) {
+      groups.push({ ...branchMenuGroup, items: visibleBranchItems });
     }
 
-    // Show Admin Storekeeper menu if user has role or is Super Admin
-    if (isSuperAdmin || hasAdminStorekeeperRole) {
-      const visibleItems = adminStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleItems.length > 0) {
-        groups.push({ ...adminStorekeeperMenuGroup, items: visibleItems });
-      }
+    // 5. Admin Storekeeper Menu
+    const visibleAdminStoreItems = adminStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleAdminStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasAdminStorekeeperRole || permissionKeys.has('issuance.admin.process') || permissionKeys.has('issuance.process'))) {
+      groups.push({ ...adminStorekeeperMenuGroup, items: visibleAdminStoreItems });
     }
 
-    // Show Branch Storekeeper menu if user has role or is Super Admin
-    if (isSuperAdmin || hasBranchStorekeeperRole) {
-      const visibleItems = branchStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleItems.length > 0) {
-        groups.push({ ...branchStorekeeperMenuGroup, items: visibleItems });
-      }
+    // 6. Branch Storekeeper Menu
+    const visibleBranchStoreItems = branchStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleBranchStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasBranchStorekeeperRole || permissionKeys.has('branch.issuance.process') || permissionKeys.has('branch.storekeeper.review'))) {
+      groups.push({ ...branchStorekeeperMenuGroup, items: visibleBranchStoreItems });
     }
 
-    // Show Wing Storekeeper menu if user has role, permission or is Super Admin
-    if (isSuperAdmin || hasWingStorekeeperRole || isWingStoreKeeper) {
-      const visibleItems = wingStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleItems.length > 0) {
-        groups.push({ ...wingStorekeeperMenuGroup, items: visibleItems });
-      }
+    // 7. Wing Storekeeper Menu
+    const visibleWingStoreItems = wingStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleWingStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasWingStorekeeperRole || isWingStoreKeeper || permissionKeys.has('wing.issuance.process') || permissionKeys.has('inventory.manage_store_keeper'))) {
+      groups.push({ ...wingStorekeeperMenuGroup, items: visibleWingStoreItems });
     }
 
-    // Show inventory menu for super admins, inventory managers, and admin chain roles.
-    // Store-keeper / scoped operational exclusion should not hide inventory menu from super admins or admin chain roles.
-    if (canAccessCentralInventoryMenu && (!canAccessStoreKeeperMenu || isSuperAdmin || hasAdminApprovalRole) && (!hasScopedOperationalRole || isSuperAdmin || hasAdminApprovalRole)) {
-      const visibleInventoryItems = inventoryMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleInventoryItems.length > 0) {
-        groups.push({ ...inventoryMenuGroup, items: visibleInventoryItems });
-      }
+    // 8. Central Inventory Menu
+    const visibleInventoryItems = inventoryMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleInventoryItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasCentralInventoryViewPermission || hasCentralInventoryManagePermission || hasAdminApprovalRole || permissionKeys.has('inventory.dashboard.view'))) {
+      groups.push({ ...inventoryMenuGroup, items: visibleInventoryItems });
     }
 
-    // Show procurement menu if user has procurement permissions
-    if (canViewProcurement || canManageProcurement) {
-      const visibleProcurementItems = procurementMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleProcurementItems.length > 0) {
-        groups.push({ ...procurementMenuGroup, items: visibleProcurementItems });
-      }
+    // 9. Procurement Menu
+    const visibleProcurementItems = procurementMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleProcurementItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || canViewProcurement || canManageProcurement || permissionKeys.has('procurement.tenders.manage'))) {
+      groups.push({ ...procurementMenuGroup, items: visibleProcurementItems });
     }
 
-    // Show issuance menu if user has issuance PROCESSING permissions
-    if (canProcessIssuance) {
-      const visibleIssuanceItems = issuanceMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleIssuanceItems.length > 0) {
-        groups.push({ ...issuanceMenuGroup, items: visibleIssuanceItems });
-      }
+    // 10. Central Stock Issuance Menu
+    const visibleIssuanceItems = issuanceMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleIssuanceItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || canProcessIssuance || permissionKeys.has('issuance.dashboard.view'))) {
+      groups.push({ ...issuanceMenuGroup, items: visibleIssuanceItems });
     }
 
-    // Show request history menu if user has APPROVAL permissions (approvers only)
-    if (hasAdminRole || isSuperAdmin) {
-      const visibleRequestHistoryItems = requestHistoryMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleRequestHistoryItems.length > 0) {
-        groups.push({ ...requestHistoryMenuGroup, items: visibleRequestHistoryItems });
-      }
+    // 11. Request History Menu
+    const visibleRequestHistoryItems = requestHistoryMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleRequestHistoryItems.length > 0 && (hasAdminRole || effectiveIsSuperAdmin || isImsAdmin || permissionKeys.has('approval.history.view'))) {
+      groups.push({ ...requestHistoryMenuGroup, items: visibleRequestHistoryItems });
     }
 
-    // Show admin wing menu for admin-capable approvers.
-    if (hasAdminRole || isSuperAdmin || canManageRoles) {
-      const visibleAdminWingItems = adminWingMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleAdminWingItems.length > 0) {
-        groups.push({ ...adminWingMenuGroup, items: visibleAdminWingItems });
-      }
+    // 12. Admin Approvals Menu
+    const visibleAdminWingItems = adminWingMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleAdminWingItems.length > 0 && (hasAdminRole || effectiveIsSuperAdmin || isImsAdmin || canManageRoles || permissionKeys.has('approval.admin.approve'))) {
+      groups.push({ ...adminWingMenuGroup, items: visibleAdminWingItems });
     }
 
-    // Show metadata menu if user has inventory or procurement permissions (before Admin)
-    if (canManageInventory || canManageProcurement) {
-      const visibleMetadataItems = metadataMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleMetadataItems.length > 0) {
-        groups.push({ ...metadataMenuGroup, items: visibleMetadataItems });
-      }
+    // 13. Master Metadata Menu
+    const visibleMetadataItems = metadataMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleMetadataItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || canManageInventory || canManageProcurement || permissionKeys.has('metadata.items.manage'))) {
+      groups.push({ ...metadataMenuGroup, items: visibleMetadataItems });
     }
 
-    // Show admin menu if user is super admin
-    if (isSuperAdmin || canManageRoles) {
-      const visibleAdminItems = adminMenuGroup.items.filter(item => checkPermission(item.permission));
-      if (visibleAdminItems.length > 0) {
-        groups.push({ ...adminMenuGroup, items: visibleAdminItems });
-      }
+    // 14. Super Admin Menu
+    const visibleAdminItems = adminMenuGroup.items.filter(item => checkPermission(item.permission));
+    if (visibleAdminItems.length > 0 && (effectiveIsSuperAdmin || canManageRoles || permissionKeys.has('admin.super'))) {
+      groups.push({ ...adminMenuGroup, items: visibleAdminItems });
     }
 
     return groups;

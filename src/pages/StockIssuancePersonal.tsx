@@ -128,7 +128,10 @@ const StockIssuancePersonal: React.FC = () => {
         })
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: any = {};
+      try { data = JSON.parse(rawText); } catch {}
+
       if (response.ok && data.success) {
         setStockCheckData(data.data);
       } else {
