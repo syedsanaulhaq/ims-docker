@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Eye, RefreshCw, Search, ArrowLeft, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { sessionService } from '@/services/sessionService';
 import { getApiBaseUrl } from '@/services/invmisApi';
 import { formatDisplayDateTime, parseSqlDate } from '@/utils/dateUtils';
