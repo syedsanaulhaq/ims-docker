@@ -210,10 +210,8 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
       const admin = Number((item as any)?.admin_stock_available ?? 0);
       return Number.isFinite(admin) ? admin : 0;
     }
-    const wing = Number(item?.wing_stock_available ?? item?.current_stock ?? 0);
-    const admin = Number((item as any)?.admin_stock_available ?? 0);
-    const total = (Number.isFinite(wing) ? wing : 0) + (Number.isFinite(admin) ? admin : 0);
-    return total;
+    const branchOrWing = Number((item as any)?.branch_stock_available ?? item?.wing_stock_available ?? item?.current_stock ?? 0);
+    return Number.isFinite(branchOrWing) ? branchOrWing : 0;
   };
 
   const isOutOfStock = (item: RequestItem) => {
@@ -226,7 +224,10 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
   };
 
   const getProcurementLockLabel = (item: RequestItem) => {
-    return 'Out of Stock / Needs Procurement';
+    if (isAdminWorkflowContext || viewMode === 'admin') {
+      return 'Out of Stock / Needs Procurement';
+    }
+    return 'Out of Stock';
   };
 
   // Helper function to check if controls should be disabled
@@ -1176,6 +1177,9 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
     selectedItemIds.forEach((itemId) => {
       const item = filteredItems.find((it) => getItemId(it) === itemId);
       if (!item) return;
+      if (bulkDecision === 'approve_wing' && !isAdminWorkflowContext && isOutOfStock(item)) {
+        return;
+      }
       const approvedQty = (
         bulkDecision === 'approve_wing' ||
         bulkDecision === 'forward_admin' ||
@@ -1346,7 +1350,9 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                                   <SelectValue placeholder="Select..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="approve_wing">Approve</SelectItem>
+                                  <SelectItem value="approve_wing" disabled={!isAdminWorkflowContext && isOutOfStock(item)}>
+                                    Approve {(!isAdminWorkflowContext && isOutOfStock(item)) ? '(Out of Stock)' : ''}
+                                  </SelectItem>
                                    {(!isAdmin || isAdminWorkflowContext || isAdminWorkflowRoleUser) && (
                                      <SelectItem value="forward_admin">{getForwardAdminLabel()}</SelectItem>
                                    )}
@@ -1466,9 +1472,13 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                   <SelectValue placeholder="Select request decision..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="approve_wing">
+                  <SelectItem 
+                    value="approve_wing" 
+                    disabled={!isAdminWorkflowContext && request?.items?.some((it) => isOutOfStock(it))}
+                  >
                     <span className="flex items-center gap-2">
                       ✓ {isAdminWorkflowContext ? 'Approve' : (isAdmin ? 'Approve from Admin Stock' : 'Approve from Wing')}
+                      {(!isAdminWorkflowContext && request?.items?.some((it) => isOutOfStock(it))) ? ' (Out of Stock)' : ''}
                     </span>
                   </SelectItem>
                   {(!isAdmin || isAdminWorkflowContext || isAdminWorkflowRoleUser) && (
