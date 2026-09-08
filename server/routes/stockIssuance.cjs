@@ -17,6 +17,19 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
+const checkIsMasterAdmin = (req) => {
+  const isSuperAdmin = req.session?.user?.is_super_admin === true ||
+    req.session?.user?.ims_permissions?.some(p => p.permission_key === 'admin.super') ||
+    req.session?.user?.ims_roles?.some(r => ['IMS_SUPER_ADMIN', 'SUPER_ADMIN', 'SUPER ADMIN'].includes(String(r.role_name || '').toUpperCase()));
+  
+  const isImsAdmin = req.session?.user?.ims_roles?.some(r => {
+    const rName = String(r.role_name || '').toUpperCase();
+    return rName === 'IMS_ADMIN' || rName === 'ADMINISTRATOR' || rName === 'IMS_SUPER_ADMIN' || rName === 'DG ADMIN';
+  });
+
+  return Boolean(isSuperAdmin || isImsAdmin);
+};
+
 const isBranchSupervisorRole = (roleName) => {
   const normalized = String(roleName || '').trim().toUpperCase().replace(/\s+/g, '_');
   return normalized === 'BRANCH_SUPERVISOR' || normalized === 'CUSTOM_BRANCH_SUPERVISOR';
@@ -281,41 +294,76 @@ router.get('/requests', requireAuth, async (req, res) => {
     }
 
     // Auto-filter by store keeper's wing/branch/admin depending on storeType
+    const isMasterAdmin = checkIsMasterAdmin(req);
+
     if (storeType === 'admin') {
-      conditions.push(`(
-        sir.request_type IN ('branch', 'wing', 'Organizational')
-        OR (
-          sir.request_type = 'Individual'
-          AND (
-            sir.requester_wing_id = 19
-            OR sir.requester_branch_id = '169'
-            OR sir.issuance_source = 'admin_store'
-            OR sir.approval_status = 'Approved by Admin'
+      if (!isMasterAdmin) {
+        conditions.push(`(
+          sir.request_type IN ('branch', 'wing', 'Organizational')
+          OR (
+            sir.request_type = 'Individual'
+            AND (
+              sir.requester_wing_id = 19
+              OR sir.requester_branch_id = '169'
+              OR sir.issuance_source = 'admin_store'
+              OR sir.approval_status = 'Approved by Admin'
+            )
           )
-        )
-      )`);
+        )`);
+      } else {
+        // Super Admin / IMS Admin viewing admin store issuance:
+        // Shows all organizational and central store requests
+        conditions.push(`(
+          sir.request_type IN ('branch', 'wing', 'Organizational')
+          OR sir.requester_wing_id = 19
+          OR sir.requester_branch_id = '169'
+          OR sir.issuance_source = 'admin_store'
+          OR sir.approval_status LIKE '%Admin%'
+          OR sir.request_type = 'Individual'
+        )`);
+      }
     } else if (storeType === 'branch') {
-      conditions.push("sir.request_type = 'Individual'");
-      if (userId) {
-        const userBranchResult = await pool.request()
-          .input('userId', sql.NVarChar(450), userId)
-          .query(`SELECT u.intBranchID as BranchId FROM AspNetUsers u WHERE u.Id = @userId`);
-        if (userBranchResult.recordset.length > 0 && userBranchResult.recordset[0].BranchId) {
-          const userBranchId = userBranchResult.recordset[0].BranchId;
-          conditions.push('CONVERT(NVARCHAR(100), sir.requester_branch_id) = @autoBranchId');
-          request = request.input('autoBranchId', sql.NVarChar(100), String(userBranchId));
+      if (isMasterAdmin) {
+        // Super Admin / IMS Admin sees all branch store issuance requests across all branches
+        if (req.query.branch_id || req.query.branchId) {
+          conditions.push('CONVERT(NVARCHAR(100), sir.requester_branch_id) = @queryBranchId');
+          request = request.input('queryBranchId', sql.NVarChar(100), String(req.query.branch_id || req.query.branchId));
+        } else {
+          conditions.push("(sir.request_type = 'branch' OR (sir.requester_branch_id IS NOT NULL AND sir.requester_branch_id <> '' AND sir.requester_branch_id <> '9000'))");
+        }
+      } else {
+        conditions.push("sir.request_type = 'Individual'");
+        if (userId) {
+          const userBranchResult = await pool.request()
+            .input('userId', sql.NVarChar(450), userId)
+            .query(`SELECT u.intBranchID as BranchId FROM AspNetUsers u WHERE u.Id = @userId`);
+          if (userBranchResult.recordset.length > 0 && userBranchResult.recordset[0].BranchId) {
+            const userBranchId = userBranchResult.recordset[0].BranchId;
+            conditions.push('CONVERT(NVARCHAR(100), sir.requester_branch_id) = @autoBranchId');
+            request = request.input('autoBranchId', sql.NVarChar(100), String(userBranchId));
+          }
         }
       }
     } else if (storeType === 'wing') {
-      conditions.push("sir.request_type = 'Individual'");
-      if (userId) {
-        const userWingResult = await pool.request()
-          .input('userId', sql.NVarChar(450), userId)
-          .query(`SELECT u.intWingID as WingId FROM AspNetUsers u WHERE u.Id = @userId`);
-        if (userWingResult.recordset.length > 0 && userWingResult.recordset[0].WingId) {
-          const userWingId = userWingResult.recordset[0].WingId;
-          conditions.push('CONVERT(NVARCHAR(100), sir.requester_wing_id) = @autoWingId');
-          request = request.input('autoWingId', sql.NVarChar(100), String(userWingId));
+      if (isMasterAdmin) {
+        // Super Admin / IMS Admin sees all wing store issuance requests across all wings
+        if (req.query.wing_id || req.query.wingId) {
+          conditions.push('CONVERT(NVARCHAR(100), sir.requester_wing_id) = @queryWingId');
+          request = request.input('queryWingId', sql.NVarChar(100), String(req.query.wing_id || req.query.wingId));
+        } else {
+          conditions.push("(sir.request_type = 'wing' OR (sir.requester_wing_id IS NOT NULL AND sir.requester_wing_id <> ''))");
+        }
+      } else {
+        conditions.push("sir.request_type = 'Individual'");
+        if (userId) {
+          const userWingResult = await pool.request()
+            .input('userId', sql.NVarChar(450), userId)
+            .query(`SELECT u.intWingID as WingId FROM AspNetUsers u WHERE u.Id = @userId`);
+          if (userWingResult.recordset.length > 0 && userWingResult.recordset[0].WingId) {
+            const userWingId = userWingResult.recordset[0].WingId;
+            conditions.push('CONVERT(NVARCHAR(100), sir.requester_wing_id) = @autoWingId');
+            request = request.input('autoWingId', sql.NVarChar(100), String(userWingId));
+          }
         }
       }
     } else {
@@ -1796,15 +1844,13 @@ async function handleBranchStorekeeperRequests(req, res) {
   try {
     const pool = getPool();
     const userId = req.session.userId;
+    const isMasterAdmin = checkIsMasterAdmin(req);
 
     const userResult = await pool.request()
       .input('userId', sql.NVarChar(450), userId)
       .query(`SELECT intBranchID as branch_id, FullName FROM AspNetUsers WHERE Id = @userId`);
 
-    const branchId = userResult.recordset[0]?.branch_id || null;
-    if (!branchId) {
-      return res.status(400).json({ error: 'No branch is assigned to this storekeeper' });
-    }
+    let branchId = req.query.branchId || req.query.branch_id || userResult.recordset[0]?.branch_id || null;
 
     const roleResult = await pool.request()
       .input('userId', sql.NVarChar(450), userId)
@@ -1813,62 +1859,73 @@ async function handleBranchStorekeeperRequests(req, res) {
         FROM ims_user_roles ur
         INNER JOIN ims_roles r ON r.id = ur.role_id
         WHERE ur.user_id = @userId
-          AND ur.is_active = 1
           AND r.is_active = 1
       `);
 
     const isBranchStorekeeper = (roleResult.recordset || []).some((row) => isBranchStorekeeperRole(row.role_name));
-    if (!isBranchStorekeeper) {
-      return res.status(403).json({ error: 'Only branch storekeepers can access this queue' });
+    if (!isBranchStorekeeper && !isMasterAdmin) {
+      return res.status(403).json({ error: 'Only branch storekeepers and administrators can access this queue' });
     }
 
-    const result = await pool.request()
-      .input('userId', sql.NVarChar(450), userId)
-      .input('branchId', sql.Int, branchId)
-      .query(`
-        SELECT
-          ra.id AS approval_id,
-          sir.id AS request_id,
-          sir.request_number,
-          sir.request_type,
-          sir.purpose,
-          sir.justification,
-          sir.urgency_level,
-          CASE
-            WHEN sir.approval_status = 'Pending Supervisor Review' THEN 'Pending Branch Storekeeper'
-            ELSE sir.approval_status
-          END AS approval_status,
-          sir.request_status,
-          sir.submitted_at,
-          u.FullName AS requester_name,
-          sii.id AS stock_item_id,
-          ai.id AS approval_item_id,
-          sii.item_master_id,
-          COALESCE(sii.nomenclature, im.nomenclature, sii.custom_item_name) AS nomenclature,
-          sii.requested_quantity,
-          sii.approved_quantity,
-          COALESCE(im.unit, 'units') AS unit,
-          COALESCE(cis.current_quantity, 0) AS available_quantity
-        FROM request_approvals ra
-        INNER JOIN stock_issuance_requests sir ON sir.id = ra.request_id
-        INNER JOIN stock_issuance_items sii ON sii.request_id = sir.id
-        LEFT JOIN approval_items ai ON ai.request_approval_id = ra.id
-          AND (
-            ai.item_master_id = sii.item_master_id
-            OR (ai.item_master_id IS NULL AND sii.item_master_id IS NULL AND COALESCE(ai.nomenclature, ai.custom_item_name) = COALESCE(sii.nomenclature, sii.custom_item_name))
-          )
-        LEFT JOIN item_masters im ON im.id = sii.item_master_id
-        LEFT JOIN current_inventory_stock cis ON cis.item_master_id = sii.item_master_id
-        LEFT JOIN AspNetUsers u ON TRY_CONVERT(uniqueidentifier, u.Id) = sir.requester_user_id
-        WHERE ra.current_approver_id = @userId
-          AND ra.current_status = 'pending'
-          AND sir.request_type = 'branch'
-          AND sir.requester_branch_id = @branchId
-          AND sir.approval_status IN ('Pending Supervisor Review', 'Pending')
-          AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
-          AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
-        ORDER BY sir.submitted_at DESC, sir.request_number DESC, nomenclature ASC
-      `);
+    let query = `
+      SELECT
+        ra.id AS approval_id,
+        sir.id AS request_id,
+        sir.request_number,
+        sir.request_type,
+        sir.purpose,
+        sir.justification,
+        sir.urgency_level,
+        CASE
+          WHEN sir.approval_status = 'Pending Supervisor Review' THEN 'Pending Branch Storekeeper'
+          ELSE sir.approval_status
+        END AS approval_status,
+        sir.request_status,
+        sir.submitted_at,
+        u.FullName AS requester_name,
+        sii.id AS stock_item_id,
+        ai.id AS approval_item_id,
+        sii.item_master_id,
+        COALESCE(sii.nomenclature, im.nomenclature, sii.custom_item_name) AS nomenclature,
+        sii.requested_quantity,
+        sii.approved_quantity,
+        COALESCE(im.unit, 'units') AS unit,
+        COALESCE(cis.current_quantity, 0) AS available_quantity
+      FROM request_approvals ra
+      INNER JOIN stock_issuance_requests sir ON sir.id = ra.request_id
+      INNER JOIN stock_issuance_items sii ON sii.request_id = sir.id
+      LEFT JOIN approval_items ai ON ai.request_approval_id = ra.id
+        AND (
+          ai.item_master_id = sii.item_master_id
+          OR (ai.item_master_id IS NULL AND sii.item_master_id IS NULL AND COALESCE(ai.nomenclature, ai.custom_item_name) = COALESCE(sii.nomenclature, sii.custom_item_name))
+        )
+      LEFT JOIN item_masters im ON im.id = sii.item_master_id
+      LEFT JOIN current_inventory_stock cis ON cis.item_master_id = sii.item_master_id
+      LEFT JOIN AspNetUsers u ON TRY_CONVERT(uniqueidentifier, u.Id) = sir.requester_user_id
+      WHERE ra.current_status = 'pending'
+        AND sir.request_type = 'branch'
+        AND sir.approval_status IN ('Pending Supervisor Review', 'Pending', 'pending_supervisor_review', 'pending_branch_storekeeper')
+        AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
+        AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
+    `;
+
+    const request = pool.request();
+    if (!isMasterAdmin) {
+      query += ` AND ra.current_approver_id = @userId`;
+      request.input('userId', sql.NVarChar(450), userId);
+      if (branchId) {
+        query += ` AND sir.requester_branch_id = @branchId`;
+        request.input('branchId', sql.Int, parseInt(branchId));
+      }
+    } else {
+      if (branchId && branchId !== 9000 && branchId !== '9000') {
+        query += ` AND sir.requester_branch_id = @branchId`;
+        request.input('branchId', sql.Int, parseInt(branchId));
+      }
+    }
+
+    query += ` ORDER BY sir.submitted_at DESC, sir.request_number DESC, nomenclature ASC`;
+    const result = await request.query(query);
 
     const requestsById = new Map();
     for (const row of result.recordset || []) {
@@ -1925,24 +1982,30 @@ router.post('/branch-storekeeper/review/:requestId', requireAuth, async (req, re
       return res.status(400).json({ error: 'item_reviews are required' });
     }
 
-    const requestResult = await pool.request()
-      .input('requestId', sql.UniqueIdentifier, requestId)
-      .input('userId', sql.NVarChar(450), userId)
-      .query(`
-        SELECT TOP 1
-          sir.id,
-          sir.request_number,
-          sir.requester_branch_id,
-          ra.id AS approval_id,
-          ra.current_approver_id
-        FROM stock_issuance_requests sir
-        INNER JOIN request_approvals ra ON ra.request_id = sir.id
-        WHERE sir.id = @requestId
-          AND sir.request_type = 'branch'
-          AND ra.current_approver_id = @userId
-          AND ra.current_status = 'pending'
-          AND sir.approval_status IN ('Pending Supervisor Review', 'Pending')
-      `);
+    const isMasterAdmin = checkIsMasterAdmin(req);
+
+    let checkQuery = `
+      SELECT TOP 1
+        sir.id,
+        sir.request_number,
+        sir.requester_branch_id,
+        ra.id AS approval_id,
+        ra.current_approver_id
+      FROM stock_issuance_requests sir
+      INNER JOIN request_approvals ra ON ra.request_id = sir.id
+      WHERE sir.id = @requestId
+        AND sir.request_type = 'branch'
+        AND ra.current_status = 'pending'
+        AND sir.approval_status IN ('Pending Supervisor Review', 'Pending', 'pending_supervisor_review', 'pending_branch_storekeeper')
+    `;
+
+    const requestReq = pool.request().input('requestId', sql.UniqueIdentifier, requestId);
+    if (!isMasterAdmin) {
+      checkQuery += ` AND ra.current_approver_id = @userId`;
+      requestReq.input('userId', sql.NVarChar(450), userId);
+    }
+
+    const requestResult = await requestReq.query(checkQuery);
 
     const requestRow = requestResult.recordset[0];
     if (!requestRow) {
