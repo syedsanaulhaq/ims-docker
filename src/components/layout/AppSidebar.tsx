@@ -688,14 +688,14 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     }
   };
 
-  // Open the active group on mount
+  // Open the active group on mount or route/query change
   useEffect(() => {
     const menuGroups = getVisibleMenuGroups();
     const activeGroup = menuGroups.find(group => isGroupActive(group.items));
     if (activeGroup) {
       setOpenGroup(activeGroup.label);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   const sidebarRootClass = isDark
     ? "!bg-slate-900 border-r border-slate-700"
