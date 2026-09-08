@@ -268,6 +268,7 @@ router.get('/requests', requireAuth, async (req, res) => {
         o.intOfficeID as 'office.office_id',
         o.strOfficeName as 'office.office_name'
       FROM stock_issuance_requests sir
+      LEFT JOIN request_approvals ra ON ra.request_id = CONVERT(NVARCHAR(100), sir.id)
       LEFT JOIN AspNetUsers u ON CONVERT(NVARCHAR(450), sir.requester_user_id) = CONVERT(NVARCHAR(450), u.Id)
       LEFT JOIN vw_User_with_designation vud ON CONVERT(NVARCHAR(450), vud.Id) = CONVERT(NVARCHAR(450), sir.requester_user_id)
       LEFT JOIN tblUserDesignations d ON u.intDesignationID = d.intDesignationID
@@ -284,9 +285,15 @@ router.get('/requests', requireAuth, async (req, res) => {
     }
 
     if (status) {
-      // Support partial matching for status groups (e.g., "Approved" matches "Approved by Admin", "Approved by Supervisor")
+      // Support matching for status groups (e.g., "Approved" matches "Approved by Admin", "Approved by Supervisor", "Approved", or requests forwarded to storekeeper)
       if (status === 'Approved') {
-        conditions.push("(sir.approval_status LIKE 'Approved%')");
+        conditions.push(`(
+          sir.approval_status LIKE 'Approved%'
+          OR sir.request_status = 'Approved'
+          OR (ra.current_approver_id = @approverUserId AND ra.current_status = 'pending')
+          OR (ra.current_status = 'approved')
+        )`);
+        request = request.input('approverUserId', sql.NVarChar(450), userId);
       } else {
         conditions.push('sir.approval_status = @status');
         request = request.input('status', sql.NVarChar(50), status);
@@ -300,16 +307,15 @@ router.get('/requests', requireAuth, async (req, res) => {
       if (!isMasterAdmin) {
         conditions.push(`(
           sir.request_type IN ('branch', 'wing', 'Organizational')
-          OR (
-            sir.request_type = 'Individual'
-            AND (
-              sir.requester_wing_id = 19
-              OR sir.requester_branch_id = '169'
-              OR sir.issuance_source = 'admin_store'
-              OR sir.approval_status = 'Approved by Admin'
-            )
-          )
+          OR sir.requester_wing_id = 19
+          OR sir.requester_branch_id = '169'
+          OR sir.issuance_source = 'admin_store'
+          OR sir.approval_status LIKE '%Admin%'
+          OR ra.is_admin_workflow = 1
+          OR ra.current_approver_id = @adminStoreUserId
+          OR sir.request_type = 'Individual'
         )`);
+        request = request.input('adminStoreUserId', sql.NVarChar(450), userId);
       } else {
         // Super Admin / IMS Admin viewing admin store issuance:
         // Shows all organizational and central store requests
@@ -320,6 +326,7 @@ router.get('/requests', requireAuth, async (req, res) => {
           OR sir.issuance_source = 'admin_store'
           OR sir.approval_status LIKE '%Admin%'
           OR sir.request_type = 'Individual'
+          OR ra.is_admin_workflow = 1
         )`);
       }
     } else if (storeType === 'branch') {

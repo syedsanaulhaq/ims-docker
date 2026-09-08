@@ -2514,10 +2514,30 @@ router.post('/:approvalId/approve', async (req, res) => {
           VALUES (@approvalId, @action_type, @action_by, @comments, @step_number, 1, @forwarded_to)
         `);
 
+      // Check if next approver is a storekeeper
+      let isNextStorekeeper = false;
+      if (newApproverId) {
+        const approverRoleRes = await transaction.request()
+          .input('approverId', sql.NVarChar, newApproverId)
+          .query(`
+            SELECT r.role_name AS Name
+            FROM ims_user_roles ur
+            INNER JOIN ims_roles r ON ur.role_id = r.id
+            WHERE ur.user_id = @approverId
+              AND ur.is_active = 1
+              AND r.is_active = 1
+          `);
+        const roles = (approverRoleRes.recordset || []).map(r => String(r.Name || '').toUpperCase());
+        isNextStorekeeper = roles.some(r => r.includes('STOREKEEPER') || r.includes('STORE_KEEPER'));
+      }
+
       // ====================================================================
-      // STOCK DEDUCTION & ISSUANCE - When request is approved
+      // STOCK DEDUCTION & ISSUANCE - When request is approved or routed to storekeeper
       // ====================================================================
-      if (overallStatus === 'approved' && item_allocations && Array.isArray(item_allocations)) {
+      const isAdminChainActor = currentUserRoles.some((role) => ADMIN_CHAIN_ROLE_NAMES.includes(role));
+      const isApprovedForIssuance = overallStatus === 'approved' || isNextStorekeeper;
+
+      if (isApprovedForIssuance && item_allocations && Array.isArray(item_allocations)) {
         if (requestId) {
           for (const allocation of item_allocations) {
             if (allocation.decision_type === 'APPROVE_FROM_STOCK' && allocation.allocated_quantity > 0) {
@@ -2547,11 +2567,12 @@ router.post('/:approvalId/approve', async (req, res) => {
                 .input('requestId', sql.UniqueIdentifier, requestId)
                 .input('itemMasterId', sql.UniqueIdentifier, itemMasterId)
                 .input('approvedQty', sql.Int, allocation.allocated_quantity)
+                .input('srcStore', sql.NVarChar, isAdminChainActor ? 'admin' : 'wing')
                 .query(`
                   UPDATE stock_issuance_items 
                   SET approved_quantity = @approvedQty,
                       item_status = 'approved',
-                      source_store_type = 'admin',
+                      source_store_type = @srcStore,
                       updated_at = GETDATE()
                   WHERE request_id = @requestId 
                     AND item_master_id = @itemMasterId
@@ -2588,16 +2609,21 @@ router.post('/:approvalId/approve', async (req, res) => {
           }
 
           // 4. Update stock_issuance_requests status
+          const approvalStatusLabel = isAdminChainActor ? 'Approved by Admin' : 'Approved by Supervisor';
+          const issuanceSourceLabel = isAdminChainActor ? 'admin_store' : 'wing_store';
+
           await transaction.request()
             .input('requestId', sql.UniqueIdentifier, requestId)
             .input('approvedBy', sql.NVarChar, userId)
+            .input('apprStatus', sql.NVarChar, approvalStatusLabel)
+            .input('issSource', sql.NVarChar, issuanceSourceLabel)
             .query(`
               UPDATE stock_issuance_requests 
               SET request_status = 'Approved',
-                  approval_status = 'Approved by Admin',
+                  approval_status = @apprStatus,
                   approved_at = GETDATE(),
                   approved_by = @approvedBy,
-                  issuance_source = 'admin_store',
+                  issuance_source = @issSource,
                   updated_at = GETDATE()
               WHERE id = @requestId
             `);
@@ -2610,9 +2636,8 @@ router.post('/:approvalId/approve', async (req, res) => {
       // SYNC stock_issuance_requests status for non-approval actions
       // (forwarding, rejection, return) so requester's My Requests page is accurate
       // ====================================================================
-      if (overallStatus !== 'approved') {
+      if (!isApprovedForIssuance && overallStatus !== 'approved') {
         const syncRequestId = requestId;
-        const isAdminChainActor = currentUserRoles.some((role) => ADMIN_CHAIN_ROLE_NAMES.includes(role));
         
         if (syncRequestId) {
           let sirStatus = 'Pending';
@@ -2629,11 +2654,12 @@ router.post('/:approvalId/approve', async (req, res) => {
                   AND ur.is_active = 1
                   AND r.is_active = 1
               `);
-            const roles = (approverRoleRes.recordset || []).map(r => r.Name);
-            if (roles.includes('Storekeeper')) {
-              sirApprovalStatus = 'Approved by Supervisor';
+            const roles = (approverRoleRes.recordset || []).map(r => String(r.Name || '').toUpperCase());
+            if (roles.some(r => r.includes('STOREKEEPER') || r.includes('STORE_KEEPER'))) {
+              sirApprovalStatus = isAdminChainActor ? 'Approved by Admin' : 'Approved by Supervisor';
+              sirStatus = 'Approved';
             } else {
-              sirApprovalStatus = 'Pending Supervisor Review';
+              sirApprovalStatus = isAdminChainActor ? 'Forwarded to Admin' : 'Pending Supervisor Review';
             }
           }
           
@@ -2644,7 +2670,7 @@ router.post('/:approvalId/approve', async (req, res) => {
             } else if (hasForwardToSupervisor) {
               sirApprovalStatus = 'Pending Supervisor Review';
             } else {
-              sirApprovalStatus = 'Pending Supervisor Review';
+              sirApprovalStatus = isAdminChainActor ? 'Forwarded to Admin' : 'Pending Supervisor Review';
             }
           } else if (overallStatus === 'forwarded_to_admin') {
             sirStatus = 'Pending';
@@ -2668,12 +2694,12 @@ router.post('/:approvalId/approve', async (req, res) => {
             .input('sirStatus', sql.NVarChar, sirStatus)
             .input('sirApprovalStatus', sql.NVarChar, sirApprovalStatus)
             .query(`
-              UPDATE stock_issuance_requests
-              SET approval_status = @sirApprovalStatus,
+              UPDATE stock_issuance_requests 
+              SET request_status = @sirStatus,
+                  approval_status = @sirApprovalStatus,
                   updated_at = GETDATE()
               WHERE id = @syncRequestId
             `);
-          
         }
       }
       // Trigger request update notification
