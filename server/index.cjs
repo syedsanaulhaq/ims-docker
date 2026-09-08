@@ -84,6 +84,10 @@ app.use('/api/users', usersRoutes);
 app.use('/api/aspnet-users', usersRoutes); // Mount prefix for active/filtered users
 app.use('/api/ims/users', usersRoutes); // Alias for wing pages compatibility
 app.use('/api/approvals', approvalsRoutes);
+app.get('/api/my-approval-history', (req, res, next) => {
+  req.url = '/my-approval-history' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+  approvalsRoutes(req, res, next);
+});
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/tenders', tenderRoutes);

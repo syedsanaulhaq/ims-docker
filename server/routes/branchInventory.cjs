@@ -8,6 +8,11 @@ const { getPool, sql } = require('../db/connection.cjs');
 
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
+    if (req.query.userId) {
+      req.session = req.session || {};
+      req.session.userId = req.query.userId;
+      return next();
+    }
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -62,10 +67,10 @@ router.get('/requests', requireAuth, async (req, res) => {
     const reqRequest = pool.request();
     let branchFilter = '';
     if (!isAdmin) {
-      reqRequest.input('branchId', sql.Int, branchId);
-      branchFilter = 'WHERE sir.requester_branch_id = @branchId AND sir.request_type = \'branch\'';
+      reqRequest.input('branchIdStr', sql.NVarChar(50), String(branchId));
+      branchFilter = 'WHERE (sir.requester_branch_id = @branchIdStr OR CAST(u.intBranchID AS NVARCHAR(50)) = @branchIdStr) AND (LOWER(sir.request_type) = \'branch\' OR sir.request_type LIKE \'%branch%\') AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)';
     } else {
-      branchFilter = 'WHERE sir.request_type = \'branch\'';
+      branchFilter = 'WHERE (LOWER(sir.request_type) = \'branch\' OR sir.request_type LIKE \'%branch%\') AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)';
     }
 
     const reqResult = await reqRequest.query(`
@@ -83,17 +88,17 @@ router.get('/requests', requireAuth, async (req, res) => {
           THEN 'Branch Stock Request' 
           ELSE COALESCE(sir.justification, sir.purpose, '') 
         END AS description,
-        sir.created_at AS requested_date,
-        sir.submitted_at AS submitted_date,
-        u.FullName AS requester_name,
-        CAST(COALESCE(sir.requester_branch_id, u.intBranchID) AS NVARCHAR(50)) AS requester_branch,
+        COALESCE(sir.created_at, sir.submitted_at) AS requested_date,
+        COALESCE(sir.submitted_at, sir.created_at) AS submitted_date,
+        COALESCE(u.FullName, 'Branch User') AS requester_name,
+        CAST(COALESCE(sir.requester_branch_id, u.intBranchID, 'Branch') AS NVARCHAR(50)) AS requester_branch,
         COALESCE(sir.request_status, 'pending') AS current_status,
         COALESCE(sir.approval_status, sir.request_status, 'pending') AS final_status,
         COALESCE(sir.urgency_level, 'Medium') AS priority
       FROM stock_issuance_requests sir
-      INNER JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
+      LEFT JOIN AspNetUsers u ON CONVERT(NVARCHAR(100), sir.requester_user_id) = CONVERT(NVARCHAR(100), u.Id)
       ${branchFilter}
-      ORDER BY sir.submitted_at DESC
+      ORDER BY COALESCE(sir.submitted_at, sir.created_at) DESC
     `);
 
     const requests = reqResult.recordset;

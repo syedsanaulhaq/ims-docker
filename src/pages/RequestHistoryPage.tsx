@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, Clock, CheckCircle, XCircle, RefreshCw, Search, Filter, ArrowRight, User, Calendar, Package, MapPin, History } from 'lucide-react';
-import { format } from 'date-fns';
 import { sessionService } from '@/services/sessionService';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '@/services/invmisApi';
+import { formatDisplayDateTime, formatDateDMY, parseSqlDate } from '@/utils/dateUtils';
 
 interface RequestItem {
   id: string;
@@ -40,16 +41,8 @@ interface ApprovalRequest {
 }
 
 // Safe date formatting helper
-const safeFormat = (dateValue: string | Date | null | undefined, formatStr: string = 'MMM dd, yyyy'): string => {
-  try {
-    if (!dateValue) return '-';
-    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-    if (isNaN(date.getTime())) return '-';
-    return format(date, formatStr);
-  } catch (error) {
-    console.error('Error formatting date:', dateValue, error);
-    return '-';
-  }
+const safeFormat = (dateValue: string | Date | null | undefined): string => {
+  return formatDisplayDateTime(dateValue);
 };
 
 const RequestHistoryPage: React.FC = () => {
@@ -74,7 +67,12 @@ const RequestHistoryPage: React.FC = () => {
   const loadApprovalHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/my-approval-history`, {
+      const user = sessionService.getCurrentUser();
+      const userId = user?.id || user?.user_id;
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/approvals/my-approval-history${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -178,14 +176,15 @@ const RequestHistoryPage: React.FC = () => {
         action_date: request.submitted_date,
         action_by_name: request.requester_name,
         action_by_designation: 'Requester',
-        comments: `Request submitted on ${format(new Date(request.submitted_date), 'MMM dd, yyyy HH:mm')}`,
+        comments: `Request submitted on ${formatDisplayDateTime(request.submitted_date)}`,
         step_status: 'completed'
       });
 
       // 2. Try to get actual approval history from API
       let actualHistory = [];
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/${request.id}/history`, {
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/approvals/${request.id}/history`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
@@ -197,10 +196,11 @@ const RequestHistoryPage: React.FC = () => {
           actualHistory = data.data || [];
         }
       } catch (apiError) {
-        }
+        console.warn('Could not fetch tracking history:', apiError);
+      }
 
       // 3. Add actual approval actions that have happened
-      actualHistory.forEach((action, index) => {
+      actualHistory.forEach((action: any) => {
         completeTimeline.push({
           ...action,
           step_status: 'completed'
@@ -208,21 +208,20 @@ const RequestHistoryPage: React.FC = () => {
       });
 
       // 4. Add current step (if not completed)
-      if (request.current_status !== 'finalized' && request.current_status !== 'rejected') {
-        // Determine who the current approver should be based on the workflow
+      const currentSt = (request.final_status || request.current_status || '').toLowerCase();
+      if (!currentSt.includes('finalized') && !currentSt.includes('completed') && !currentSt.includes('reject')) {
         let currentApprover = 'Pending Approval';
         let currentDesignation = 'Next Approver';
-        
-        // Basic workflow logic - this can be enhanced based on your actual workflow
+
         if (actualHistory.length === 0) {
-          currentApprover = 'HR Supervisor';
-          currentDesignation = 'Human Resources';
+          currentApprover = 'Supervisor';
+          currentDesignation = 'Wing / Branch Supervisor';
         } else if (actualHistory.length === 1) {
-          currentApprover = 'Inventory Manager';
-          currentDesignation = 'Inventory Management';
+          currentApprover = 'Admin Officer';
+          currentDesignation = 'Central Administration';
         } else {
-          currentApprover = 'Department Head';
-          currentDesignation = 'Final Approval';
+          currentApprover = 'Storekeeper';
+          currentDesignation = 'Issuance Storekeeper';
         }
 
         completeTimeline.push({
@@ -234,38 +233,11 @@ const RequestHistoryPage: React.FC = () => {
           comments: 'Awaiting approval action',
           step_status: 'current'
         });
-
-        // 5. Add future steps
-        if (actualHistory.length === 0) {
-          completeTimeline.push({
-            id: 'future_step_1',
-            action_type: 'pending',
-            action_date: null,
-            action_by_name: 'Inventory Manager',
-            action_by_designation: 'Inventory Management',
-            comments: 'Future approval step',
-            step_status: 'future'
-          });
-        }
-        
-        if (actualHistory.length <= 1) {
-          completeTimeline.push({
-            id: 'final_step',
-            action_type: 'pending',
-            action_date: null,
-            action_by_name: 'Department Head',
-            action_by_designation: 'Final Approval',
-            comments: 'Final approval step',
-            step_status: 'future'
-          });
-        }
       }
 
       setTrackingData(completeTimeline);
-      
     } catch (error) {
       console.error('❌ Error creating tracking timeline:', error);
-      // Fallback to basic timeline
       setTrackingData([{
         id: 'submission',
         action_type: 'submitted',
@@ -288,13 +260,18 @@ const RequestHistoryPage: React.FC = () => {
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = searchTerm === '' || 
-      request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.items.some(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      (request.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.requester_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.items || []).some(item => (item.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesAction = actionFilter === 'all' || request.my_action === actionFilter;
-    const matchesStatus = statusFilter === 'all' || request.final_status === statusFilter;
+    const finalStatusLower = (request.final_status || request.current_status || '').toLowerCase();
+    const matchesStatus = statusFilter === 'all' || 
+      finalStatusLower === statusFilter.toLowerCase() ||
+      (statusFilter === 'pending' && finalStatusLower.includes('pend')) ||
+      (statusFilter === 'approved' && (finalStatusLower.includes('approv') || finalStatusLower === 'finalized' || finalStatusLower === 'completed')) ||
+      (statusFilter === 'rejected' && finalStatusLower.includes('reject'));
     
     return matchesSearch && matchesAction && matchesStatus;
   });
@@ -309,11 +286,12 @@ const RequestHistoryPage: React.FC = () => {
     };
 
     reqs.forEach(request => {
-      if (request.final_status === 'approved') {
+      const status = (request.final_status || request.current_status || '').toLowerCase();
+      if (status.includes('approv') || status === 'finalized' || status === 'completed') {
         grouped.approved.push(request);
-      } else if (request.final_status === 'rejected') {
+      } else if (status.includes('reject')) {
         grouped.rejected.push(request);
-      } else if (request.final_status === 'pending') {
+      } else if (status.includes('pend') || status.includes('forward')) {
         grouped.pending.push(request);
       } else {
         grouped.other.push(request);
