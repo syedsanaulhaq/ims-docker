@@ -16,6 +16,7 @@ import {
 import { useSession } from '../contexts/SessionContext';
 import { PermissionGate } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';
+import { formatDisplayDateTime, formatDateDMY } from '@/utils/dateUtils';
 
 interface RequestItem {
   id: string;
@@ -389,7 +390,7 @@ const SupervisorApprovals: React.FC = () => {
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar size={16} />
-                      {new Date(request.submitted_at).toLocaleDateString()} ({request.pending_hours}h ago)
+                      {formatDateDMY(request.submitted_at)} ({request.pending_hours}h ago)
                     </span>
                     <span className="flex items-center gap-1">
                       <Package size={16} />
@@ -438,9 +439,7 @@ const SupervisorApprovals: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Submitted</p>
                     <p className="font-semibold">
-                      {selectedRequest.request?.submitted_at
-                        ? new Date(selectedRequest.request.submitted_at).toLocaleString()
-                        : 'N/A'}
+                      {formatDisplayDateTime(selectedRequest.request?.submitted_at)}
                     </p>
                   </div>
                   <div>

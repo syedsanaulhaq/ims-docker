@@ -11,6 +11,7 @@ import {
 import PerItemApprovalPanel from './PerItemApprovalPanel';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { CheckCircle, Clock, RefreshCw, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { formatDisplayDateTime } from '@/utils/dateUtils';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line
 } from 'recharts';
@@ -1189,14 +1190,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                         <div className="text-sm text-gray-600 space-y-1 mb-3">
                           <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                           <div>
-                            Submitted: {new Date(request.submitted_date).toLocaleString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
+                            Submitted: {formatDisplayDateTime(request.submitted_date)}
                           </div>
                           <div>{renderTransferBadge(request)}</div>
                         </div>
@@ -1315,7 +1309,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       )}
 
       {/* Branch Requests Table */}
-      {viewMode === 'admin' && activeScopeTab === 'branch' && (
+      {(viewMode !== 'admin' ? shouldShowScope('branch') : activeScopeTab === 'branch') && (
       <Card className="border border-gray-200">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
@@ -1410,14 +1404,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                           <div className="text-sm text-gray-600 space-y-1 mb-3">
                             <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                             <div>
-                              Submitted: {new Date(request.submitted_date).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}
+                              Submitted: {formatDisplayDateTime(request.submitted_date)}
                             </div>
                             <div>{renderTransferBadge(request)}</div>
                             {request.current_approver_name && (
@@ -1588,17 +1575,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                           <div className="text-sm text-gray-600 space-y-1 mb-3">
                             <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                             <div>
-                              Submitted: {(() => {
-                                const date = new Date(request.submitted_date);
-                                return date.toLocaleString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
-                                });
-                              })()}
+                              Submitted: {formatDisplayDateTime(request.submitted_date)}
                             </div>
                             <div>{renderTransferBadge(request)}</div>
                             {request.current_approver_name && (
