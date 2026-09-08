@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: ims-backend-dev
+    container_name: ims-backend
     working_dir: /app
     volumes:
       - .:/app
@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: ims-frontend-dev
+    container_name: ims-frontend
     working_dir: /app
     volumes:
       - .:/app
