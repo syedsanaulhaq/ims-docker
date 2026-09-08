@@ -532,23 +532,29 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
 
     // Role-based fallbacks for existing roles
     if (lowerKey.startsWith('personal.')) return true;
-    if (lowerKey.startsWith('branch.')) {
-      if (hasStoreKeeperRole || hasBranchSupervisorRole || hasBranchStorekeeperRole) return true;
+    if (lowerKey === 'branch.storekeeper.review' || lowerKey === 'branch.issuance.process') {
+      if (effectiveIsSuperAdmin || isImsAdmin || hasBranchStorekeeperRole) return true;
+    } else if (lowerKey.startsWith('branch.')) {
+      if (effectiveIsSuperAdmin || isImsAdmin || hasBranchSupervisorRole) return true;
     }
-    if (lowerKey.startsWith('wing.')) {
-      if (hasStoreKeeperRole || hasWingSupervisorRole || hasWingStorekeeperRole || isWingStoreKeeper) return true;
+    if (lowerKey === 'wing.issuance.process') {
+      if (effectiveIsSuperAdmin || isImsAdmin || hasWingStorekeeperRole || isWingStoreKeeper) return true;
+    } else if (lowerKey.startsWith('wing.')) {
+      if (effectiveIsSuperAdmin || isImsAdmin || hasWingSupervisorRole || isWingSupervisor) return true;
     }
     if (lowerKey.startsWith('approval.')) {
       if (hasApproverRole || hasAdminRole || hasSupervisorRole) return true;
     }
     if (lowerKey.startsWith('inventory.')) {
-      if (hasCentralInventoryViewPermission || hasCentralInventoryManagePermission || hasAdminRole || hasStoreKeeperRole) return true;
+      if (hasCentralInventoryViewPermission || hasCentralInventoryManagePermission || hasAdminRole) return true;
     }
     if (lowerKey.startsWith('procurement.')) {
       if (canViewProcurement || canManageProcurement) return true;
     }
-    if (lowerKey.startsWith('issuance.')) {
-      if (canProcessIssuance || hasAdminStorekeeperRole || hasStoreKeeperRole) return true;
+    if (lowerKey === 'issuance.admin.process') {
+      if (effectiveIsSuperAdmin || isImsAdmin || hasAdminStorekeeperRole || canProcessIssuance) return true;
+    } else if (lowerKey.startsWith('issuance.')) {
+      if (canProcessIssuance || hasAdminStorekeeperRole || hasBranchStorekeeperRole || hasWingStorekeeperRole) return true;
     }
     if (lowerKey.startsWith('metadata.')) {
       if (canManageInventory || canManageProcurement || hasAdminRole) return true;
@@ -564,45 +570,45 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
   const getVisibleMenuGroups = () => {
     const groups: MenuGroup[] = [];
 
-    // 1. Personal Menu (Always visible)
+    // 1. Personal Menu (Always visible for all users)
     const visiblePersonalItems = personalMenuGroup.items.filter(item => checkPermission(item.permission));
     if (visiblePersonalItems.length > 0) {
       groups.push({ ...personalMenuGroup, items: visiblePersonalItems });
     }
 
-    // 2. Supervisor Menu
+    // 2. Supervisor Menu (For Branch/Wing Supervisors & Admins)
     const visibleSubordinateItems = subordinateMenuGroup.items.filter(item => checkPermission(item.permission));
     if (visibleSubordinateItems.length > 0) {
       groups.push({ ...subordinateMenuGroup, items: visibleSubordinateItems });
     }
 
-    // 3. Wing Menu
+    // 3. Wing Menu (For Wing Supervisors & Admins)
     const visibleWingItems = wingMenuGroup.items.filter(item => checkPermission(item.permission));
     if (visibleWingItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasWingSupervisorRole || isWingSupervisor || permissionKeys.has('wing.dashboard.view'))) {
       groups.push({ ...wingMenuGroup, items: visibleWingItems });
     }
 
-    // 4. Branch Menu
+    // 4. Branch Menu (For Branch Supervisors & Admins)
     const visibleBranchItems = branchMenuGroup.items.filter(item => checkPermission(item.permission));
-    if (visibleBranchItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || canAccessBranchMenu || permissionKeys.has('branch.dashboard.view'))) {
+    if (visibleBranchItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasBranchSupervisorRole || permissionKeys.has('branch.dashboard.view'))) {
       groups.push({ ...branchMenuGroup, items: visibleBranchItems });
     }
 
-    // 5. Admin Storekeeper Menu
+    // 5. Admin Storekeeper Menu (Only for Admin Storekeepers & Super Admins)
     const visibleAdminStoreItems = adminStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-    if (visibleAdminStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasStoreKeeperRole || hasAdminStorekeeperRole || canProcessIssuance || permissionKeys.has('issuance.admin.process') || permissionKeys.has('issuance.process'))) {
+    if (visibleAdminStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasAdminStorekeeperRole || permissionKeys.has('issuance.admin.process'))) {
       groups.push({ ...adminStorekeeperMenuGroup, items: visibleAdminStoreItems });
     }
 
-    // 6. Branch Storekeeper Menu
+    // 6. Branch Storekeeper Menu (Only for Branch Storekeepers & Super Admins)
     const visibleBranchStoreItems = branchStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-    if (visibleBranchStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasStoreKeeperRole || hasBranchStorekeeperRole || permissionKeys.has('branch.issuance.process') || permissionKeys.has('branch.storekeeper.review'))) {
+    if (visibleBranchStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasBranchStorekeeperRole || permissionKeys.has('branch.issuance.process') || permissionKeys.has('branch.storekeeper.review'))) {
       groups.push({ ...branchStorekeeperMenuGroup, items: visibleBranchStoreItems });
     }
 
-    // 7. Wing Storekeeper Menu
+    // 7. Wing Storekeeper Menu (Only for Wing Storekeepers & Super Admins)
     const visibleWingStoreItems = wingStorekeeperMenuGroup.items.filter(item => checkPermission(item.permission));
-    if (visibleWingStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasStoreKeeperRole || hasWingStorekeeperRole || isWingStoreKeeper || permissionKeys.has('wing.issuance.process') || permissionKeys.has('inventory.manage_store_keeper'))) {
+    if (visibleWingStoreItems.length > 0 && (effectiveIsSuperAdmin || isImsAdmin || hasWingStorekeeperRole || isWingStoreKeeper || permissionKeys.has('wing.issuance.process'))) {
       groups.push({ ...wingStorekeeperMenuGroup, items: visibleWingStoreItems });
     }
 
