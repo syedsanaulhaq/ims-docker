@@ -121,6 +121,7 @@ import PurchaseOrderDashboard from "./pages/PurchaseOrderDashboard";
 import PurchaseOrderDetails from "./pages/PurchaseOrderDetails";
 import ReceivingReportPage from "./pages/ReceivingReportPage";
 import ReceiveDelivery from "./pages/ReceiveDelivery";
+import BarcodeTrackerPage from "./pages/BarcodeTrackerPage";
 import { useParams } from "react-router-dom";
 
 const queryClient = new QueryClient();
@@ -265,6 +266,7 @@ function App() {
                   <Route path="branch-storekeeper-review" element={<BranchStorekeeperReviewPage />} />
                   <Route path="workflow-admin" element={<WorkflowAdmin />} />
                   <Route path="stock-issuance-processing" element={<StockIssuanceProcessing />} />
+                  <Route path="barcode-tracker" element={<BarcodeTrackerPage />} />
                 </Route>
 
                 {/* Procurement Workflow - Protected */}

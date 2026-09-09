@@ -9,8 +9,9 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import {
   Package, CheckCircle, AlertCircle, Truck, User, Calendar,
   FileText, Send, Eye, Upload, X, Image, ChevronDown,
-  ClipboardCheck, Car, UserCheck, ArrowRight, RefreshCw
+  ClipboardCheck, Car, UserCheck, ArrowRight, RefreshCw, Barcode, QrCode
 } from 'lucide-react';
+import SelectSerialNumbersForIssuanceDialog from '@/components/stockTransactions/SelectSerialNumbersForIssuanceDialog';
 import {
   Dialog,
   DialogContent,
@@ -148,6 +149,10 @@ const StockIssuanceProcessing: React.FC = () => {
     }
   };
 
+  // serial numbers assignment state
+  const [showSerialDialog, setShowSerialDialog] = useState(false);
+  const [assignedSerialsMap, setAssignedSerialsMap] = useState<Record<string, string[]>>({});
+
   const openDispatch = (req: RequestRow) => {
     setSelected(req);
     setMethod('Direct');
@@ -156,6 +161,8 @@ const StockIssuanceProcessing: React.FC = () => {
     setIssuanceNotes('');
     setProofFile(null);
     setProofPreview('');
+    setAssignedSerialsMap({});
+    setShowSerialDialog(false);
     setShowModal(true);
     setError('');
   };
@@ -184,7 +191,12 @@ const StockIssuanceProcessing: React.FC = () => {
         const issRes = await fetch(`${API()}/stock-issuance/issue/${selected.id}`, {
           method: 'POST', credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ issued_by: user?.user_id, issued_by_name: user?.full_name, issuance_notes: issuanceNotes })
+          body: JSON.stringify({
+            issued_by: user?.user_id,
+            issued_by_name: user?.full_name,
+            issuance_notes: issuanceNotes,
+            item_serials: assignedSerialsMap
+          })
         });
         if (!issRes.ok) {
           const err = await issRes.json();
@@ -390,6 +402,26 @@ const StockIssuanceProcessing: React.FC = () => {
                 <p className="font-semibold text-gray-800">{selected.requester_name}</p>
                 {selected.office_name && <p className="text-sm text-gray-500">{selected.office_name}</p>}
                 {selected.wing_name && <p className="text-sm text-gray-500">{selected.wing_name}</p>}
+              </div>
+
+              {/* Physical Barcode & Serial Number Tagging Button */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                    <Barcode className="h-4 w-4 text-emerald-600" />
+                    Physical Item Barcode & Serial Tagging
+                  </p>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    {Object.values(assignedSerialsMap).reduce((a, b) => a + b.length, 0)} physical serial/barcode item(s) selected
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSerialDialog(true)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+                >
+                  <QrCode className="h-3.5 w-3.5" /> Scan / Select Serials
+                </button>
               </div>
 
               {/* Delivery method */}
@@ -648,6 +680,21 @@ const StockIssuanceProcessing: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Serial Numbers Selection Dialog */}
+      {selected && (
+        <SelectSerialNumbersForIssuanceDialog
+          open={showSerialDialog}
+          onClose={() => setShowSerialDialog(false)}
+          onConfirm={(selectedMap) => {
+            setAssignedSerialsMap(selectedMap);
+            setShowSerialDialog(false);
+          }}
+          requestItems={selected.items || []}
+          requestNumber={selected.request_number}
+          requesterName={selected.requester_name}
+        />
+      )}
     </div>
   );
 };

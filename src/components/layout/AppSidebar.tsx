@@ -32,7 +32,9 @@ import {
   ShoppingCart,
   History,
   XCircle,
-  Clock
+  Clock,
+  Barcode,
+  QrCode
 } from "lucide-react";
 import { usePermission } from '@/hooks/usePermission';
 import { useSession } from '@/contexts/SessionContext';
@@ -360,6 +362,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     icon: Package,
     items: [
       { title: "Inventory Dashboard", icon: BarChart3, path: "/dashboard/inventory-dashboard", permission: 'inventory.dashboard.view' },
+      { title: "Barcode Asset Tracker", icon: Barcode, path: "/dashboard/barcode-tracker", permission: 'inventory.stock.view' },
       { title: "Opening Balance Entry", icon: Package, path: "/dashboard/opening-balance-entry", permission: 'inventory.opening_balance.entry' },
       { title: "Stock Quantities", icon: BarChart3, path: "/dashboard/inventory-stock-quantities", permission: 'inventory.stock.view' },
       { title: "Stock Alerts", icon: AlertTriangle, path: "/dashboard/inventory-alerts", permission: 'inventory.alerts.view' },

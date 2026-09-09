@@ -2281,6 +2281,76 @@ router.post('/issue/:id', requireAuth, async (req, res) => {
             WHERE id = @itemId
           `);
 
+        // Handle physical serial numbers / barcode assignment if provided
+        const serialAssignments = req.body.item_serials || {};
+        let serialIdsToAssign = [];
+        if (Array.isArray(serialAssignments)) {
+          serialIdsToAssign = serialAssignments;
+        } else if (typeof serialAssignments === 'object' && serialAssignments !== null) {
+          const keySerials = serialAssignments[item.id] || serialAssignments[item.item_master_id];
+          if (Array.isArray(keySerials)) {
+            serialIdsToAssign = keySerials;
+          }
+        }
+
+        for (const sId of serialIdsToAssign) {
+          const serialGuid = typeof sId === 'object' ? (sId.id || sId.serial_id) : sId;
+          if (!serialGuid) continue;
+
+          await transaction.request()
+            .input('serialId', sql.UniqueIdentifier, serialGuid)
+            .input('userId', sql.NVarChar(450), request.requester_user_id ? String(request.requester_user_id) : null)
+            .input('wingId', sql.Int, request.requester_wing_id ? Number(request.requester_wing_id) : null)
+            .input('officeId', sql.Int, request.requester_office_id ? Number(request.requester_office_id) : null)
+            .input('branchId', sql.Int, request.requester_branch_id ? Number(request.requester_branch_id) : null)
+            .input('requestId', sql.UniqueIdentifier, id)
+            .input('itemId', sql.UniqueIdentifier, item.id)
+            .input('issuedBy', sql.NVarChar(450), String(userId || ''))
+            .query(`
+              UPDATE delivery_item_serial_numbers
+              SET status = 'ISSUED',
+                  issued_to_user_id = @userId,
+                  issued_to_wing_id = @wingId,
+                  issued_to_office_id = @officeId,
+                  issued_to_branch_id = @branchId,
+                  issuance_request_id = @requestId,
+                  issuance_item_id = @itemId,
+                  issued_at = GETDATE(),
+                  issued_by = @issuedBy
+              WHERE id = @serialId
+            `);
+
+          const serialInfoRes = await transaction.request()
+            .input('serialId', sql.UniqueIdentifier, serialGuid)
+            .query(`SELECT serial_number FROM delivery_item_serial_numbers WHERE id = @serialId`);
+          const sNum = serialInfoRes.recordset[0]?.serial_number || 'UNKNOWN';
+
+          await transaction.request()
+            .input('logId', sql.UniqueIdentifier, require('uuid').v4())
+            .input('serialId', sql.UniqueIdentifier, serialGuid)
+            .input('serialNumber', sql.NVarChar, sNum)
+            .input('actorId', sql.NVarChar, String(userId || ''))
+            .input('actorName', sql.NVarChar, issuerName || 'Storekeeper')
+            .input('recipientId', sql.NVarChar, request.requester_user_id ? String(request.requester_user_id) : null)
+            .input('recipientName', sql.NVarChar, request.requester_name || 'Requester')
+            .input('wingId', sql.Int, request.requester_wing_id ? Number(request.requester_wing_id) : null)
+            .input('officeId', sql.Int, request.requester_office_id ? Number(request.requester_office_id) : null)
+            .input('branchId', sql.Int, request.requester_branch_id ? Number(request.requester_branch_id) : null)
+            .input('refId', sql.NVarChar, request.request_number || '')
+            .input('notes', sql.NVarChar, issuance_notes || 'Physically issued to requester')
+            .query(`
+              INSERT INTO item_serial_lifecycle_logs (
+                id, serial_id, serial_number, action_type, actor_id, actor_name,
+                recipient_user_id, recipient_name, wing_id, office_id, branch_id,
+                reference_id, notes, created_at
+              ) VALUES (
+                @logId, @serialId, @serialNumber, 'ISSUED', @actorId, @actorName,
+                @recipientId, @recipientName, @wingId, @officeId, @branchId,
+                @refId, @notes, GETDATE()
+              )
+            `);
+        }
+
         // Deduct stock from acquisitions first (FIFO) when quantity_available is supported.
         // If issuance transactions already exist for this request, skip deduction to avoid double deduction.
         if (hasExistingIssuanceTransactions) {
