@@ -316,10 +316,6 @@ export default function PurchaseOrderDetails() {
               <div className="text-center">
                 <p className="text-sm font-bold">{po.file_number || ''}</p>
               </div>
-              
-              <div className="text-center mb-4">
-                <h1 className="text-base font-bold uppercase">ELECTION COMMISSION OF PAKISTAN</h1>
-              </div>
 
               <div className="flex justify-end mb-6">
                 <div className="text-sm text-right">

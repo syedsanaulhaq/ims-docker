@@ -255,37 +255,38 @@ export const ReportDocumentHeader: React.FC<ReportDocumentHeaderProps> = ({
   const qrUrl = `/dashboard/barcode-tracker?query=${encodeURIComponent(barcodeValue)}`;
 
   return (
-    <div className="border-b-2 border-slate-900 pb-5 mb-6 print:mb-4">
-      <div className="flex flex-row items-center justify-between gap-4">
-        {/* Left Side: QR Code + Scan Link */}
-        <div className="shrink-0 flex items-center gap-3">
-          <QRCodeVisual value={qrUrl} size={64} label="SCAN REPORT" />
-          <div className="hidden sm:block text-[10px] text-slate-500 font-mono space-y-0.5">
-            <span className="font-bold text-slate-900 block">ECP VERIFIED</span>
-            <span>Doc Code:</span>
-            <span className="font-bold text-slate-800 block">{barcodeValue}</span>
+    <div className="border-b-2 border-slate-900 pb-4 mb-6 print:mb-4 space-y-4">
+      {/* 1. Full-Width Un-Squeezed Official Government Heading at the Top */}
+      <div className="text-center w-full">
+        <div className="inline-block px-3 py-0.5 bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full mb-1">
+          {badgeText}
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+          ELECTION COMMISSION OF PAKISTAN
+        </h1>
+        <h2 className="text-sm sm:text-base font-bold text-blue-900 tracking-wide uppercase mt-0.5">
+          {title}
+        </h2>
+        <p className="text-xs text-slate-600 font-medium mt-0.5">{subtitle}</p>
+      </div>
+
+      {/* 2. Neat Barcode & QR Code Verification Box Placed Below Heading */}
+      <div className="flex flex-row items-center justify-between bg-slate-50/80 border border-slate-300 rounded-xl p-3 px-5 shadow-2xs">
+        {/* Left: 2D QR Code + Verification Label */}
+        <div className="flex items-center gap-3">
+          <QRCodeVisual value={qrUrl} size={52} label="SCAN TO VERIFY" />
+          <div className="text-xs font-mono space-y-0.5">
+            <span className="font-extrabold text-slate-900 block text-xs tracking-wider">ECP VERIFIED DOCUMENT</span>
+            <span className="text-slate-500">Doc Ref Code: </span>
+            <span className="font-bold text-blue-900">{barcodeValue}</span>
           </div>
         </div>
 
-        {/* Center: ECP Crest & Official Title */}
-        <div className="text-center flex-1 px-2">
-          <div className="inline-block px-3 py-0.5 bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full mb-1">
-            {badgeText}
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-            ELECTION COMMISSION OF PAKISTAN
-          </h1>
-          <h2 className="text-sm sm:text-base font-bold text-blue-900 tracking-wide uppercase mt-0.5">
-            {title}
-          </h2>
-          <p className="text-[11px] text-slate-600 mt-0.5 font-medium">{subtitle}</p>
-        </div>
-
-        {/* Right Side: 1D CODE128 Barcode */}
-        <div className="shrink-0 flex flex-col items-end justify-center">
-          <BarcodeVisual text={barcodeValue} height={36} barWidth={1.5} showText={true} />
-          <span className="text-[10px] text-slate-500 font-mono mt-1">
-            Date: <strong>{date}</strong>
+        {/* Right: 1D CODE128 Barcode + Date */}
+        <div className="flex flex-col items-end justify-center">
+          <BarcodeVisual text={barcodeValue} height={32} barWidth={1.4} showText={true} />
+          <span className="text-[10px] text-slate-500 font-mono mt-0.5">
+            Date: <strong className="text-slate-800">{date}</strong>
           </span>
         </div>
       </div>
