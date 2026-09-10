@@ -11,6 +11,7 @@ import {
 } from '../services/approvalForwardingService';
 import { sessionService } from '../services/sessionService';
 import InventoryCheckModal from './InventoryCheckModal';
+import { formatDisplayDateTime } from '@/utils/dateUtils';
 
 interface ApprovalForwardingProps {
   approvalId: string;
@@ -85,15 +86,7 @@ export const ApprovalForwarding: React.FC<ApprovalForwardingProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString.replace(' ', 'T'));
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+    return formatDisplayDateTime(dateString);
   };
 
   useEffect(() => {
@@ -431,17 +424,7 @@ export const ApprovalForwarding: React.FC<ApprovalForwardingProps> = ({
           <div>
             <span className="font-medium text-gray-700">Submitted Date:</span>
             <div className="text-gray-900">
-              {(() => {
-                const date = new Date(approval.submitted_date);
-                return date.toLocaleString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                });
-              })()}
+              {formatDisplayDateTime(approval.submitted_date)}
             </div>
           </div>
           {approval.current_status === 'pending' && (

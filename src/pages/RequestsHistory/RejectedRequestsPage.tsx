@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Eye, RefreshCw, Search, ArrowLeft, XCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { sessionService } from '@/services/sessionService';
+import { getApiBaseUrl } from '@/services/invmisApi';
+import { formatDisplayDateTime, parseSqlDate } from '@/utils/dateUtils';
 
 interface RequestItem {
   id: string;
@@ -34,16 +37,8 @@ interface ApprovalRequest {
   priority: string;
 }
 
-const safeFormat = (dateValue: string | Date | null | undefined, formatStr: string = 'MMM dd, yyyy'): string => {
-  try {
-    if (!dateValue) return '-';
-    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-    if (isNaN(date.getTime())) return '-';
-    return format(date, formatStr);
-  } catch (error) {
-    console.error('Error formatting date:', dateValue, error);
-    return '-';
-  }
+const safeFormat = (dateValue: string | Date | null | undefined): string => {
+  return formatDisplayDateTime(dateValue);
 };
 
 const RejectedRequestsPage: React.FC = () => {
@@ -62,7 +57,12 @@ const RejectedRequestsPage: React.FC = () => {
   const loadApprovalHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/my-approval-history`, {
+      const user = sessionService.getCurrentUser();
+      const userId = user?.id || user?.user_id;
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/approvals/my-approval-history${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -74,8 +74,11 @@ const RejectedRequestsPage: React.FC = () => {
         const data = await response.json();
         if (data.success) {
           // Filter only rejected requests
-          const rejectedRequests = data.requests.filter(
-            (req: ApprovalRequest) => req.final_status === 'rejected'
+          const rejectedRequests = (data.requests || []).filter(
+            (req: ApprovalRequest) => {
+              const st = (req.final_status || req.current_status || '').toLowerCase();
+              return st.includes('reject');
+            }
           );
           setRequests(rejectedRequests);
         }
@@ -89,8 +92,9 @@ const RejectedRequestsPage: React.FC = () => {
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = searchTerm === '' ||
-      request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester_name.toLowerCase().includes(searchTerm.toLowerCase());
+      (request.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.requester_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 

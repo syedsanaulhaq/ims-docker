@@ -1664,6 +1664,168 @@ router.get('/history/:issuanceId', async (req, res) => {
 });
 
 // ============================================================================
+// GET /api/approvals/my-approval-history - Get approval & request history for current user
+// ============================================================================
+router.get('/my-approval-history', async (req, res) => {
+  try {
+    const pool = getPool();
+    await ensureTables(pool);
+
+    const userId = req.query.userId || req.session?.userId || req.session?.user?.id;
+    const isSuperAdmin = req.session?.user?.is_super_admin === true;
+
+    let userFilter = '';
+    const queryReq = pool.request();
+
+    if (!isSuperAdmin && userId) {
+      queryReq.input('userId', sql.NVarChar(450), userId);
+      userFilter = `
+        AND (
+          ra.current_approver_id = @userId
+          OR ra.submitted_by = @userId
+          OR CONVERT(NVARCHAR(100), sir.requester_user_id) = CONVERT(NVARCHAR(100), @userId)
+          OR sir.supervisor_id = @userId
+          OR sir.admin_id = @userId
+          OR EXISTS (
+            SELECT 1 FROM approval_history ah
+            WHERE ah.request_approval_id = ra.id
+              AND ah.action_by = @userId
+          )
+          OR EXISTS (
+            SELECT 1 FROM ims_request_workflow_state rws
+            WHERE rws.request_id = ra.request_id
+              AND rws.current_approver_id = @userId
+          )
+        )
+      `;
+    }
+
+    const currentUserId = userId || '';
+    queryReq.input('currentUserId', sql.NVarChar(450), currentUserId);
+
+    const query = `
+      SELECT 
+        ra.id,
+        ra.request_id,
+        sir.request_number,
+        COALESCE(sir.request_type, ra.request_type, 'stock_issuance') as request_type,
+        ra.submitted_date,
+        sir.submitted_at,
+        sir.created_at,
+        COALESCE(ra.current_status, sir.request_status, 'pending') as current_status,
+        COALESCE(sir.approval_status, sir.request_status, ra.current_status, 'pending') as final_status,
+        ra.submitted_by,
+        ra.current_approver_id,
+        COALESCE(u_requester.FullName, 'Requester') as requester_name,
+        u_current_approver.FullName as current_approver_name,
+        o.strOfficeName as requester_office,
+        w.Name as requester_wing,
+        COALESCE(sir.justification, sir.purpose, 'Stock Issuance Request') as title,
+        COALESCE(sir.purpose, sir.justification, 'Request for inventory items') as description,
+        COALESCE(sir.urgency_level, 'Medium') as priority,
+        COALESCE(
+          (SELECT TOP 1 ah.action_type 
+           FROM approval_history ah 
+           WHERE ah.request_approval_id = ra.id 
+           AND ah.action_by = @currentUserId
+           ORDER BY ah.action_date DESC), 
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM approval_history ah 
+                        WHERE ah.request_approval_id = ra.id 
+                        AND ah.action_by = @currentUserId 
+                        AND ah.action_type LIKE 'forward%') THEN 'forwarded'
+            WHEN ra.current_approver_id = @currentUserId AND ra.current_status = 'pending' THEN 'pending'
+            WHEN ra.current_approver_id = @currentUserId AND ra.current_status = 'approved' THEN 'approved'
+            WHEN ra.current_approver_id = @currentUserId AND ra.current_status = 'rejected' THEN 'rejected'
+            WHEN ra.submitted_by = @currentUserId THEN 'submitted'
+            ELSE COALESCE(ra.current_status, 'pending')
+          END
+        ) as my_action,
+        ra.updated_date as my_action_date,
+        COALESCE(item_counts.item_count, 0) as total_items
+      FROM request_approvals ra
+      LEFT JOIN stock_issuance_requests sir ON sir.id = ra.request_id
+      LEFT JOIN AspNetUsers u_requester ON (u_requester.Id = ra.submitted_by OR CONVERT(NVARCHAR(100), sir.requester_user_id) = CONVERT(NVARCHAR(100), u_requester.Id))
+      LEFT JOIN AspNetUsers u_current_approver ON u_current_approver.Id = ra.current_approver_id
+      LEFT JOIN tblOffices o ON CONVERT(NVARCHAR(100), sir.requester_office_id) = CONVERT(NVARCHAR(100), o.intOfficeID)
+      LEFT JOIN WingsInformation w ON sir.requester_wing_id = w.Id
+      LEFT JOIN (
+        SELECT request_id, COUNT(*) as item_count
+        FROM stock_issuance_items 
+        GROUP BY request_id
+      ) item_counts ON item_counts.request_id = ra.request_id
+      WHERE sir.id IS NOT NULL
+        AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
+        ${userFilter}
+      ORDER BY COALESCE(sir.submitted_at, ra.submitted_date) DESC
+    `;
+
+    const historyResult = await queryReq.query(query);
+    const requests = [];
+
+    // Fetch items for each request
+    for (const reqRow of historyResult.recordset) {
+      let items = [];
+      try {
+        const itemsResult = await pool.request()
+          .input('requestId', sql.UniqueIdentifier, reqRow.request_id)
+          .query(`
+            SELECT 
+              sii.id,
+              sii.item_master_id as item_id,
+              CASE 
+                WHEN sii.item_type = 'custom' THEN sii.custom_item_name
+                ELSE COALESCE(im.nomenclature, sii.nomenclature, sii.custom_item_name, 'Unknown Item')
+              END as item_name,
+              sii.requested_quantity,
+              sii.approved_quantity,
+              COALESCE(im.unit, 'units') as unit,
+              sii.item_type
+            FROM stock_issuance_items sii
+            LEFT JOIN item_masters im ON im.id = sii.item_master_id
+            WHERE sii.request_id = @requestId
+          `);
+        items = itemsResult.recordset || [];
+      } catch (itemErr) {
+        items = [];
+      }
+
+      requests.push({
+        id: reqRow.id,
+        request_id: reqRow.request_id,
+        request_number: reqRow.request_number,
+        request_type: reqRow.request_type,
+        title: reqRow.title,
+        description: reqRow.description,
+        requested_date: reqRow.created_at || reqRow.submitted_date,
+        submitted_date: reqRow.submitted_at || reqRow.submitted_date,
+        requester_name: reqRow.requester_name,
+        requester_office: reqRow.requester_office,
+        requester_wing: reqRow.requester_wing,
+        my_action: reqRow.my_action,
+        my_action_date: reqRow.my_action_date,
+        my_comments: null,
+        forwarded_to: null,
+        current_status: reqRow.current_status,
+        final_status: reqRow.final_status,
+        items: items,
+        total_items: items.length || reqRow.total_items || 0,
+        priority: reqRow.priority || 'Medium'
+      });
+    }
+
+    res.json({
+      success: true,
+      requests: requests,
+      total: requests.length
+    });
+  } catch (error) {
+    console.error('❌ Error in /my-approval-history:', error);
+    res.status(500).json({ success: false, error: error.message, requests: [] });
+  }
+});
+
+// ============================================================================
 // GET /api/approvals/my-approvals - Get pending approvals for current user
 // Uses request_approvals table with fallback to stock_issuance_requests
 // ============================================================================
@@ -2193,18 +2355,33 @@ router.post('/:approvalId/approve', async (req, res) => {
           newApproverId = adminResult.recordset[0].user_id;
         }
       } else if (hasForwardToSupervisor && !newApproverId) {
-        // Find a WING_SUPERVISOR user
-        const supResult = await transaction.request()
+        // 1. Try finding direct supervisor from viw_employee_with_supervisor for the requester
+        const directSup = await transaction.request()
+          .input('approvalIdParam', sql.NVarChar, approvalId)
           .query(`
-            SELECT TOP 1 ur.user_id
-            FROM ims_user_roles ur
-            INNER JOIN ims_roles r ON r.id = ur.role_id
-            WHERE r.role_name = 'WING_SUPERVISOR'
-            AND ur.user_id != '${userId}'
-            ORDER BY ur.user_id
+            SELECT TOP 1 bossUser.Id as user_id
+            FROM request_approvals ra
+            INNER JOIN AspNetUsers u ON ra.submitted_by = u.Id
+            INNER JOIN viw_employee_with_supervisor s ON s.CNIC = u.CNIC
+            INNER JOIN AspNetUsers bossUser ON s.BossCNIC = bossUser.CNIC
+            WHERE ra.id = @approvalIdParam AND bossUser.Id != '${userId}'
           `);
-        if (supResult.recordset.length > 0) {
-          newApproverId = supResult.recordset[0].user_id;
+        if (directSup.recordset.length > 0 && directSup.recordset[0].user_id) {
+          newApproverId = directSup.recordset[0].user_id;
+        } else {
+          // Fallback: Find a WING_SUPERVISOR user
+          const supResult = await transaction.request()
+            .query(`
+              SELECT TOP 1 ur.user_id
+              FROM ims_user_roles ur
+              INNER JOIN ims_roles r ON r.id = ur.role_id
+              WHERE r.role_name = 'WING_SUPERVISOR'
+              AND ur.user_id != '${userId}'
+              ORDER BY ur.user_id
+            `);
+          if (supResult.recordset.length > 0) {
+            newApproverId = supResult.recordset[0].user_id;
+          }
         }
       }
 
@@ -2337,10 +2514,30 @@ router.post('/:approvalId/approve', async (req, res) => {
           VALUES (@approvalId, @action_type, @action_by, @comments, @step_number, 1, @forwarded_to)
         `);
 
+      // Check if next approver is a storekeeper
+      let isNextStorekeeper = false;
+      if (newApproverId) {
+        const approverRoleRes = await transaction.request()
+          .input('approverId', sql.NVarChar, newApproverId)
+          .query(`
+            SELECT r.role_name AS Name
+            FROM ims_user_roles ur
+            INNER JOIN ims_roles r ON ur.role_id = r.id
+            WHERE ur.user_id = @approverId
+              AND ur.is_active = 1
+              AND r.is_active = 1
+          `);
+        const roles = (approverRoleRes.recordset || []).map(r => String(r.Name || '').toUpperCase());
+        isNextStorekeeper = roles.some(r => r.includes('STOREKEEPER') || r.includes('STORE_KEEPER'));
+      }
+
       // ====================================================================
-      // STOCK DEDUCTION & ISSUANCE - When request is approved
+      // STOCK DEDUCTION & ISSUANCE - When request is approved or routed to storekeeper
       // ====================================================================
-      if (overallStatus === 'approved' && item_allocations && Array.isArray(item_allocations)) {
+      const isAdminChainActor = currentUserRoles.some((role) => ADMIN_CHAIN_ROLE_NAMES.includes(role));
+      const isApprovedForIssuance = overallStatus === 'approved' || isNextStorekeeper;
+
+      if (isApprovedForIssuance && item_allocations && Array.isArray(item_allocations)) {
         if (requestId) {
           for (const allocation of item_allocations) {
             if (allocation.decision_type === 'APPROVE_FROM_STOCK' && allocation.allocated_quantity > 0) {
@@ -2370,11 +2567,12 @@ router.post('/:approvalId/approve', async (req, res) => {
                 .input('requestId', sql.UniqueIdentifier, requestId)
                 .input('itemMasterId', sql.UniqueIdentifier, itemMasterId)
                 .input('approvedQty', sql.Int, allocation.allocated_quantity)
+                .input('srcStore', sql.NVarChar, isAdminChainActor ? 'admin' : 'wing')
                 .query(`
                   UPDATE stock_issuance_items 
                   SET approved_quantity = @approvedQty,
                       item_status = 'approved',
-                      source_store_type = 'admin',
+                      source_store_type = @srcStore,
                       updated_at = GETDATE()
                   WHERE request_id = @requestId 
                     AND item_master_id = @itemMasterId
@@ -2411,16 +2609,21 @@ router.post('/:approvalId/approve', async (req, res) => {
           }
 
           // 4. Update stock_issuance_requests status
+          const approvalStatusLabel = isAdminChainActor ? 'Approved by Admin' : 'Approved by Supervisor';
+          const issuanceSourceLabel = isAdminChainActor ? 'admin_store' : 'wing_store';
+
           await transaction.request()
             .input('requestId', sql.UniqueIdentifier, requestId)
             .input('approvedBy', sql.NVarChar, userId)
+            .input('apprStatus', sql.NVarChar, approvalStatusLabel)
+            .input('issSource', sql.NVarChar, issuanceSourceLabel)
             .query(`
               UPDATE stock_issuance_requests 
               SET request_status = 'Approved',
-                  approval_status = 'Approved by Admin',
+                  approval_status = @apprStatus,
                   approved_at = GETDATE(),
                   approved_by = @approvedBy,
-                  issuance_source = 'admin_store',
+                  issuance_source = @issSource,
                   updated_at = GETDATE()
               WHERE id = @requestId
             `);
@@ -2433,9 +2636,8 @@ router.post('/:approvalId/approve', async (req, res) => {
       // SYNC stock_issuance_requests status for non-approval actions
       // (forwarding, rejection, return) so requester's My Requests page is accurate
       // ====================================================================
-      if (overallStatus !== 'approved') {
+      if (!isApprovedForIssuance && overallStatus !== 'approved') {
         const syncRequestId = requestId;
-        const isAdminChainActor = currentUserRoles.some((role) => ADMIN_CHAIN_ROLE_NAMES.includes(role));
         
         if (syncRequestId) {
           let sirStatus = 'Pending';
@@ -2452,11 +2654,12 @@ router.post('/:approvalId/approve', async (req, res) => {
                   AND ur.is_active = 1
                   AND r.is_active = 1
               `);
-            const roles = (approverRoleRes.recordset || []).map(r => r.Name);
-            if (roles.includes('Storekeeper')) {
-              sirApprovalStatus = 'Approved by Supervisor';
+            const roles = (approverRoleRes.recordset || []).map(r => String(r.Name || '').toUpperCase());
+            if (roles.some(r => r.includes('STOREKEEPER') || r.includes('STORE_KEEPER'))) {
+              sirApprovalStatus = isAdminChainActor ? 'Approved by Admin' : 'Approved by Supervisor';
+              sirStatus = 'Approved';
             } else {
-              sirApprovalStatus = 'Pending Supervisor Review';
+              sirApprovalStatus = isAdminChainActor ? 'Forwarded to Admin' : 'Pending Supervisor Review';
             }
           }
           
@@ -2467,7 +2670,7 @@ router.post('/:approvalId/approve', async (req, res) => {
             } else if (hasForwardToSupervisor) {
               sirApprovalStatus = 'Pending Supervisor Review';
             } else {
-              sirApprovalStatus = 'Pending Supervisor Review';
+              sirApprovalStatus = isAdminChainActor ? 'Forwarded to Admin' : 'Pending Supervisor Review';
             }
           } else if (overallStatus === 'forwarded_to_admin') {
             sirStatus = 'Pending';
@@ -2491,12 +2694,12 @@ router.post('/:approvalId/approve', async (req, res) => {
             .input('sirStatus', sql.NVarChar, sirStatus)
             .input('sirApprovalStatus', sql.NVarChar, sirApprovalStatus)
             .query(`
-              UPDATE stock_issuance_requests
-              SET approval_status = @sirApprovalStatus,
+              UPDATE stock_issuance_requests 
+              SET request_status = @sirStatus,
+                  approval_status = @sirApprovalStatus,
                   updated_at = GETDATE()
               WHERE id = @syncRequestId
             `);
-          
         }
       }
       // Trigger request update notification
@@ -2531,6 +2734,82 @@ router.post('/:approvalId/approve', async (req, res) => {
   } catch (error) {
     console.error('❌ Error processing per-item approval:', error);
     res.status(500).json({ error: 'Failed to process approval', details: error.message });
+  }
+});
+
+// ============================================================================
+// GET /api/approvals/:approvalId/history - Get approval history for an approval GUID
+// ============================================================================
+router.get('/:approvalId/history', async (req, res, next) => {
+  try {
+    const { approvalId } = req.params;
+
+    const guidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!guidRegex.test(approvalId)) {
+      return next();
+    }
+
+    const pool = getPool();
+    await ensureTables(pool);
+
+    const result = await pool.request()
+      .input('approvalId', sql.UniqueIdentifier, approvalId)
+      .query(`
+        SELECT 
+          ah.id,
+          ah.request_approval_id,
+          ah.action_type,
+          ah.action_by,
+          u_action.FullName AS action_by_name,
+          u_action.Role AS action_by_designation,
+          ah.action_date,
+          ah.forwarded_to,
+          u_forward.FullName AS forwarded_to_name,
+          ah.comments,
+          ah.internal_notes,
+          ah.step_number,
+          ah.is_current_step
+        FROM approval_history ah
+        LEFT JOIN AspNetUsers u_action ON u_action.Id = ah.action_by
+        LEFT JOIN AspNetUsers u_forward ON u_forward.Id = ah.forwarded_to
+        WHERE ah.request_approval_id = @approvalId
+        ORDER BY ah.action_date ASC
+      `);
+
+    // Fallback if no records in approval_history: check stock_issuance_approval_history
+    if (result.recordset.length === 0) {
+      const appRes = await pool.request()
+        .input('approvalId', sql.UniqueIdentifier, approvalId)
+        .query(`SELECT request_id FROM request_approvals WHERE id = @approvalId`);
+
+      if (appRes.recordset.length > 0 && appRes.recordset[0].request_id) {
+        const legacyResult = await pool.request()
+          .input('requestId', sql.UniqueIdentifier, appRes.recordset[0].request_id)
+          .query(`
+            SELECT 
+              siah.id,
+              @approvalId AS request_approval_id,
+              siah.action_type,
+              siah.action_by,
+              u.FullName AS action_by_name,
+              u.Role AS action_by_designation,
+              siah.action_date,
+              siah.comments,
+              1 AS step_number,
+              1 AS is_current_step
+            FROM stock_issuance_approval_history siah
+            LEFT JOIN AspNetUsers u ON u.Id = siah.action_by
+            WHERE siah.request_id = @requestId
+            ORDER BY siah.action_date ASC
+          `);
+        return res.json({ success: true, data: legacyResult.recordset });
+      }
+    }
+
+    res.json({ success: true, data: result.recordset });
+  } catch (error) {
+    console.error('❌ Error fetching approval history:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch approval history', details: error.message, data: [] });
   }
 });
 

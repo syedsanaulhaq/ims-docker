@@ -16,6 +16,7 @@ import {
 import { useSession } from '../contexts/SessionContext';
 import { PermissionGate } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';
+import { formatDisplayDateTime } from '@/utils/dateUtils';
 
 interface RequestItem {
   id: string;
@@ -377,7 +378,7 @@ const AdminApprovals: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">Forwarded</p>
                     <p className="font-semibold">
-                      {new Date(selectedRequest.request.supervisor_reviewed_at).toLocaleString()}
+                      {formatDisplayDateTime(selectedRequest.request.supervisor_reviewed_at)}
                     </p>
                   </div>
                   <div className="col-span-2 md:col-span-3">
@@ -537,7 +538,7 @@ const AdminApprovals: React.FC = () => {
                           </div>
                           <p className="text-sm text-gray-600">{entry.comments || entry.forwarding_reason}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {new Date(entry.action_date).toLocaleString()}
+                            {formatDisplayDateTime(entry.action_date)}
                           </p>
                         </div>
                       </div>

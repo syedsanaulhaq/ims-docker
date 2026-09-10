@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ims-backend-prod
+    restart: always
+    working_dir: /app
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - SQL_SERVER_HOST=${SQL_SERVER_HOST}
+      - SQL_SERVER_PORT=${SQL_SERVER_PORT}
+      - SQL_SERVER_USER=${SQL_SERVER_USER}
+      - SQL_SERVER_PASSWORD=${SQL_SERVER_PASSWORD}
+      - SQL_SERVER_DATABASE=${SQL_SERVER_DATABASE}
+      - SQL_SERVER_ENCRYPT=${SQL_SERVER_ENCRYPT}
+      - SQL_SERVER_TRUST_CERT=${SQL_SERVER_TRUST_CERT}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ims-network
+    depends_on:
+      - nginx
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: ims-frontend-prod
+    restart: always
+    working_dir: /app
+    expose:
+      - "3000"
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - PORT=3000
+    networks:
+      - ims-network
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: ims-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - ims-network
+    depends_on:
+      - frontend
+      - backend
+
+networks:
+  ims-network:
+    driver: bridge

@@ -13,6 +13,7 @@ import ApprovalForwarding from './ApprovalForwarding';
 import PerItemApprovalPanel from './PerItemApprovalPanel';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { CheckCircle, Clock, RefreshCw, Search } from "lucide-react";
+import { formatDisplayDateTime } from '@/utils/dateUtils';
 
 const ApprovalDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -490,17 +491,7 @@ const ApprovalDashboard: React.FC = () => {
                         <div className="text-sm text-gray-600 space-y-1">
                           <div>Submitted by: <span className="font-medium text-gray-900">{approval.submitted_by_name}</span></div>
                           <div>
-                            Submitted: {(() => {
-                              const date = new Date(approval.submitted_date);
-                              return date.toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              });
-                            })()}
+                            Submitted: {formatDisplayDateTime(approval.submitted_date)}
                           </div>
                           {approval.current_approver_name && (
                             <div>Current Approver: <span className="font-medium text-gray-900">{approval.current_approver_name}</span></div>
@@ -668,17 +659,7 @@ const ApprovalDashboard: React.FC = () => {
                         <div className="text-sm text-gray-600 space-y-1">
                           <div>Submitted by: <span className="font-medium text-gray-900">{approval.submitted_by_name}</span></div>
                           <div>
-                            Submitted: {(() => {
-                              const date = new Date(approval.submitted_date);
-                              return date.toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              });
-                            })()}
+                            Submitted: {formatDisplayDateTime(approval.submitted_date)}
                           </div>
                           {approval.current_approver_name && (
                             <div>Current Approver: <span className="font-medium text-gray-900">{approval.current_approver_name}</span></div>

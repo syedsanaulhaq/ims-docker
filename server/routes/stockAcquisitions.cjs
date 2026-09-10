@@ -577,6 +577,193 @@ router.put('/opening-balance', async (req, res) => {
 });
 
 // ============================================================================
+// DELETE /api/stock-acquisitions/opening-balance
+// Delete opening balance entries (single or batch)
+// Checks if stock from the item has been issued/dispatched before deleting.
+// ============================================================================
+router.delete('/opening-balance', async (req, res) => {
+  try {
+    const { ids } = req.body; // Array of opening_balance_entries IDs
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No opening balance entry IDs provided for deletion' });
+    }
+
+    const pool = await getPool();
+    const transaction = pool.transaction();
+
+    try {
+      await transaction.begin();
+
+      const deletedEntries = [];
+      const blockedEntries = [];
+
+      for (const entryId of ids) {
+        // 1. Fetch entry details
+        const entryRes = await transaction.request()
+          .input('entry_id', sql.UniqueIdentifier, entryId)
+          .query(`
+            SELECT obe.id, obe.item_master_id, obe.quantity_received, obe.quantity_already_issued,
+                   im.nomenclature, im.item_code
+            FROM opening_balance_entries obe
+            LEFT JOIN item_masters im ON obe.item_master_id = im.id
+            WHERE obe.id = @entry_id
+          `);
+
+        if (entryRes.recordset.length === 0) {
+          continue; // Entry not found or already deleted
+        }
+
+        const entry = entryRes.recordset[0];
+        const itemMasterId = entry.item_master_id;
+        const itemName = entry.nomenclature || 'Unknown Item';
+        const itemCode = entry.item_code || '';
+
+        // 2. Check if item has already been issued/dispatched or used in active requests
+        // Check A: issued_items_ledger
+        const ledgerCheck = await transaction.request()
+          .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+          .query(`
+            SELECT COUNT(*) AS count
+            FROM issued_items_ledger
+            WHERE item_master_id = @item_master_id
+          `);
+        const ledgerIssuedCount = ledgerCheck.recordset[0]?.count || 0;
+
+        // Check B: stock_issuance_items joined with requests that are ISSUED, COMPLETED, DISPATCHED, APPROVED
+        const issuanceCheck = await transaction.request()
+          .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+          .query(`
+            SELECT COUNT(*) AS count
+            FROM stock_issuance_items sii
+            JOIN stock_issuance_requests sir ON sii.request_id = sir.id
+            WHERE sii.item_master_id = @item_master_id
+              AND UPPER(COALESCE(sir.request_status, sir.approval_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED', 'APPROVED', 'FORWARDED_TO_STORE', 'IN_PROGRESS')
+          `);
+        const issuanceCount = issuanceCheck.recordset[0]?.count || 0;
+
+        // Check C: New system issuances in stock_acquisitions (excluding historical opening balance baseline)
+        const acqCheck = await transaction.request()
+          .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+          .query(`
+            SELECT ISNULL(SUM(quantity_issued), 0) AS total_non_ob_issued
+            FROM stock_acquisitions
+            WHERE item_master_id = @item_master_id
+              AND (notes IS NULL OR notes NOT LIKE '%Opening Balance%')
+          `);
+        const nonObIssuedQty = acqCheck.recordset[0]?.total_non_ob_issued || 0;
+
+        if (ledgerIssuedCount > 0 || issuanceCount > 0 || nonObIssuedQty > 0) {
+          blockedEntries.push({
+            entry_id: entryId,
+            item_code: itemCode,
+            nomenclature: itemName,
+            reason: `Item stock has already been issued or dispatched in the system (${ledgerIssuedCount} ledger record(s), ${issuanceCount} issuance request(s)).`
+          });
+          continue;
+        }
+
+        // 3. Delete from opening_balance_entries
+        await transaction.request()
+          .input('entry_id', sql.UniqueIdentifier, entryId)
+          .query(`
+            DELETE FROM opening_balance_entries
+            WHERE id = @entry_id
+          `);
+
+        // 4. Delete corresponding stock_acquisitions record for this item's opening balance
+        await transaction.request()
+          .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+          .query(`
+            DELETE FROM stock_acquisitions
+            WHERE item_master_id = @item_master_id
+              AND notes LIKE '%Opening Balance%'
+          `);
+
+        // 5. Recalculate and update current_inventory_stock
+        const stockSumRes = await transaction.request()
+          .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+          .query(`
+            SELECT ISNULL(SUM(quantity_available), 0) AS new_total
+            FROM stock_acquisitions
+            WHERE item_master_id = @item_master_id
+          `);
+        const newTotalStock = stockSumRes.recordset[0]?.new_total || 0;
+
+        if (newTotalStock > 0) {
+          await transaction.request()
+            .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+            .input('new_total', sql.Decimal(15, 2), newTotalStock)
+            .query(`
+              UPDATE current_inventory_stock
+              SET current_quantity = @new_total,
+                  last_updated = GETDATE()
+              WHERE item_master_id = @item_master_id
+            `);
+        } else {
+          await transaction.request()
+            .input('item_master_id', sql.UniqueIdentifier, itemMasterId)
+            .query(`
+              DELETE FROM current_inventory_stock
+              WHERE item_master_id = @item_master_id
+            `);
+        }
+
+        deletedEntries.push({
+          entry_id: entryId,
+          item_code: itemCode,
+          nomenclature: itemName
+        });
+      }
+
+      // Check if opening_balance_entries table is now completely empty
+      const remainingCountRes = await transaction.request().query(`
+        SELECT COUNT(*) AS total_remaining FROM opening_balance_entries
+      `);
+      const totalRemaining = remainingCountRes.recordset[0]?.total_remaining || 0;
+
+      if (totalRemaining === 0) {
+        await transaction.request().query(`
+          UPDATE system_settings
+          SET setting_value = 'false', updated_at = GETDATE()
+          WHERE setting_key = 'opening_balance_completed';
+        `);
+      }
+
+      if (blockedEntries.length > 0 && deletedEntries.length === 0) {
+        await transaction.rollback();
+        const firstBlocked = blockedEntries[0];
+        return res.status(409).json({
+          error: `Cannot delete opening balance entry for "${firstBlocked.nomenclature}": ${firstBlocked.reason}`,
+          blockedEntries
+        });
+      }
+
+      await transaction.commit();
+
+      res.json({
+        success: true,
+        message: `Successfully deleted ${deletedEntries.length} opening balance entry/entries.`,
+        deletedEntries,
+        blockedEntries,
+        openingBalanceEmpty: totalRemaining === 0
+      });
+
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('❌ Error deleting opening balance entries:', error);
+    res.status(500).json({
+      error: 'Failed to delete opening balance entries',
+      details: error.message
+    });
+  }
+});
+
+// ============================================================================
 // GET /api/stock-acquisitions/stock-by-item/:itemId
 // Get available stock for an item (with FIFO ordering)
 // ============================================================================

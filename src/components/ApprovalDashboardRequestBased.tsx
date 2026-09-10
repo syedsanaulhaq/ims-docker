@@ -11,6 +11,7 @@ import {
 import PerItemApprovalPanel from './PerItemApprovalPanel';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { CheckCircle, Clock, RefreshCw, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { formatDisplayDateTime } from '@/utils/dateUtils';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line
 } from 'recharts';
@@ -69,11 +70,24 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
   const [allScopedRequests, setAllScopedRequests] = useState<RequestSummary[]>([]);
   const selectedScope = new URLSearchParams(location.search).get('scope') || 'all';
   const [activeScopeTab, setActiveScopeTab] = useState<'individual' | 'branch' | 'wing'>(() => {
-    if (selectedScope === 'branch' || selectedScope === 'wing') {
-      return selectedScope;
+    const scope = (new URLSearchParams(location.search).get('scope') || '').toLowerCase();
+    if (scope === 'branch' || scope === 'wing') {
+      return scope;
     }
     return 'individual';
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const scope = params.get('scope')?.toLowerCase();
+    if (scope === 'branch') {
+      setActiveScopeTab('branch');
+    } else if (scope === 'wing') {
+      setActiveScopeTab('wing');
+    } else if (scope === 'personal' || scope === 'individual') {
+      setActiveScopeTab('individual');
+    }
+  }, [location.search]);
 
 
   const statusPriority: Record<string, number> = {
@@ -591,29 +605,29 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
     return Math.ceil(getFilteredRequests().length / itemsPerPage);
   };
 
-  // Group requests by type (personal vs wing-wise)
+  // Group requests by type (personal vs wing-wise vs branch-wise)
   const getPersonalRequests = () => {
     const filtered = getFilteredRequests();
-    const personal = filtered.filter(r => {
-      const scopeType = (r.approval?.scope_type || '').toLowerCase();
-      return scopeType === 'individual';
+    return filtered.filter(r => {
+      const scopeType = String((r.approval as any)?.scope_type || '').toLowerCase();
+      const requestType = String(r.request_type || '').toLowerCase();
+      return scopeType === 'individual' || scopeType === 'personal' || requestType === 'personal' || requestType === 'individual';
     });
-    return personal;
   };
 
   const getWingRequests = () => {
     const filtered = getFilteredRequests();
-    const wing = filtered.filter(r => {
-      const scopeType = (r.approval?.scope_type || '').toLowerCase();
-      return scopeType === 'organizational';
+    return filtered.filter(r => {
+      const scopeType = String((r.approval as any)?.scope_type || '').toLowerCase();
+      const requestType = String(r.request_type || '').toLowerCase();
+      return scopeType === 'organizational' || scopeType === 'wing' || requestType === 'wing' || requestType === 'organizational';
     });
-    return wing;
   };
 
   const getBranchRequests = () => {
     const filtered = getFilteredRequests();
     return filtered.filter(r => {
-      const scopeType = (r.approval?.scope_type || '').toLowerCase();
+      const scopeType = String((r.approval as any)?.scope_type || '').toLowerCase();
       const requestType = String(r.request_type || '').toLowerCase();
       return scopeType === 'branch' || requestType === 'branch';
     });
@@ -679,7 +693,10 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
   };
 
   const shouldShowScope = (scope: 'personal' | 'branch' | 'wing') => {
-    return selectedScope === 'all' || selectedScope === scope;
+    const currentScope = new URLSearchParams(location.search).get('scope')?.toLowerCase() || 'all';
+    if (currentScope === 'all') return true;
+    if ((currentScope === 'personal' || currentScope === 'individual') && scope === 'personal') return true;
+    return currentScope === scope;
   };
 
   const handleConfigureWorkflows = () => {
@@ -1071,13 +1088,19 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       {viewMode === 'admin' && (
         <div className="flex items-center gap-2 border-b border-gray-200 mb-4">
           {[
-            { key: 'individual', label: 'Individual Working', count: getPersonalRequests().length },
-            { key: 'branch', label: 'Branch', count: getBranchRequests().length },
-            { key: 'wing', label: 'Wing', count: getWingRequests().length },
+            { key: 'individual', scopeParam: 'personal', label: 'Subordinate Requests', count: getPersonalRequests().length },
+            { key: 'branch', scopeParam: 'branch', label: 'Branch', count: getBranchRequests().length },
+            { key: 'wing', scopeParam: 'wing', label: 'Wing', count: getWingRequests().length },
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveScopeTab(tab.key as any)}
+              onClick={() => {
+                setActiveScopeTab(tab.key as any);
+                navigate({
+                  pathname: location.pathname,
+                  search: `?scope=${tab.scopeParam}`
+                });
+              }}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeScopeTab === tab.key
                   ? 'border-blue-500 text-blue-600'
@@ -1099,7 +1122,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="text-4xl font-bold flex items-center gap-3">
-              <Badge className="bg-blue-100 text-blue-800 text-lg font-semibold px-4 py-2">Individual Working</Badge>
+              <Badge className="bg-blue-100 text-blue-800 text-lg font-semibold px-4 py-2">Subordinate Requests</Badge>
               <span className="text-gray-600 text-2xl">({getPersonalRequests().length})</span>
             </CardTitle>
               <div className="flex items-center gap-2">
@@ -1153,7 +1176,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
           <CardContent>
             {getPersonalRequests().length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">{searchTerm ? 'No matching requests' : 'No individual working requests'}</p>
+                <p className="text-gray-500">{searchTerm ? 'No matching requests' : 'No subordinate requests'}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1189,14 +1212,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                         <div className="text-sm text-gray-600 space-y-1 mb-3">
                           <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                           <div>
-                            Submitted: {new Date(request.submitted_date).toLocaleString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
+                            Submitted: {formatDisplayDateTime(request.submitted_date)}
                           </div>
                           <div>{renderTransferBadge(request)}</div>
                         </div>
@@ -1315,7 +1331,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
       )}
 
       {/* Branch Requests Table */}
-      {viewMode === 'admin' && activeScopeTab === 'branch' && (
+      {(viewMode !== 'admin' ? shouldShowScope('branch') : activeScopeTab === 'branch') && (
       <Card className="border border-gray-200">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
@@ -1410,14 +1426,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                           <div className="text-sm text-gray-600 space-y-1 mb-3">
                             <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                             <div>
-                              Submitted: {new Date(request.submitted_date).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}
+                              Submitted: {formatDisplayDateTime(request.submitted_date)}
                             </div>
                             <div>{renderTransferBadge(request)}</div>
                             {request.current_approver_name && (
@@ -1588,17 +1597,7 @@ const ApprovalDashboardRequestBased: React.FC<ApprovalDashboardRequestBasedProps
                           <div className="text-sm text-gray-600 space-y-1 mb-3">
                             <div>Submitted by: <span className="font-medium text-gray-900">{request.submitted_by_name}</span></div>
                             <div>
-                              Submitted: {(() => {
-                                const date = new Date(request.submitted_date);
-                                return date.toLocaleString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
-                                });
-                              })()}
+                              Submitted: {formatDisplayDateTime(request.submitted_date)}
                             </div>
                             <div>{renderTransferBadge(request)}</div>
                             {request.current_approver_name && (

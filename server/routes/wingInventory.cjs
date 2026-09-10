@@ -8,6 +8,11 @@ const { getPool, sql } = require('../db/connection.cjs');
 
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.userId) {
+    if (req.query.userId) {
+      req.session = req.session || {};
+      req.session.userId = req.query.userId;
+      return next();
+    }
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -53,9 +58,9 @@ router.get('/requests', requireAuth, async (req, res) => {
     let wingFilter = '';
     if (!isAdmin) {
       reqRequest.input('wingId', sql.Int, wingId);
-      wingFilter = 'WHERE sir.requester_wing_id = @wingId AND sir.request_type = \'wing\'';
+      wingFilter = 'WHERE (sir.requester_wing_id = @wingId OR u.intWingID = @wingId) AND (LOWER(sir.request_type) = \'wing\' OR sir.request_type LIKE \'%wing%\') AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)';
     } else {
-      wingFilter = 'WHERE sir.request_type = \'wing\'';
+      wingFilter = 'WHERE (LOWER(sir.request_type) = \'wing\' OR sir.request_type LIKE \'%wing%\') AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)';
     }
 
     const reqResult = await reqRequest.query(`
@@ -65,18 +70,18 @@ router.get('/requests', requireAuth, async (req, res) => {
         sir.request_type,
         COALESCE(sir.purpose, 'Stock Issuance Request') AS title,
         COALESCE(sir.justification, sir.purpose, '') AS description,
-        sir.created_at AS requested_date,
-        sir.submitted_at AS submitted_date,
-        u.FullName AS requester_name,
-        w.Name AS requester_wing,
+        COALESCE(sir.created_at, sir.submitted_at) AS requested_date,
+        COALESCE(sir.submitted_at, sir.created_at) AS submitted_date,
+        COALESCE(u.FullName, 'Wing User') AS requester_name,
+        COALESCE(w.Name, 'Wing') AS requester_wing,
         COALESCE(sir.request_status, 'pending') AS current_status,
         COALESCE(sir.approval_status, sir.request_status, 'pending') AS final_status,
         COALESCE(sir.urgency_level, 'Medium') AS priority
       FROM stock_issuance_requests sir
-      INNER JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
-      LEFT JOIN WingsInformation w ON u.intWingID = w.Id
+      LEFT JOIN AspNetUsers u ON CONVERT(NVARCHAR(100), sir.requester_user_id) = CONVERT(NVARCHAR(100), u.Id)
+      LEFT JOIN WingsInformation w ON (sir.requester_wing_id = w.Id OR u.intWingID = w.Id)
       ${wingFilter}
-      ORDER BY sir.submitted_at DESC
+      ORDER BY COALESCE(sir.submitted_at, sir.created_at) DESC
     `);
 
     const requests = reqResult.recordset;

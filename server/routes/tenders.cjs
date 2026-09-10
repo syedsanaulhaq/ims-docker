@@ -167,45 +167,37 @@ router.post('/', upload.fields([
             item[field] = field === 'quantity' ? 1 : (item.estimated_unit_price || 0);
           }
           if (item[field] !== undefined) {
-            itemInsertQuery += `, ${field}`;
-            itemValuesQuery += `, @${field}`;
             let value = item[field];
-            let sqlType = sql.NVarChar;
+            let sqlType = sql.NVarChar(sql.MAX);
 
-            if (['quantity', 'quantity_received', 'estimated_unit_price', 'actual_unit_price', 'total_amount'].includes(field)) {
+            if (field === 'source_required_item_ids') {
+              sqlType = sql.NVarChar(sql.MAX);
+              value = normalizeIdList(value);
+            } else if (['quantity', 'quantity_received', 'estimated_unit_price', 'actual_unit_price', 'total_amount'].includes(field)) {
               if (field === 'quantity' || field === 'quantity_received') {
                 sqlType = sql.Int;
-                value = value ? parseInt(value, 10) : null;
+                value = (value !== null && value !== undefined && value !== '' && !isNaN(value)) ? parseInt(value, 10) : null;
               } else {
                 sqlType = sql.Decimal(15, 2);
-                value = value ? parseFloat(value) : null;
+                value = (value !== null && value !== undefined && value !== '' && !isNaN(value)) ? parseFloat(value) : null;
               }
-            } else if (field === 'item_master_id') {
+            } else if (field === 'item_master_id' || field === 'source_required_item_id') {
               sqlType = sql.UniqueIdentifier;
+              value = (value && typeof value === 'string' && value.trim() !== '') ? value.trim() : null;
+            } else if (value !== null && value !== undefined) {
+              value = String(value);
+            } else {
+              value = null;
             }
+
+            itemInsertQuery += `, ${field}`;
+            itemValuesQuery += `, @${field}`;
             itemRequest.input(field, sqlType, value);
           }
         }
 
         itemInsertQuery += ') ' + itemValuesQuery + ')';
         await itemRequest.query(itemInsertQuery);
-
-        if (item.source_required_item_id) {
-          await transaction.request()
-            .input('requiredItemId', sql.UniqueIdentifier, item.source_required_item_id)
-            .input('tenderId', sql.UniqueIdentifier, tenderId)
-            .input('tenderType', sql.NVarChar, tender_type)
-            .input('tenderRef', sql.NVarChar, tenderData.reference_number || tenderData.title || '')
-            .query(`
-              UPDATE required_items
-              SET status = 'In Tender',
-                  tender_id = @tenderId,
-                  tender_type = @tenderType,
-                  tender_reference = @tenderRef,
-                  updated_at = GETDATE()
-              WHERE id = @requiredItemId AND status != 'Procured'
-            `);
-        }
       }
     }
 
@@ -262,7 +254,7 @@ router.get('/', async (req, res) => {
     }
 
     if (type && type !== 'all') {
-      query += ' AND tender_type = @type';
+      query += ' AND (tender_type = @type OR LOWER(REPLACE(tender_type, \' \', \'-\')) = LOWER(REPLACE(@type, \' \', \'-\')))';
       request.input('type', sql.NVarChar, type);
     }
 
@@ -611,16 +603,27 @@ router.put('/:id', async (req, res) => {
       if (tenderData[field] !== undefined) {
         updateQuery += `, ${field} = @${field}`;
         let value = tenderData[field];
-        let sqlType = sql.NVarChar;
+        let sqlType = sql.NVarChar(sql.MAX);
 
         if (field.endsWith('_date') || field.endsWith('_deadline')) {
           sqlType = sql.DateTime;
-          value = value ? new Date(value) : null;
+          value = (value && value !== '') ? new Date(value) : null;
+          if (value && isNaN(value.getTime())) value = null;
         } else if (field.endsWith('_value') || field.endsWith('_total') || field === 'quantity') {
           sqlType = sql.Decimal(15, 2);
-          value = value ? parseFloat(value) : null;
-        } else if (field.endsWith('_id')) {
+          value = (value !== null && value !== undefined && value !== '' && !isNaN(value)) ? parseFloat(value) : null;
+        } else if (field === 'vendor_id') {
           sqlType = sql.UniqueIdentifier;
+          value = (value && typeof value === 'string' && value.trim() !== '') ? value.trim() : null;
+        } else {
+          sqlType = sql.NVarChar(sql.MAX);
+          if (Array.isArray(value)) {
+            value = normalizeIdList(value);
+          } else if (value !== null && value !== undefined) {
+            value = String(value);
+          } else {
+            value = null;
+          }
         }
 
         updateRequest.input(field, sqlType, value);
@@ -658,7 +661,7 @@ router.put('/:id', async (req, res) => {
             itemVendorId = awardedVendorId || item.vendor_id || null;
           }
 
-          itemRequest.input('vendor_id', sql.UniqueIdentifier, itemVendorId || null);
+          itemRequest.input('vendor_id', sql.UniqueIdentifier, (itemVendorId && typeof itemVendorId === 'string' && itemVendorId.trim() !== '') ? itemVendorId.trim() : null);
 
           let itemInsertQuery = 'INSERT INTO tender_items (id, tender_id, created_at, updated_at, vendor_id';
           let itemValuesQuery = 'VALUES (@id, @tender_id, @created_at, @updated_at, @vendor_id';
@@ -672,46 +675,37 @@ router.put('/:id', async (req, res) => {
 
           for (const field of itemFields) {
             if (item[field] !== undefined) {
-              itemInsertQuery += `, ${field}`;
-              itemValuesQuery += `, @${field}`;
               let value = item[field];
-              let sqlType = sql.NVarChar;
+              let sqlType = sql.NVarChar(sql.MAX);
 
-              if (['quantity', 'quantity_received', 'estimated_unit_price', 'actual_unit_price', 'total_amount'].includes(field)) {
+              if (field === 'source_required_item_ids') {
+                sqlType = sql.NVarChar(sql.MAX);
+                value = normalizeIdList(value);
+              } else if (['quantity', 'quantity_received', 'estimated_unit_price', 'actual_unit_price', 'total_amount'].includes(field)) {
                 if (field === 'quantity' || field === 'quantity_received') {
                   sqlType = sql.Int;
-                  value = value ? parseInt(value, 10) : null;
+                  value = (value !== null && value !== undefined && value !== '' && !isNaN(value)) ? parseInt(value, 10) : null;
                 } else {
                   sqlType = sql.Decimal(15, 2);
-                  value = value ? parseFloat(value) : null;
+                  value = (value !== null && value !== undefined && value !== '' && !isNaN(value)) ? parseFloat(value) : null;
                 }
-              } else if (field === 'item_master_id') {
+              } else if (field === 'item_master_id' || field === 'source_required_item_id') {
                 sqlType = sql.UniqueIdentifier;
+                value = (value && typeof value === 'string' && value.trim() !== '') ? value.trim() : null;
+              } else if (value !== null && value !== undefined) {
+                value = String(value);
+              } else {
+                value = null;
               }
 
+              itemInsertQuery += `, ${field}`;
+              itemValuesQuery += `, @${field}`;
               itemRequest.input(field, sqlType, value);
             }
           }
 
           itemInsertQuery += ') ' + itemValuesQuery + ')';
           await itemRequest.query(itemInsertQuery);
-
-          if (item.source_required_item_id) {
-            await transaction.request()
-              .input('requiredItemId', sql.UniqueIdentifier, item.source_required_item_id)
-              .input('tenderId', sql.UniqueIdentifier, id)
-              .input('tenderType', sql.NVarChar, tender_type)
-              .input('tenderRef', sql.NVarChar, tenderData.reference_number || tenderData.title || '')
-              .query(`
-                UPDATE required_items
-                SET status = 'In Tender',
-                    tender_id = @tenderId,
-                    tender_type = @tenderType,
-                    tender_reference = @tenderRef,
-                    updated_at = GETDATE()
-                WHERE id = @requiredItemId AND status != 'Procured'
-              `);
-          }
         }
       }
     }

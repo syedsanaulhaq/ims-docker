@@ -1,139 +1,231 @@
+// ============================================================================
+// Notification Utility
+// ============================================================================
+// Utility helpers for creating database-backed user notifications
+
 const { sql } = require('../db/connection.cjs');
 
-async function notifyRequestUpdate(db, requestId, status, metadata = {}) {
+/**
+ * Inserts a notification into the Notifications table.
+ */
+const createNotification = async (db, userId, title, message, type = 'info', actionUrl = null, actionText = null) => {
   try {
-    const actorName = metadata.actorName || 'System';
-    const comments = metadata.comments || '';
-    const actorId = metadata.actorId || null;
-
-    // 1. Fetch the request details to find the requester_user_id
-    const requestResult = await db.request()
-      .input('RequestId', sql.UniqueIdentifier, requestId)
-      .query(`
-        SELECT requester_user_id, request_number, request_type, requester_wing_id, requester_branch_id
-        FROM stock_issuance_requests
-        WHERE id = @RequestId
-      `);
-
-    if (!requestResult.recordset || requestResult.recordset.length === 0) {
-      console.warn(`[Notification] Request ${requestId} not found.`);
+    if (!userId) {
+      console.warn('⚠️ No userId provided to createNotification, skipping.');
       return;
     }
-
-    const { requester_user_id, request_number, request_type } = requestResult.recordset[0];
-
-    // 2. Define who should receive the notification and what the title/message is
-    let targetUserId = null;
-    let title = '';
-    let message = '';
-    let type = 'info'; // info, success, warning, error
-    let actionUrl = `/dashboard/request-details/${requestId}`;
-    let actionText = 'View Request';
-
-    if (['APPROVED', 'REJECTED', 'ISSUED', 'DISPATCHED', 'ACKNOWLEDGED'].includes(status)) {
-      // Notify the requester
-      targetUserId = requester_user_id;
-      title = `Request ${request_number} ${status}`;
-      if (status === 'APPROVED') {
-        message = `Your request ${request_number} has been approved by ${actorName}.${comments ? ' Comments: ' + comments : ''}`;
-        type = 'success';
-      } else if (status === 'REJECTED') {
-        message = `Your request ${request_number} has been rejected by ${actorName}.${comments ? ' Comments: ' + comments : ''}`;
-        type = 'error';
-      } else if (status === 'ISSUED') {
-        message = `Stock has been issued for your request ${request_number} by ${actorName}.`;
-        type = 'success';
-      } else if (status === 'DISPATCHED') {
-        message = `Stock has been dispatched for your request ${request_number} by ${actorName}.`;
-        type = 'info';
-      } else {
-        message = `Request ${request_number} has been acknowledged.`;
-        type = 'info';
-      }
-    } else if (status === 'SUBMITTED' || status === 'FORWARDED') {
-      // When submitted/forwarded, notify the active approvers (supervisors/admin)
-      const approverResult = await db.request()
-        .input('RequestId', sql.UniqueIdentifier, requestId)
-        .query(`
-          SELECT TOP 1 current_approver_id, current_role_name
-          FROM request_approvals
-          WHERE request_id = @RequestId AND current_status = 'PENDING'
-        `);
-
-      if (approverResult.recordset && approverResult.recordset.length > 0) {
-        const { current_approver_id, current_role_name } = approverResult.recordset[0];
-        if (current_approver_id) {
-          targetUserId = current_approver_id;
-        } else if (current_role_name) {
-          // If role-based, notify all users with that role
-          const roleUsers = await db.request()
-            .input('RoleName', sql.NVarChar, current_role_name)
-            .query(`
-              SELECT u.Id 
-              FROM AspNetUsers u
-              INNER JOIN AspNetUserRoles ur ON u.Id = ur.UserId
-              INNER JOIN AspNetRoles r ON ur.RoleId = r.Id
-              WHERE r.Name = @RoleName
-            `);
-          
-          if (roleUsers.recordset && roleUsers.recordset.length > 0) {
-            for (const row of roleUsers.recordset) {
-              await insertNotification(db, row.Id, `Pending Approval: ${request_number}`, `A request (${request_number}) is pending your approval.`, 'warning', actionUrl, actionText);
-            }
-          }
-          return;
-        }
-      }
-
-      // Fallback
-      if (!targetUserId) {
-        const adminUsers = await db.request()
-          .query(`
-            SELECT u.Id 
-            FROM AspNetUsers u
-            INNER JOIN AspNetUserRoles ur ON u.Id = ur.UserId
-            INNER JOIN AspNetRoles r ON ur.RoleId = r.Id
-            WHERE r.Name IN ('Admin', 'Supervisor', 'Branch Supervisor')
-          `);
-        if (adminUsers.recordset && adminUsers.recordset.length > 0) {
-          for (const row of adminUsers.recordset) {
-            await insertNotification(db, row.Id, `New Request: ${request_number}`, `A new request (${request_number}) has been submitted and is pending approval.`, 'info', actionUrl, actionText);
-          }
-        }
-        return;
-      }
-
-      title = `Approval Required: ${request_number}`;
-      message = `Request ${request_number} has been ${status.toLowerCase()} and requires your approval.`;
-      type = 'warning';
-    }
-
-    if (targetUserId) {
-      await insertNotification(db, targetUserId, title, message, type, actionUrl, actionText);
-    }
-  } catch (err) {
-    console.error('[Notification Error] Failed to create notification:', err);
-  }
-}
-
-async function insertNotification(db, userId, title, message, type, actionUrl, actionText) {
-  try {
+    const cleanUserId = String(userId);
+    
     await db.request()
-      .input('UserId', sql.NVarChar, userId)
+      .input('UserId', sql.NVarChar, cleanUserId)
       .input('Title', sql.NVarChar, title)
       .input('Message', sql.NVarChar, message)
       .input('Type', sql.NVarChar, type)
       .input('ActionUrl', sql.NVarChar, actionUrl)
       .input('ActionText', sql.NVarChar, actionText)
       .query(`
-        INSERT INTO Notifications (Id, UserId, Title, Message, Type, ActionUrl, ActionText, IsRead, CreatedAt)
-        VALUES (NEWID(), @UserId, @Title, @Message, @Type, @ActionUrl, @ActionText, 0, GETDATE())
+        INSERT INTO Notifications (Id, UserId, Title, Message, Type, ActionUrl, ActionText, CreatedAt, IsRead)
+        VALUES (NEWID(), @UserId, @Title, @Message, @Type, @ActionUrl, @ActionText, GETDATE(), 0)
       `);
+    console.log(`📧 Notification created successfully for user ${cleanUserId}: "${title}"`);
   } catch (err) {
-    console.error('[Notification Insert Error] Failed to insert row:', err);
+    console.error('❌ Failed to create application notification:', err.message);
   }
-}
+};
+
+/**
+ * Handles request state change notifications.
+ * Fetches request metadata and notifies either the requester or the next/current approver.
+ */
+const notifyRequestUpdate = async (db, requestId, action, options = {}) => {
+  try {
+    if (!requestId) return;
+
+    // 1. Fetch request details
+    const requestResult = await db.request()
+      .input('requestId', sql.UniqueIdentifier, requestId)
+      .query(`
+        SELECT 
+          sir.id,
+          sir.request_number,
+          CONVERT(NVARCHAR(450), sir.requester_user_id) AS requester_user_id,
+          sir.request_status,
+          sir.approval_status,
+          u.FullName AS requester_name
+        FROM stock_issuance_requests sir
+        LEFT JOIN AspNetUsers u ON sir.requester_user_id = TRY_CONVERT(uniqueidentifier, u.Id)
+        WHERE sir.id = @requestId
+      `);
+
+    if (requestResult.recordset.length === 0) {
+      console.warn(`⚠️ Request ${requestId} not found for notification.`);
+      return;
+    }
+
+    const request = requestResult.recordset[0];
+    const { request_number, requester_user_id, requester_name } = request;
+
+    // 2. Fetch current approver from request_approvals
+    const approvalResult = await db.request()
+      .input('requestId', sql.UniqueIdentifier, requestId)
+      .query(`
+        SELECT TOP 1 
+          CONVERT(NVARCHAR(450), current_approver_id) AS current_approver_id,
+          current_status
+        FROM request_approvals
+        WHERE request_id = @requestId
+        ORDER BY updated_date DESC, created_date DESC
+      `);
+
+    const currentApproverId = approvalResult.recordset[0]?.current_approver_id || null;
+
+    const actorName = options.actorName || 'System';
+    const comments = options.comments || '';
+
+    // Action handling
+    switch (action.toUpperCase()) {
+      case 'SUBMITTED':
+        // A request is newly submitted. Notify the current approver.
+        if (currentApproverId) {
+          await createNotification(
+            db,
+            currentApproverId,
+            `New Stock Request: ${request_number}`,
+            `${requester_name} has submitted a new stock request. Your review and approval is required.`,
+            'info',
+            '/dashboard/approval-dashboard-request-based',
+            'Review Request'
+          );
+        }
+        break;
+
+      case 'APPROVED':
+        // The request has been approved at a step, or fully approved.
+        // First, notify the requester that the request was updated.
+        const approvalLabel = request.approval_status || 'Approved';
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Approved: ${request_number}`,
+          `Your request has been approved by ${actorName}. Status: ${approvalLabel}.`,
+          'success',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+
+        // If it was forwarded to next step (i.e. still pending and has a current approver who is NOT the requester)
+        if (currentApproverId && currentApproverId !== requester_user_id && request.request_status !== 'Approved') {
+          await createNotification(
+            db,
+            currentApproverId,
+            `Stock Request Pending: ${request_number}`,
+            `A stock request is pending your review and approval.`,
+            'info',
+            '/dashboard/approval-dashboard-request-based',
+            'Review Request'
+          );
+        }
+        break;
+
+      case 'FORWARDED':
+        // Request has been forwarded (e.g. to admin or next designation)
+        const forwardLabel = request.approval_status || 'Forwarded';
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Forwarded: ${request_number}`,
+          `Your request has been forwarded by ${actorName}. Status: ${forwardLabel}.`,
+          'info',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+
+        // Notify the new approver
+        if (currentApproverId && currentApproverId !== requester_user_id) {
+          await createNotification(
+            db,
+            currentApproverId,
+            `Stock Request Forwarded: ${request_number}`,
+            `A stock request has been forwarded to you and is pending your review.`,
+            'info',
+            '/dashboard/approval-dashboard-request-based',
+            'Review Request'
+          );
+        }
+        break;
+
+      case 'REJECTED':
+        // Request rejected by supervisor or admin
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Rejected: ${request_number}`,
+          `Your request has been rejected by ${actorName}.${comments ? ' Reason: ' + comments : ''}`,
+          'error',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+        break;
+
+      case 'RETURNED':
+        // Request returned to requester for edit
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Returned: ${request_number}`,
+          `Your request has been returned to you by ${actorName} for correction/review.${comments ? ' Comments: ' + comments : ''}`,
+          'warning',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+        break;
+
+      case 'ISSUED':
+        // Request has been issued by central storekeeper
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Issued: ${request_number}`,
+          `Your request items have been issued by the storekeeper. Please collect them.`,
+          'success',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+        break;
+
+      case 'DISPATCHED':
+        // Request has been dispatched by central storekeeper
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Dispatched: ${request_number}`,
+          `Your requested items have been dispatched.`,
+          'info',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+        break;
+
+      case 'ACKNOWLEDGED':
+        // Request receipt acknowledged by user. Optionally notify the storekeeper/issuer,
+        // but typically this completes the workflow.
+        await createNotification(
+          db,
+          requester_user_id,
+          `Request Completed: ${request_number}`,
+          `You have acknowledged the receipt of your requested items. The request is now closed.`,
+          'success',
+          `/dashboard/request-details/${requestId}`,
+          'View Details'
+        );
+        break;
+    }
+  } catch (err) {
+    console.error('❌ Failed to handle request update notification:', err.message);
+  }
+};
 
 module.exports = {
+  createNotification,
   notifyRequestUpdate
 };

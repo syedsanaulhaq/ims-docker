@@ -756,22 +756,40 @@ router.post('/for-po/:poId', handleDeliveryUpload, async (req, res) => {
         if (item.serial_numbers && Array.isArray(item.serial_numbers) && item.serial_numbers.length > 0) {
           for (const serialNumber of item.serial_numbers) {
             if (serialNumber && serialNumber.trim().length > 0) {
+              const serialId = require('uuid').v4();
+              const trimmedSerial = serialNumber.trim();
+
               await transaction.request()
-                .input('id', sql.UniqueIdentifier, require('uuid').v4())
+                .input('id', sql.UniqueIdentifier, serialId)
                 .input('delivery_id', sql.UniqueIdentifier, deliveryId)
                 .input('delivery_item_id', sql.UniqueIdentifier, itemId)
                 .input('item_master_id', sql.UniqueIdentifier, item.item_master_id)
-                .input('serial_number', sql.NVarChar, serialNumber.trim())
+                .input('serial_number', sql.NVarChar, trimmedSerial)
+                .input('barcode_data', sql.NVarChar, trimmedSerial)
                 .input('notes', sql.NVarChar, item.remarks || null)
                 .query(`
                   INSERT INTO delivery_item_serial_numbers (
                     id, delivery_id, delivery_item_id, item_master_id, 
-                    serial_number, notes, created_at
+                    serial_number, barcode_data, status, notes, created_at
                   )
                   VALUES (
                     @id, @delivery_id, @delivery_item_id, @item_master_id,
-                    @serial_number, @notes, GETDATE()
+                    @serial_number, @barcode_data, 'IN_STOCK', @notes, GETDATE()
                   )
+                `);
+
+              // Log acquisition event in item_serial_lifecycle_logs
+              await transaction.request()
+                .input('logId', sql.UniqueIdentifier, require('uuid').v4())
+                .input('serialId', sql.UniqueIdentifier, serialId)
+                .input('serialNumber', sql.NVarChar, trimmedSerial)
+                .input('refId', sql.NVarChar, po_number || deliveryNumber)
+                .input('notes', sql.NVarChar, `Acquired in store via Delivery #${deliveryNumber}`)
+                .query(`
+                  INSERT INTO item_serial_lifecycle_logs
+                    (id, serial_id, serial_number, action_type, actor_name, reference_id, notes, created_at)
+                  VALUES
+                    (@logId, @serialId, @serialNumber, 'ACQUIRED', 'Storekeeper', @refId, @notes, GETDATE())
                 `);
             }
           }

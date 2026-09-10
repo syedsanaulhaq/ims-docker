@@ -60,6 +60,10 @@ export default function OpeningBalanceEntry() {
   // Existing entries (previously submitted items)
   const [existingEntries, setExistingEntries] = useState<any[]>([]);
   
+  // Checkbox selection and deletion state
+  const [selectedItemKeys, setSelectedItemKeys] = useState<string[]>([]);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Check if redirected from Dashboard with setup message
   const showSetupMessage = location.state?.showSetupMessage;
   const setupMessage = location.state?.message;
@@ -408,6 +412,30 @@ export default function OpeningBalanceEntry() {
     URL.revokeObjectURL(link.href);
   };
 
+  const parseCsvLine = (text: string): string[] => {
+    const result: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        if (inQuotes && text[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += char;
+      }
+    }
+    result.push(cur.trim());
+    return result;
+  };
+
   const handleCsvImport = (file: File) => {
     setCsvError(null);
     setCsvSuccess(null);
@@ -415,17 +443,17 @@ export default function OpeningBalanceEntry() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = (e.target?.result as string) || '';
-      const lines = text
+      const rawLines = text
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter((line) => line.length > 0);
 
-      if (lines.length < 2) {
+      if (rawLines.length < 2) {
         setCsvError('CSV file must include a header row and at least one data row.');
         return;
       }
 
-      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+      const headers = parseCsvLine(rawLines[0]).map((h) => h.toLowerCase().replace(/^"|"$/g, ''));
       const itemCodeIndex = headers.indexOf('item_code');
       const itemIdIndex = headers.indexOf('item_master_id');
       const itemNameIndex = headers.indexOf('item_name') !== -1 ? headers.indexOf('item_name') : headers.indexOf('nomenclature');
@@ -440,40 +468,37 @@ export default function OpeningBalanceEntry() {
       const importedItems: OpeningBalanceItem[] = [];
       const errors: string[] = [];
 
-      for (let i = 1; i < lines.length; i += 1) {
-        const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+      for (let i = 1; i < rawLines.length; i += 1) {
+        const cols = parseCsvLine(rawLines[i]).map((c) => c.replace(/^"|"$/g, ''));
         const itemCode = itemCodeIndex >= 0 ? cols[itemCodeIndex] : '';
         const itemId = itemIdIndex >= 0 ? cols[itemIdIndex] : '';
         const itemName = itemNameIndex >= 0 ? cols[itemNameIndex] : '';
         const qtyRaw = cols[qtyIndex] || '0';
         const qtyIssuedRaw = qtyIssuedIndex >= 0 ? (cols[qtyIssuedIndex] || '0') : '0';
-        const quantityReceived = parseFloat(qtyRaw);
-        const quantityIssued = parseFloat(qtyIssuedRaw) || 0;
+        const rawQuantityReceived = parseFloat(qtyRaw);
+        const rawQuantityIssued = parseFloat(qtyIssuedRaw);
 
         if (!itemCode && !itemId && !itemName) {
           errors.push(`Row ${i + 1}: missing item_code, item_name, or item_master_id.`);
           continue;
         }
 
-        if (!Number.isFinite(quantityReceived) || quantityReceived <= 0) {
-          errors.push(`Row ${i + 1}: invalid quantity_received.`);
-          continue;
+        const quantityReceived = (Number.isFinite(rawQuantityReceived) && rawQuantityReceived >= 0) ? rawQuantityReceived : 0;
+        let quantityIssued = (Number.isFinite(rawQuantityIssued) && rawQuantityIssued >= 0) ? rawQuantityIssued : 0;
+
+        if (quantityIssued > quantityReceived) {
+          quantityIssued = quantityReceived;
         }
 
-        // Find item by ID, code, or name (case-insensitive partial match for name)
+        // Find item by ID, code, or name
         let matchedItem = itemId
           ? itemMasters.find((im) => im.id === itemId)
           : itemCode 
             ? itemMasters.find((im) => im.item_code === itemCode)
-            : itemMasters.find((im) => im.nomenclature.toLowerCase().includes(itemName.toLowerCase()) || itemName.toLowerCase().includes(im.nomenclature.toLowerCase()));
+            : itemMasters.find((im) => im.nomenclature.toLowerCase() === itemName.toLowerCase() || im.nomenclature.toLowerCase().includes(itemName.toLowerCase()) || itemName.toLowerCase().includes(im.nomenclature.toLowerCase()));
 
         if (!matchedItem) {
           errors.push(`Row ${i + 1}: item not found for (${itemName || itemCode || itemId}).`);
-          continue;
-        }
-
-        if (quantityIssued > quantityReceived) {
-          errors.push(`Row ${i + 1}: qty issued (${quantityIssued}) cannot exceed qty received (${quantityReceived}).`);
           continue;
         }
 
@@ -483,7 +508,7 @@ export default function OpeningBalanceEntry() {
           category_name: matchedItem.category_name,
           quantity_received: quantityReceived,
           quantity_already_issued: quantityIssued,
-          quantity_available: quantityReceived - quantityIssued,
+          quantity_available: Math.max(0, quantityReceived - quantityIssued),
           unit_cost: 0,
         });
       }
@@ -493,33 +518,133 @@ export default function OpeningBalanceEntry() {
         return;
       }
 
-      setItems((prev) => {
-        const byId = new Map(prev.map((item) => [item.item_master_id, { ...item }]));
-        importedItems.forEach((item) => {
-          const existing = byId.get(item.item_master_id);
-          if (existing) {
-            existing.quantity_received += item.quantity_received;
-            existing.quantity_available += item.quantity_received;
-            byId.set(item.item_master_id, existing);
-          } else {
-            byId.set(item.item_master_id, item);
-          }
-        });
-        return Array.from(byId.values());
-      });
+      setItems(importedItems);
 
       if (errors.length > 0) {
-        setCsvError(errors.slice(0, 5).join(' '));
+        setCsvError(`Loaded ${importedItems.length} items. Note: ${errors.slice(0, 3).join(' ')}`);
       }
 
-      setCsvSuccess(`Imported ${importedItems.length} item(s) from CSV.`);
+      setCsvSuccess(`Successfully loaded all ${importedItems.length} item(s) from CSV. Click 'Save' below to record in system.`);
     };
 
     reader.readAsText(file);
   };
 
-  const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const getItemKey = (item: OpeningBalanceItem) => item.entry_id || item.item_master_id;
+
+  const isAllSelected = items.length > 0 && selectedItemKeys.length === items.length;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedItemKeys([]);
+    } else {
+      setSelectedItemKeys(items.map(getItemKey));
+    }
+  };
+
+  const handleToggleSelect = (key: string) => {
+    if (selectedItemKeys.includes(key)) {
+      setSelectedItemKeys(selectedItemKeys.filter(k => k !== key));
+    } else {
+      setSelectedItemKeys([...selectedItemKeys, key]);
+    }
+  };
+
+  const handleRemoveOrDeleteItem = async (item: OpeningBalanceItem, index: number) => {
+    setError(null);
+    const key = getItemKey(item);
+
+    if (!item.isExisting || !item.entry_id) {
+      // Unsaved item, remove locally
+      setItems(prev => prev.filter((_, i) => i !== index));
+      setSelectedItemKeys(prev => prev.filter(k => k !== key));
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete opening balance for "${item.nomenclature}"?`)) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/stock-acquisitions/opening-balance`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ids: [item.entry_id] })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to delete opening balance entry');
+      } else {
+        setSuccess(true);
+        await fetchExistingEntries(selectedFinancialYear);
+        await fetchGoLiveStatus();
+        setSelectedItemKeys(prev => prev.filter(k => k !== key));
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch (err: any) {
+      console.error('Error deleting opening balance:', err);
+      setError(err.message || 'Failed to delete opening balance entry');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    setError(null);
+    if (selectedItemKeys.length === 0) return;
+
+    const selectedItems = items.filter(it => selectedItemKeys.includes(getItemKey(it)));
+    const unsavedItems = selectedItems.filter(it => !it.isExisting || !it.entry_id);
+    const existingItems = selectedItems.filter(it => it.isExisting && it.entry_id);
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedItems.length} selected opening balance item(s)?`)) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      // 1. Remove unsaved items locally
+      if (unsavedItems.length > 0) {
+        const unsavedKeys = new Set(unsavedItems.map(getItemKey));
+        setItems(prev => prev.filter(it => !unsavedKeys.has(getItemKey(it))));
+      }
+
+      // 2. Delete existing items via API
+      if (existingItems.length > 0) {
+        const idsToDelete = existingItems.map(it => it.entry_id!);
+        const response = await fetch(`${getApiBaseUrl()}/stock-acquisitions/opening-balance`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ids: idsToDelete })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'Failed to delete selected opening balance entries');
+        } else {
+          if (data.blockedEntries && data.blockedEntries.length > 0) {
+            setError(`Could not delete item(s): ${data.blockedEntries.map((b: any) => b.nomenclature).join(', ')} because stock was already issued/dispatched.`);
+          } else {
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+          }
+          await fetchExistingEntries(selectedFinancialYear);
+          await fetchGoLiveStatus();
+        }
+      }
+      setSelectedItemKeys([]);
+    } catch (err: any) {
+      console.error('Error deleting selected items:', err);
+      setError(err.message || 'Failed to delete selected items');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1027,105 +1152,148 @@ export default function OpeningBalanceEntry() {
             {/* Items List */}
             {items.length > 0 && (
               <>
+                {/* Batch Delete Action Bar */}
+                {selectedItemKeys.length > 0 && (
+                  <div className="flex items-center justify-between bg-red-50 border border-red-200 p-2 px-4 rounded-md mb-3">
+                    <span className="text-sm font-medium text-red-700">
+                      {selectedItemKeys.length} item(s) selected
+                    </span>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                      disabled={deleteLoading}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteLoading ? 'Deleting...' : `Delete Selected (${selectedItemKeys.length})`}
+                    </Button>
+                  </div>
+                )}
+
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-100">
+                      <TableHead className="w-[40px]">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={isAllSelected}
+                          onChange={handleSelectAll}
+                          title="Select All Items"
+                        />
+                      </TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead className="text-right">Qty Received</TableHead>
                       <TableHead className="text-right">Qty Issued</TableHead>
                       <TableHead className="text-right font-bold">Total Qty</TableHead>
-                      {!goLiveStatus.opening_balance_completed && <TableHead className="w-[60px]"></TableHead>}
+                      <TableHead className="w-[60px] text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={index} className={item.isModified ? 'bg-yellow-50' : ''}>
-                        <TableCell>
-                          <Badge variant="outline">{item.category_name || 'N/A'}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{item.nomenclature}</TableCell>
-                        <TableCell className="text-right">
-                          {!goLiveStatus.opening_balance_completed ? (
-                            <Input
-                              type="number"
-                              min={0}
-                              value={item.quantity_received}
-                              onChange={(e) => {
-                                const newVal = parseInt(e.target.value) || 0;
-                                setItems(prev => prev.map((it, i) => {
-                                  if (i !== index) return it;
-                                  const isModified = it.isExisting && it.originalValues ? (
-                                    newVal !== it.originalValues.quantity_received ||
-                                    it.quantity_already_issued !== it.originalValues.quantity_already_issued ||
-                                    it.unit_cost !== it.originalValues.unit_cost
-                                  ) : false;
-                                  return {
-                                    ...it,
-                                    quantity_received: newVal,
-                                    quantity_available: newVal - it.quantity_already_issued,
-                                    isModified,
-                                  };
-                                }));
-                              }}
-                              className="w-20 text-right"
+                    {items.map((item, index) => {
+                      const itemKey = getItemKey(item);
+                      const isSelected = selectedItemKeys.includes(itemKey);
+
+                      return (
+                        <TableRow key={itemKey || index} className={`${item.isModified ? 'bg-yellow-50' : ''} ${isSelected ? 'bg-blue-50' : ''}`}>
+                          <TableCell className="w-[40px]">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelect(itemKey)}
                             />
-                          ) : (
-                            item.quantity_received
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-orange-600">
-                          {!goLiveStatus.opening_balance_completed ? (
-                            <Input
-                              type="number"
-                              min={0}
-                              max={item.quantity_received}
-                              value={item.quantity_already_issued}
-                              onChange={(e) => {
-                                const newVal = parseInt(e.target.value) || 0;
-                                setItems(prev => prev.map((it, i) => {
-                                  if (i !== index) return it;
-                                  const isModified = it.isExisting && it.originalValues ? (
-                                    it.quantity_received !== it.originalValues.quantity_received ||
-                                    newVal !== it.originalValues.quantity_already_issued ||
-                                    it.unit_cost !== it.originalValues.unit_cost
-                                  ) : false;
-                                  return {
-                                    ...it,
-                                    quantity_already_issued: newVal,
-                                    quantity_available: it.quantity_received - newVal,
-                                    isModified,
-                                  };
-                                }));
-                              }}
-                              className="w-20 text-right"
-                            />
-                          ) : (
-                            item.quantity_already_issued
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-green-600">{item.quantity_available}</TableCell>
-                        {!goLiveStatus.opening_balance_completed && (
+                          </TableCell>
                           <TableCell>
+                            <Badge variant="outline">{item.category_name || 'N/A'}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">{item.nomenclature}</TableCell>
+                          <TableCell className="text-right">
+                            {!goLiveStatus.opening_balance_completed ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.quantity_received}
+                                onChange={(e) => {
+                                  const newVal = parseInt(e.target.value) || 0;
+                                  setItems(prev => prev.map((it, i) => {
+                                    if (i !== index) return it;
+                                    const isModified = it.isExisting && it.originalValues ? (
+                                      newVal !== it.originalValues.quantity_received ||
+                                      it.quantity_already_issued !== it.originalValues.quantity_already_issued ||
+                                      it.unit_cost !== it.originalValues.unit_cost
+                                    ) : false;
+                                    return {
+                                      ...it,
+                                      quantity_received: newVal,
+                                      quantity_available: newVal - it.quantity_already_issued,
+                                      isModified,
+                                    };
+                                  }));
+                                }}
+                                className="w-20 text-right"
+                              />
+                            ) : (
+                              item.quantity_received
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-orange-600">
+                            {!goLiveStatus.opening_balance_completed ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                max={item.quantity_received}
+                                value={item.quantity_already_issued}
+                                onChange={(e) => {
+                                  const newVal = parseInt(e.target.value) || 0;
+                                  setItems(prev => prev.map((it, i) => {
+                                    if (i !== index) return it;
+                                    const isModified = it.isExisting && it.originalValues ? (
+                                      it.quantity_received !== it.originalValues.quantity_received ||
+                                      newVal !== it.originalValues.quantity_already_issued ||
+                                      it.unit_cost !== it.originalValues.unit_cost
+                                    ) : false;
+                                    return {
+                                      ...it,
+                                      quantity_already_issued: newVal,
+                                      quantity_available: it.quantity_received - newVal,
+                                      isModified,
+                                    };
+                                  }));
+                                }}
+                                className="w-20 text-right"
+                              />
+                            ) : (
+                              item.quantity_already_issued
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-green-600">{item.quantity_available}</TableCell>
+                          <TableCell className="text-center">
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleRemoveItem(index)}
+                              onClick={() => handleRemoveOrDeleteItem(item, index)}
+                              disabled={deleteLoading}
+                              title="Delete Opening Balance Entry"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
+                        </TableRow>
+                      );
+                    })}
                     {/* Totals Row */}
                     <TableRow className="bg-gray-100 font-semibold">
+                      <TableCell></TableCell>
                       <TableCell colSpan={2}>TOTALS ({items.length} items)</TableCell>
                       <TableCell className="text-right">{totalReceived}</TableCell>
                       <TableCell className="text-right text-orange-600">{totalIssued}</TableCell>
                       <TableCell className="text-right font-bold text-green-600">{totalAvailable}</TableCell>
-                      {!goLiveStatus.opening_balance_completed && <TableCell></TableCell>}
+                      <TableCell></TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

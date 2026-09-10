@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ims-backend-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=development
+      - SQL_SERVER_HOST=host.docker.internal
+      - SQL_SERVER_PORT=1433
+      - SQL_SERVER_USER=inventorymanagementuser
+      - SQL_SERVER_PASSWORD=2016Wfp61@
+      - SQL_SERVER_DATABASE=InventoryManagementDB
+      - SESSION_SECRET=inventory-management-secret-key-2025
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    labels:
+      - "monitoring=true"
+      - "app=ims-backend"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ims-frontend-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "9080:9090"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - PORT=9090
+    restart: unless-stopped
+    labels:
+      - "monitoring=true"
+      - "app=ims-frontend"
+
+  # Monitoring: Prometheus (metrics collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ims-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-storage:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+
+  # Monitoring: Grafana (dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ims-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Monitoring: cAdvisor (container metrics)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: ims-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
+volumes:
+  prometheus-storage:
+  grafana-storage:

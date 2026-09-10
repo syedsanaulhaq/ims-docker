@@ -81,6 +81,7 @@ const tenderItemsRoutes = require('./routes/tender-items.cjs');
 const requiredItemsRoutes = require('./routes/requiredItems.cjs');
 const wingInventoryRoutes = require('./routes/wingInventory.cjs');
 const branchInventoryRoutes = require('./routes/branchInventory.cjs');
+const barcodeTrackerRoutes = require('./routes/barcodeTracker.cjs');
 
 app.use('/api/auth', authRoutes);
 app.use('/api', authRoutes); // Legacy mount for /api/session and /api/sso-login
@@ -88,6 +89,10 @@ app.use('/api/users', usersRoutes);
 app.use('/api/aspnet-users', usersRoutes); // Mount prefix for active/filtered users
 app.use('/api/ims/users', usersRoutes); // Alias for wing pages compatibility
 app.use('/api/approvals', approvalsRoutes);
+app.get('/api/my-approval-history', (req, res, next) => {
+  req.url = '/my-approval-history' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+  approvalsRoutes(req, res, next);
+});
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/tenders', tenderRoutes);
@@ -98,6 +103,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/sub-categories', categoryRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/inventory-stock', inventoryRoutes); // Alias for legacy frontend calls
+app.use('/inventory', inventoryRoutes); // Alias for frontend calls without /api prefix
 app.use('/api/stock-issuance', stockIssuanceRoutes);
 app.use('/api/stock-acquisitions', stockAcquisitionsRoutes);
 app.use('/api/reports', reportsRoutes);
@@ -112,6 +118,7 @@ app.use('/api/wing-inventory', wingInventoryRoutes);
 app.use('/api/wing-request-history', wingInventoryRoutes); // Alias: requests sub-route serves history
 app.use('/api/branch-inventory', branchInventoryRoutes);
 app.use('/api/branch-request-history', branchInventoryRoutes); // Alias: requests sub-route serves history
+app.use('/api/barcode', barcodeTrackerRoutes);
 app.use('/api/ims/users', require('./routes/users.cjs')); // Alias used by wing pages
 
 // ============================================================================
@@ -133,9 +140,12 @@ async function startServer() {
     await initializePool();
 
     // Start listening
-    app.listen(config.PORT, () => {
+    const server = app.listen(config.PORT, () => {
       console.log(`✅ Server listening on port ${config.PORT}`);
     });
+
+    // Keep process alive
+    setInterval(() => {}, 1000 * 60 * 60);
   } catch (err) {
     console.error('❌ Failed to start server:', err);
     process.exit(1);

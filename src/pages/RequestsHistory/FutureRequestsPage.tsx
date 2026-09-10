@@ -11,9 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, Clock, RefreshCw, Search, Filter, ArrowLeft, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { sessionService } from '@/services/sessionService';
+import { getApiBaseUrl } from '@/services/invmisApi';
+import { formatDisplayDateTime, parseSqlDate } from '@/utils/dateUtils';
+import { useNavigate } from 'react-router-dom';
 
 interface RequestItem {
   id: string;
@@ -43,20 +44,12 @@ interface ApprovalRequest {
   final_status: string;
   items: RequestItem[];
   total_items: number;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  priority: string;
 }
 
 // Safe date formatting helper
-const safeFormat = (dateValue: string | Date | null | undefined, formatStr: string = 'MMM dd, yyyy'): string => {
-  try {
-    if (!dateValue) return '-';
-    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-    if (isNaN(date.getTime())) return '-';
-    return format(date, formatStr);
-  } catch (error) {
-    console.error('Error formatting date:', dateValue, error);
-    return '-';
-  }
+const safeFormat = (dateValue: string | Date | null | undefined): string => {
+  return formatDisplayDateTime(dateValue);
 };
 
 const FutureRequestsPage: React.FC = () => {
@@ -77,7 +70,12 @@ const FutureRequestsPage: React.FC = () => {
   const loadApprovalHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/my-approval-history`, {
+      const user = sessionService.getCurrentUser();
+      const userId = user?.id || user?.user_id;
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/approvals/my-approval-history${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -89,8 +87,11 @@ const FutureRequestsPage: React.FC = () => {
         const data = await response.json();
         if (data.success) {
           // Filter only approved requests
-          const approvedRequests = data.requests.filter(
-            (req: ApprovalRequest) => req.final_status === 'approved'
+          const approvedRequests = (data.requests || []).filter(
+            (req: ApprovalRequest) => {
+              const st = (req.final_status || req.current_status || '').toLowerCase();
+              return st.includes('approv') || st === 'finalized' || st === 'completed';
+            }
           );
           setRequests(approvedRequests);
         }
@@ -104,8 +105,9 @@ const FutureRequestsPage: React.FC = () => {
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = searchTerm === '' ||
-      request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester_name.toLowerCase().includes(searchTerm.toLowerCase());
+      (request.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.requester_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 

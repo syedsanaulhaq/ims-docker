@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Clock, CheckCircle, XCircle, RefreshCw, Search, User, Calendar, Package, History, Building2 } from 'lucide-react';
-import { format } from 'date-fns';
 import { sessionService } from '@/services/sessionService';
 import { useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '@/services/invmisApi';
+import { formatDisplayDateTime, formatDateDMY, parseSqlDate } from '@/utils/dateUtils';
 
 interface RequestItem {
   id: string;
@@ -120,7 +121,12 @@ const BranchRequestHistoryPage: React.FC = () => {
   const loadBranchRequestHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/branch-inventory/requests`, {
+      const user = sessionService.getCurrentUser();
+      const userId = user?.id || user?.user_id;
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/branch-inventory/requests${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -197,7 +203,6 @@ const BranchRequestHistoryPage: React.FC = () => {
     setShowTracking(true);
 
     try {
-      // Create a comprehensive timeline with submitted, current, and future steps
       const completeTimeline = [];
 
       // 1. Add the submission step
@@ -207,14 +212,15 @@ const BranchRequestHistoryPage: React.FC = () => {
         action_date: request.submitted_date,
         action_by_name: request.requester_name,
         action_by_designation: 'Requester',
-        comments: `Request submitted on ${format(new Date(request.submitted_date), 'MMM dd, yyyy HH:mm')}`,
+        comments: `Request submitted on ${formatDisplayDateTime(request.submitted_date)}`,
         step_status: 'completed'
       });
 
       // 2. Try to get actual approval history from API
       let actualHistory = [];
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/approvals/${request.id}/history`, {
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/approvals/${request.id}/history`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
@@ -226,10 +232,11 @@ const BranchRequestHistoryPage: React.FC = () => {
           actualHistory = data.data || [];
         }
       } catch (apiError) {
-        }
+        console.warn('Could not fetch tracking history:', apiError);
+      }
 
       // 3. Add actual approval actions that have happened
-      actualHistory.forEach((action, index) => {
+      actualHistory.forEach((action: any) => {
         completeTimeline.push({
           ...action,
           step_status: 'completed'
@@ -237,21 +244,19 @@ const BranchRequestHistoryPage: React.FC = () => {
       });
 
       // 4. Add current step (if not completed)
-      if (request.current_status !== 'finalized' && request.current_status !== 'rejected') {
-        // Use actual current approver information from the request data
+      const currentSt = (request.final_status || request.current_status || '').toLowerCase();
+      if (!currentSt.includes('finalized') && !currentSt.includes('completed') && !currentSt.includes('reject')) {
         let currentApprover = request.current_approver_name || 'Pending Approval';
         let currentDesignation = request.current_approver_designation || 'Next Approver';
-        const statusText = String(request.final_status || request.current_status || '').toLowerCase();
 
-        // Prefer workflow-aware fallback titles if no specific approver info is available
         if (!request.current_approver_name) {
-          if (statusText.includes('forwarded to admin') || statusText.includes('pending admin')) {
+          if (currentSt.includes('forwarded to admin') || currentSt.includes('pending admin')) {
             currentApprover = 'DD Admin';
             currentDesignation = 'Admin Approval';
-          } else if (statusText.includes('pending supervisor') || statusText.includes('forwarded to supervisor')) {
+          } else if (currentSt.includes('pending supervisor') || currentSt.includes('forwarded to supervisor')) {
             currentApprover = 'Branch Supervisor';
             currentDesignation = 'Supervisor Approval';
-          } else if (statusText.includes('storekeeper')) {
+          } else if (currentSt.includes('storekeeper')) {
             currentApprover = 'Branch Storekeeper';
             currentDesignation = 'Store Review';
           } else {
@@ -275,7 +280,6 @@ const BranchRequestHistoryPage: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error creating tracking timeline:', error);
-      // Fallback to basic timeline
       setTrackingData([{
         id: 'submission',
         action_type: 'submitted',
@@ -298,10 +302,10 @@ const BranchRequestHistoryPage: React.FC = () => {
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = searchTerm === '' ||
-      request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.items.some(item => item.item_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      (request.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.requester_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.items || []).some(item => (item.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = statusFilter === 'all' || request.final_status === statusFilter;
 

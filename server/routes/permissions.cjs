@@ -23,8 +23,9 @@ const requirePermission = (permission) => {
       if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
-      // Check if user has permission in session
-      const isSuperAdmin = req.session.user?.is_super_admin === true;
+      // Check if user is super admin
+      const isSuperAdmin = req.session.user?.is_super_admin === true ||
+        req.session.user?.ims_permissions?.some(p => p.permission_key === 'admin.super');
       if (isSuperAdmin) {
         return next();
       }
@@ -33,8 +34,18 @@ const requirePermission = (permission) => {
       if (hasPermission) {
         return next();
       }
+
       // Fallback to database check
       const pool = getPool();
+      const isDbSuperAdmin = await pool.request()
+        .input('userId', sql.NVarChar(450), req.session.userId)
+        .query('SELECT dbo.fn_IsSuperAdmin(@userId) as is_super_admin');
+      
+      const isSuperVal = isDbSuperAdmin.recordset[0]?.is_super_admin;
+      if (isSuperVal === 1 || isSuperVal === true) {
+        return next();
+      }
+
       const result = await pool.request()
         .input('userId', sql.NVarChar(450), req.session.userId)
         .input('permissionKey', sql.NVarChar(100), permission)
@@ -159,6 +170,7 @@ router.get('/roles', requireAuth, async (req, res) => {
 
     const result = await pool.request().query(`
       SELECT 
+        id,
         id as role_id,
         role_name,
         display_name,
@@ -508,7 +520,21 @@ router.get('/all', requireAuth, async (req, res) => {
         description,
         created_at
       FROM ims_permissions
-      ORDER BY module_name, action_name
+      WHERE is_active = 1
+      ORDER BY 
+        CASE module_name
+          WHEN 'Personal' THEN 1
+          WHEN 'Branch' THEN 2
+          WHEN 'Wing' THEN 3
+          WHEN 'Inventory' THEN 4
+          WHEN 'Procurement' THEN 5
+          WHEN 'Issuance' THEN 6
+          WHEN 'Approvals' THEN 7
+          WHEN 'Metadata' THEN 8
+          WHEN 'Administration' THEN 9
+          ELSE 10
+        END,
+        action_name
     `);
 
     res.json(result.recordset);
@@ -607,10 +633,20 @@ router.get('/users', requireAuth, async (req, res) => {
 router.post('/users/:userId/roles', requireAuth, requirePermission('users.assign_roles'), async (req, res) => {
   try {
     const { userId } = req.params;
-    const { role_id, scope_type, scope_wing_id, notes } = req.body;
+    let { role_id, id, role_name, scope_type, scope_wing_id, notes } = req.body;
+    let targetRoleId = role_id || id;
     const pool = getPool();
 
-    if (!role_id) {
+    if (!targetRoleId && role_name) {
+      const nameCheck = await pool.request()
+        .input('roleName', sql.NVarChar(100), role_name)
+        .query('SELECT id FROM ims_roles WHERE role_name = @roleName OR display_name = @roleName');
+      if (nameCheck.recordset.length > 0) {
+        targetRoleId = nameCheck.recordset[0].id;
+      }
+    }
+
+    if (!targetRoleId) {
       return res.status(400).json({ error: 'Role ID is required' });
     }
 
@@ -625,7 +661,7 @@ router.post('/users/:userId/roles', requireAuth, requirePermission('users.assign
 
     // Check if role exists
     const roleCheck = await pool.request()
-      .input('roleId', sql.UniqueIdentifier, role_id)
+      .input('roleId', sql.UniqueIdentifier, targetRoleId)
       .query('SELECT id, role_name FROM ims_roles WHERE id = @roleId');
 
     if (roleCheck.recordset.length === 0) {
@@ -635,7 +671,7 @@ router.post('/users/:userId/roles', requireAuth, requirePermission('users.assign
     // Check if user already has this role with same scope
     const existingCheck = await pool.request()
       .input('userId', sql.NVarChar(450), userId)
-      .input('roleId', sql.UniqueIdentifier, role_id)
+      .input('roleId', sql.UniqueIdentifier, targetRoleId)
       .input('scopeType', sql.NVarChar(50), scope_type || 'Global')
       .input('scopeWingId', sql.Int, scope_wing_id || null)
       .query(`
@@ -653,14 +689,14 @@ router.post('/users/:userId/roles', requireAuth, requirePermission('users.assign
     // Assign role
     await pool.request()
       .input('userId', sql.NVarChar(450), userId)
-      .input('roleId', sql.UniqueIdentifier, role_id)
+      .input('roleId', sql.UniqueIdentifier, targetRoleId)
       .input('scopeType', sql.NVarChar(50), scope_type || 'Global')
       .input('scopeWingId', sql.Int, scope_wing_id || null)
       .input('assignedBy', sql.NVarChar(450), req.session.userId)
       .input('notes', sql.NVarChar(sql.MAX), notes || null)
       .query(`
-        INSERT INTO ims_user_roles (user_id, role_id, scope_type, scope_wing_id, assigned_by, notes)
-        VALUES (@userId, @roleId, @scopeType, @scopeWingId, @assignedBy, @notes)
+        INSERT INTO ims_user_roles (id, user_id, role_id, scope_type, scope_wing_id, assigned_by, notes)
+        VALUES (NEWID(), @userId, @roleId, @scopeType, @scopeWingId, @assignedBy, @notes)
       `);
 
     res.json({ success: true, message: 'Role assigned successfully' });
@@ -678,27 +714,70 @@ router.delete('/users/:userId/roles/:roleId', requireAuth, requirePermission('us
     const { userId, roleId } = req.params;
     const pool = getPool();
 
-    // Delete the role assignment (roleId could be either the role_id or user_role_id from the ID column)
-    // Try deleting by user_role_id first (if roleId is actually the assignment ID)
-    let result = await pool.request()
-      .input('userRoleId', sql.UniqueIdentifier, roleId)
-      .query(`
-        DELETE FROM ims_user_roles
-        WHERE id = @userRoleId
-      `);
+    let deleted = false;
 
-    // If nothing was deleted, try deleting by role_id and user_id combination
-    if (result.rowsAffected[0] === 0) {
-      result = await pool.request()
+    // Check if 'all' was requested
+    if (roleId.toLowerCase() === 'all') {
+      const resultAll = await pool.request()
         .input('userId', sql.NVarChar(450), userId)
-        .input('roleId', sql.UniqueIdentifier, roleId)
-        .query(`
-          DELETE FROM ims_user_roles
-          WHERE user_id = @userId AND role_id = @roleId
-        `);
+        .query('DELETE FROM ims_user_roles WHERE user_id = @userId');
+      
+      return res.json({ 
+        success: true, 
+        message: `All roles revoked successfully (${resultAll.rowsAffected?.[0] || 0} removed)` 
+      });
     }
 
-    if (result.rowsAffected[0] === 0) {
+    // 1. Try deleting by user_role_id (primary key of ims_user_roles)
+    try {
+      const result1 = await pool.request()
+        .input('userRoleId', sql.UniqueIdentifier, roleId)
+        .query(`
+          DELETE FROM ims_user_roles
+          WHERE id = @userRoleId
+        `);
+      if (result1.rowsAffected && result1.rowsAffected[0] > 0) {
+        deleted = true;
+      }
+    } catch (e) {
+      // If UUID parsing failed on roleId, ignore and try string/role_id query
+    }
+
+    // 2. If nothing was deleted, try deleting by role_id and user_id combination
+    if (!deleted) {
+      try {
+        const result2 = await pool.request()
+          .input('userId', sql.NVarChar(450), userId)
+          .input('roleId', sql.UniqueIdentifier, roleId)
+          .query(`
+            DELETE FROM ims_user_roles
+            WHERE user_id = @userId AND role_id = @roleId
+          `);
+        if (result2.rowsAffected && result2.rowsAffected[0] > 0) {
+          deleted = true;
+        }
+      } catch (e) {
+        // Continue to step 3
+      }
+    }
+
+    // 3. If still not deleted, try matching role_name in case roleId was passed as role_name
+    if (!deleted) {
+      const result3 = await pool.request()
+        .input('userId', sql.NVarChar(450), userId)
+        .input('roleName', sql.NVarChar(100), roleId)
+        .query(`
+          DELETE ur
+          FROM ims_user_roles ur
+          INNER JOIN ims_roles r ON ur.role_id = r.id
+          WHERE ur.user_id = @userId AND (r.role_name = @roleName OR r.display_name = @roleName)
+        `);
+      if (result3.rowsAffected && result3.rowsAffected[0] > 0) {
+        deleted = true;
+      }
+    }
+
+    if (!deleted) {
       return res.status(404).json({ error: 'Role assignment not found' });
     }
 
