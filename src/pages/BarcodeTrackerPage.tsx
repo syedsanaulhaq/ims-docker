@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReportDocumentHeader } from '@/components/common/BarcodeQRVisual';
 
 const API = () => getApiBaseUrl();
 
@@ -305,12 +306,14 @@ const BarcodeTrackerPage: React.FC = () => {
       {/* Main Asset Full Report Card */}
       {data && (
         <div className="space-y-6">
-          {/* Printable Header */}
-          <div className="hidden print:block text-center border-b pb-4 mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Election Commission of Pakistan</h1>
-            <h2 className="text-lg font-semibold text-slate-700">Inventory Management System (IMS)</h2>
-            <h3 className="text-md font-medium text-slate-500 mt-1">PHYSICAL ASSET TRACKING & AUDIT REPORT</h3>
-            <p className="text-xs text-slate-400 mt-1">Generated Date: {new Date().toLocaleString()}</p>
+          {/* Printable Header with Barcode & QR Code */}
+          <div className="hidden print:block mb-6">
+            <ReportDocumentHeader
+              title="PHYSICAL ASSET LIFETIME AUDIT REPORT"
+              docNumber={data.serial_number}
+              poNumber={data.procurement?.po_number}
+              badgeText="VERIFIED PHYSICAL ASSET REPORT"
+            />
           </div>
 
           {/* Asset Main Banner */}

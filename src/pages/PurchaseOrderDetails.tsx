@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, ArrowLeft, Download, Printer, FileText } from 'lucide-react';
 import POFulfillmentTracker from '@/components/po/POFulfillmentTracker';
+import { ReportDocumentHeader } from '@/components/common/BarcodeQRVisual';
 
 interface POItem {
   id: number;
@@ -297,11 +298,18 @@ export default function PurchaseOrderDetails() {
         <div className="px-6 py-8 print:p-0">
           <div className="print-container mx-auto bg-white shadow-lg" style={{ width: '210mm', paddingLeft: '2in', paddingRight: '0.7in', paddingTop: '0.5in', paddingBottom: '0.5in' }}>
             
-            {/* Header Section */}
-            <div className="mb-8">
-              <div className="flex justify-end items-start mb-4">
-                <div className="text-sm font-bold uppercase">
-                  <p className="underline">MOST IMMEDIATE</p>
+            {/* Header Section with Barcode & QR Code */}
+            <ReportDocumentHeader
+              title="PURCHASE & SUPPLY ORDER"
+              docNumber={po.po_number}
+              poNumber={po.po_number}
+              badgeText="OFFICIAL PROCUREMENT ORDER"
+            />
+
+            <div className="mb-6">
+              <div className="flex justify-end items-start mb-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-red-700">
+                  <span className="underline">MOST IMMEDIATE</span>
                 </div>
               </div>
               

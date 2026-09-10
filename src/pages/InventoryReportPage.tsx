@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ErrorState from '@/components/common/ErrorState';
 import { supabase } from '@/integrations/supabase/client';
+import { ReportDocumentHeader, ItemSerialBarcodeTag } from '@/components/common/BarcodeQRVisual';
 
 // Inventory Item interface based on database schema
 interface InventoryItem {
@@ -196,11 +197,13 @@ const InventoryReportPage: React.FC = () => {
       </nav>
 
       <main className="flex-1 p-6 max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Inventory Item Report</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="p-6">
+          <ReportDocumentHeader
+            title="PHYSICAL INVENTORY STOCK REPORT"
+            docNumber={inventoryItem.item_code}
+            badgeText="CENTRAL INVENTORY AUDIT SLIP"
+          />
+          <CardContent className="pt-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <div className="text-xs text-muted-foreground">Item Code</div>
