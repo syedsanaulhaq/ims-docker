@@ -198,11 +198,13 @@ const InventoryReportPage: React.FC = () => {
 
       <main className="flex-1 p-6 max-w-4xl mx-auto">
         <Card className="p-6">
-          <ReportDocumentHeader
-            title="PHYSICAL INVENTORY STOCK REPORT"
-            docNumber={inventoryItem.item_code}
-            badgeText="CENTRAL INVENTORY AUDIT SLIP"
-          />
+          <div className="flex justify-between items-start border-b pb-4 mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Inventory Item Stock Report</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Central Store • Election Commission of Pakistan</p>
+            </div>
+            <ReportDocumentHeader docNumber={inventoryItem.item_code} />
+          </div>
           <CardContent className="pt-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>

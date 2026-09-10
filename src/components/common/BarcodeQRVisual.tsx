@@ -232,66 +232,46 @@ export const QRCodeVisual: React.FC<QRCodeVisualProps> = ({
 };
 
 // ============================================================================
-// 3. Document-Level Official Report Header with Barcode & QR Code
 // ============================================================================
-interface ReportDocumentHeaderProps {
-  title: string;
-  subtitle?: string;
+// 3. Compact Top-Right QR Code Box Component for Reports
+// ============================================================================
+interface TopRightQRCodeProps {
   docNumber?: string;
   poNumber?: string;
+  title?: string;
+  subtitle?: string;
   date?: string;
   badgeText?: string;
+  label?: string;
+  className?: string;
 }
 
-export const ReportDocumentHeader: React.FC<ReportDocumentHeaderProps> = ({
-  title,
-  subtitle = 'Secretariat, Constitution Avenue, G-5/2, Islamabad',
+export const TopRightQRCode: React.FC<TopRightQRCodeProps> = ({
   docNumber,
   poNumber,
-  date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-  badgeText = 'OFFICIAL AUDIT REPORT'
+  label = 'ECP VERIFIED',
+  className = ''
 }) => {
-  const barcodeValue = docNumber || poNumber || 'ECP-IMS-REPORT';
-  const qrUrl = `/dashboard/barcode-tracker?query=${encodeURIComponent(barcodeValue)}`;
+  const code = docNumber || poNumber || '';
+  if (!code) return null;
+  const qrUrl = `/dashboard/barcode-tracker?query=${encodeURIComponent(code)}`;
 
   return (
-    <div className="border-b-2 border-slate-900 pb-4 mb-6 print:mb-4 space-y-4">
-      {/* 1. Full-Width Un-Squeezed Official Government Heading at the Top */}
-      <div className="text-center w-full">
-        <div className="inline-block px-3 py-0.5 bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full mb-1">
-          {badgeText}
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
-          ELECTION COMMISSION OF PAKISTAN
-        </h1>
-        <h2 className="text-sm sm:text-base font-bold text-blue-900 tracking-wide uppercase mt-0.5">
-          {title}
-        </h2>
-        <p className="text-xs text-slate-600 font-medium mt-0.5">{subtitle}</p>
-      </div>
-
-      {/* 2. Neat Barcode & QR Code Verification Box Placed Below Heading */}
-      <div className="flex flex-row items-center justify-between bg-slate-50/80 border border-slate-300 rounded-xl p-3 px-5 shadow-2xs">
-        {/* Left: 2D QR Code + Verification Label */}
-        <div className="flex items-center gap-3">
-          <QRCodeVisual value={qrUrl} size={52} label="SCAN TO VERIFY" />
-          <div className="text-xs font-mono space-y-0.5">
-            <span className="font-extrabold text-slate-900 block text-xs tracking-wider">ECP VERIFIED DOCUMENT</span>
-            <span className="text-slate-500">Doc Ref Code: </span>
-            <span className="font-bold text-blue-900">{barcodeValue}</span>
-          </div>
-        </div>
-
-        {/* Right: 1D CODE128 Barcode + Date */}
-        <div className="flex flex-col items-end justify-center">
-          <BarcodeVisual text={barcodeValue} height={32} barWidth={1.4} showText={true} />
-          <span className="text-[10px] text-slate-500 font-mono mt-0.5">
-            Date: <strong className="text-slate-800">{date}</strong>
-          </span>
+    <div className={`flex justify-end ${className}`}>
+      <div className="inline-flex items-center gap-2.5 bg-white border border-slate-300 p-1.5 px-2.5 rounded-lg shadow-2xs">
+        <QRCodeVisual value={qrUrl} size={48} />
+        <div className="text-[10px] font-mono leading-tight text-left">
+          <span className="font-extrabold text-slate-900 block">{label}</span>
+          <span className="text-slate-500 font-semibold">{code}</span>
         </div>
       </div>
     </div>
   );
+};
+
+// Backward-compatible alias for ReportDocumentHeader -> renders sleek Top-Right QR Code box
+export const ReportDocumentHeader: React.FC<TopRightQRCodeProps> = (props) => {
+  return <TopRightQRCode {...props} className="mb-2" />;
 };
 
 // ============================================================================

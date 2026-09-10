@@ -298,23 +298,22 @@ export default function PurchaseOrderDetails() {
         <div className="px-6 py-8 print:p-0">
           <div className="print-container mx-auto bg-white shadow-lg" style={{ width: '210mm', paddingLeft: '2in', paddingRight: '0.7in', paddingTop: '0.5in', paddingBottom: '0.5in' }}>
             
-            {/* Header Section with Barcode & QR Code */}
-            <ReportDocumentHeader
-              title="PURCHASE & SUPPLY ORDER"
-              docNumber={po.po_number}
-              poNumber={po.po_number}
-              badgeText="OFFICIAL PROCUREMENT ORDER"
-            />
-
             <div className="mb-6">
-              <div className="flex justify-end items-start mb-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-red-700">
-                  <span className="underline">MOST IMMEDIATE</span>
+              <div className="flex justify-between items-start mb-2">
+                <div className="text-sm font-bold">
+                  {po.file_number || ''}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-red-700">
+                    <span className="underline">MOST IMMEDIATE</span>
+                  </div>
+                  {/* Top-Right QR Code Box */}
+                  <ReportDocumentHeader docNumber={po.po_number} />
                 </div>
               </div>
-              
-              <div className="text-center">
-                <p className="text-sm font-bold">{po.file_number || ''}</p>
+
+              <div className="text-center my-4">
+                <h1 className="text-base font-bold uppercase">ELECTION COMMISSION OF PAKISTAN</h1>
               </div>
 
               <div className="flex justify-end mb-6">

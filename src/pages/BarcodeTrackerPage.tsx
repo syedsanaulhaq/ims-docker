@@ -330,17 +330,7 @@ const BarcodeTrackerPage: React.FC = () => {
       {/* =================================================================== */}
       {data && (
         <div className="space-y-6 print:hidden">
-          {/* Prominent On-Screen Scannable Barcode & QR Header */}
-          <Card className="border-blue-200 bg-white p-6 rounded-2xl shadow-sm">
-            <ReportDocumentHeader
-              title="PHYSICAL ASSET LIFETIME AUDIT REPORT"
-              docNumber={data.serial_number}
-              poNumber={data.procurement?.po_number}
-              badgeText="VERIFIED PHYSICAL ASSET REPORT"
-            />
-          </Card>
-
-          {/* Asset Main Banner */}
+          {/* Asset Main Banner with Top-Right QR Code */}
           <Card className="border-slate-200 shadow-md bg-white rounded-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white p-6 sm:p-8">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -605,13 +595,16 @@ const BarcodeTrackerPage: React.FC = () => {
       {data && (
         <div className="hidden formal-print-document print:block bg-white text-black p-4 space-y-6">
           {/* Formal Official Header */}
-          <ReportDocumentHeader
-            title="PHYSICAL ASSET TRACKING & AUDIT SLIP"
-            subtitle="Central Inventory Secretariat • Election Commission of Pakistan"
-            docNumber={data.serial_number}
-            poNumber={data.procurement?.po_number}
-            badgeText="OFFICIAL INVENTORY ASSET SLIP"
-          />
+          <div className="border-b-2 border-black pb-3 mb-4">
+            <div className="flex justify-between items-start">
+              <div className="flex-1 text-center pr-4">
+                <h1 className="text-xl font-black uppercase tracking-tight">ELECTION COMMISSION OF PAKISTAN</h1>
+                <h2 className="text-sm font-bold text-gray-800 uppercase mt-0.5">PHYSICAL ASSET TRACKING & AUDIT SLIP</h2>
+                <p className="text-[11px] text-gray-600">Central Inventory Secretariat • Secretariat, G-5/2, Islamabad</p>
+              </div>
+              <ReportDocumentHeader docNumber={data.serial_number} />
+            </div>
+          </div>
 
           {/* Section 1: Item Technical Specifications */}
           <div className="border border-black p-3 space-y-2">
