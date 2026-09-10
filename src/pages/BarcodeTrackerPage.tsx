@@ -10,27 +10,20 @@ import {
   AlertCircle,
   Package,
   Building,
-  User,
-  Calendar,
-  DollarSign,
-  FileText,
   Printer,
   History,
   Tag,
   Clock,
   ShieldCheck,
-  MapPin,
   Sparkles,
-  ArrowRight,
-  RefreshCw,
   Phone,
-  Mail,
   UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReportDocumentHeader, BarcodeVisual, QRCodeVisual } from '@/components/common/BarcodeQRVisual';
 
 const API = () => getApiBaseUrl();
 
@@ -189,7 +182,37 @@ const BarcodeTrackerPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 space-y-6 print:p-0 print:bg-white">
+    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Dynamic CSS Print Styles for Formal Government A4 Slip */}
+      <style>{`
+        @page {
+          size: A4 portrait;
+          margin: 0.5in;
+        }
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print\\:hidden, aside, header, nav, button {
+            display: none !important;
+          }
+          .formal-print-document {
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+        }
+      `}</style>
+
       {/* Header (Hidden on Print) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
@@ -200,13 +223,13 @@ const BarcodeTrackerPage: React.FC = () => {
             Physical Asset Barcode & QR Tracker
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Scan physical item tags to generate complete procurement, client issuance, & lifetime audit reports
+            Scan physical item tags to inspect complete procurement, client allotment, & lifetime movement history
           </p>
         </div>
 
         {data && (
           <Button onClick={handlePrint} variant="outline" className="bg-white border-slate-300 shadow-sm gap-2">
-            <Printer className="h-4 w-4" /> Print Asset Report
+            <Printer className="h-4 w-4" /> Print Asset Slip
           </Button>
         )}
       </div>
@@ -227,7 +250,7 @@ const BarcodeTrackerPage: React.FC = () => {
                   ref={scannerRef}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Scan item barcode with scanner OR type serial number (e.g. SN-LAPTOP-1001)..."
+                  placeholder="Scan item barcode with scanner OR type serial number (e.g. DELL-LAT-2026-98401)..."
                   className="pl-12 py-6 text-base font-mono bg-white border-slate-300 shadow-inner rounded-xl focus:ring-2 focus:ring-blue-600"
                 />
               </div>
@@ -246,7 +269,7 @@ const BarcodeTrackerPage: React.FC = () => {
               <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
               <span className="font-semibold text-slate-700">Quick Test Barcodes:</span>
               {[
-                { code: 'DELL-LAT-2026-98401', label: 'DELL-LAT-2026-98401 (Issued to Asif Ali Yasin)' },
+                { code: 'DELL-LAT-2026-98401', label: 'DELL-LAT-2026-98401 (Issued)' },
                 { code: 'DELL-LAT-2026-98402', label: 'DELL-LAT-2026-98402 (Issued)' },
                 { code: 'DELL-LAT-2026-98403', label: 'DELL-LAT-2026-98403 (In Store)' },
                 { code: 'HP-PRINTER-2026-33104', label: 'HP-PRINTER-2026-33104 (Issued)' }
@@ -287,7 +310,7 @@ const BarcodeTrackerPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Error Message */}
+      {/* Error Message (Hidden on Print) */}
       {error && (
         <Card className="border-red-200 bg-red-50/60 p-6 rounded-2xl text-red-900 print:hidden">
           <div className="flex items-center gap-3">
@@ -302,16 +325,20 @@ const BarcodeTrackerPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Main Asset Full Report Card */}
+      {/* =================================================================== */}
+      {/* 1. ON-SCREEN VISUAL DASHBOARD VIEW (Visible in UI on Screen) */}
+      {/* =================================================================== */}
       {data && (
-        <div className="space-y-6">
-          {/* Printable Header */}
-          <div className="hidden print:block text-center border-b pb-4 mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Election Commission of Pakistan</h1>
-            <h2 className="text-lg font-semibold text-slate-700">Inventory Management System (IMS)</h2>
-            <h3 className="text-md font-medium text-slate-500 mt-1">PHYSICAL ASSET TRACKING & AUDIT REPORT</h3>
-            <p className="text-xs text-slate-400 mt-1">Generated Date: {new Date().toLocaleString()}</p>
-          </div>
+        <div className="space-y-6 print:hidden">
+          {/* Prominent On-Screen Scannable Barcode & QR Header */}
+          <Card className="border-blue-200 bg-white p-6 rounded-2xl shadow-sm">
+            <ReportDocumentHeader
+              title="PHYSICAL ASSET LIFETIME AUDIT REPORT"
+              docNumber={data.serial_number}
+              poNumber={data.procurement?.po_number}
+              badgeText="VERIFIED PHYSICAL ASSET REPORT"
+            />
+          </Card>
 
           {/* Asset Main Banner */}
           <Card className="border-slate-200 shadow-md bg-white rounded-2xl overflow-hidden">
@@ -350,7 +377,6 @@ const BarcodeTrackerPage: React.FC = () => {
 
           {/* 3 Main Information Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
             {/* 1. Item Specifications Card */}
             <Card className="border-slate-200 shadow-sm bg-white rounded-2xl">
               <CardHeader className="bg-slate-50/70 border-b py-4 px-5">
@@ -520,7 +546,6 @@ const BarcodeTrackerPage: React.FC = () => {
                 {data.timeline.map((event, idx) => {
                   const isAcquired = event.action_type === 'ACQUIRED';
                   const isIssued = event.action_type === 'ISSUED';
-                  const isReturned = event.action_type === 'RETURNED';
 
                   return (
                     <div key={event.id || idx} className="flex gap-4 relative items-start">
@@ -571,6 +596,121 @@ const BarcodeTrackerPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 2. FORMAL GOVERNMENT PRINTABLE AUDIT SLIP (Visible ONLY on Print) */}
+      {/* =================================================================== */}
+      {data && (
+        <div className="hidden formal-print-document print:block bg-white text-black p-4 space-y-6">
+          {/* Formal Official Header */}
+          <ReportDocumentHeader
+            title="PHYSICAL ASSET TRACKING & AUDIT SLIP"
+            subtitle="Central Inventory Secretariat • Election Commission of Pakistan"
+            docNumber={data.serial_number}
+            poNumber={data.procurement?.po_number}
+            badgeText="OFFICIAL INVENTORY ASSET SLIP"
+          />
+
+          {/* Section 1: Item Technical Specifications */}
+          <div className="border border-black p-3 space-y-2">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider border-b border-black pb-1">
+              1. Physical Asset Technical Specifications
+            </h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div><span className="font-bold">Nomenclature:</span> {data.item.nomenclature}</div>
+              <div><span className="font-bold">Serial Number / Barcode:</span> <span className="font-mono font-extrabold">{data.serial_number}</span></div>
+              <div><span className="font-bold">Item Master Code:</span> {data.item.item_code || '-'}</div>
+              <div><span className="font-bold">Category / Subcategory:</span> {data.item.category_name} {data.item.subcategory_name ? `/ ${data.item.subcategory_name}` : ''}</div>
+              <div><span className="font-bold">Manufacturer / Brand:</span> {data.item.manufacturer || '-'}</div>
+              <div><span className="font-bold">Current Asset Status:</span> <strong className="uppercase">{data.status}</strong></div>
+              <div className="col-span-2"><span className="font-bold">Technical Specifications:</span> {data.item.specifications || 'Standard Catalog Specifications'}</div>
+            </div>
+          </div>
+
+          {/* Section 2: Procurement & Supplier Records */}
+          <div className="border border-black p-3 space-y-2">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider border-b border-black pb-1">
+              2. Procurement & Supplier Records
+            </h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div><span className="font-bold">Purchase Order #:</span> {data.procurement.po_number || '-'}</div>
+              <div><span className="font-bold">Delivery Chalan #:</span> {data.procurement.delivery_number || '-'}</div>
+              <div><span className="font-bold">Delivery Date:</span> {data.procurement.delivery_date ? new Date(data.procurement.delivery_date).toLocaleDateString('en-GB') : '-'}</div>
+              <div><span className="font-bold">Unit Price:</span> {data.procurement.unit_price ? `PKR ${Number(data.procurement.unit_price).toLocaleString()}` : '-'}</div>
+              <div><span className="font-bold">Supplier / Vendor Name:</span> {data.procurement.vendor_name || '-'}</div>
+              <div><span className="font-bold">Vendor Contact Person / Phone:</span> {data.procurement.vendor_contact_person || '-'} {data.procurement.vendor_phone ? `(${data.procurement.vendor_phone})` : ''}</div>
+            </div>
+          </div>
+
+          {/* Section 3: Current Recipient Allotment Record */}
+          <div className="border border-black p-3 space-y-2">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider border-b border-black pb-1">
+              3. Current Client / Staff Allotment Record
+            </h3>
+            {data.assignment ? (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                <div><span className="font-bold">Allotted Staff / Client Name:</span> <strong>{data.assignment.recipient_name}</strong></div>
+                <div><span className="font-bold">Designation:</span> {data.assignment.recipient_designation || '-'}</div>
+                <div><span className="font-bold">Wing / Office:</span> {data.assignment.wing_name || '-'} {data.assignment.office_name ? `/ ${data.assignment.office_name}` : ''}</div>
+                <div><span className="font-bold">Issuance Request #:</span> {data.assignment.request_number || '-'}</div>
+                <div><span className="font-bold">Date Issued:</span> {data.assignment.issued_at ? new Date(data.assignment.issued_at).toLocaleDateString('en-GB') : '-'}</div>
+                <div className="col-span-2"><span className="font-bold">Issuance Purpose:</span> {data.assignment.issuance_purpose || '-'}</div>
+              </div>
+            ) : (
+              <p className="text-xs italic text-gray-700">This physical item is currently stored in Central Store and has not been issued to any client/employee.</p>
+            )}
+          </div>
+
+          {/* Section 4: Lifetime Movement History Table */}
+          <div className="border border-black p-3 space-y-2">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider border-b border-black pb-1">
+              4. Complete Lifetime Movement History Audit Log
+            </h3>
+            <table className="w-full text-xs border border-black border-collapse">
+              <thead>
+                <tr className="bg-gray-100 border-b border-black">
+                  <th className="border-r border-black p-1 text-center w-8">#</th>
+                  <th className="border-r border-black p-1 text-left">Action</th>
+                  <th className="border-r border-black p-1 text-left">Date & Time</th>
+                  <th className="border-r border-black p-1 text-left">Reference #</th>
+                  <th className="border-r border-black p-1 text-left">Processed By</th>
+                  <th className="border-r border-black p-1 text-left">Recipient / Location</th>
+                  <th className="p-1 text-left">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.timeline.map((event, idx) => (
+                  <tr key={event.id || idx} className="border-b border-black/40">
+                    <td className="border-r border-black p-1 text-center font-bold">{idx + 1}</td>
+                    <td className="border-r border-black p-1 font-bold">{event.action_type}</td>
+                    <td className="border-r border-black p-1 font-mono">{event.created_at ? new Date(event.created_at).toLocaleDateString('en-GB') : '-'}</td>
+                    <td className="border-r border-black p-1 font-mono">{event.reference_id || '-'}</td>
+                    <td className="border-r border-black p-1">{event.actor_name || '-'}</td>
+                    <td className="border-r border-black p-1">{event.recipient_name || 'Central Store'}</td>
+                    <td className="p-1 text-gray-700">{event.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Section 5: Official Signatures & Verification Stamp */}
+          <div className="pt-8 grid grid-cols-3 gap-6 text-center text-xs">
+            <div>
+              <div className="border-t border-black pt-1 font-bold">Storekeeper / Prepared By</div>
+              <p className="text-[10px] text-gray-600">Signature & Official Stamp</p>
+            </div>
+            <div>
+              <div className="border-t border-black pt-1 font-bold">Admin / IT Officer Verified</div>
+              <p className="text-[10px] text-gray-600">Signature & Date</p>
+            </div>
+            <div>
+              <div className="border-t border-black pt-1 font-bold">Recipient Client Signature</div>
+              <p className="text-[10px] text-gray-600">Acknowledgment Signature</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

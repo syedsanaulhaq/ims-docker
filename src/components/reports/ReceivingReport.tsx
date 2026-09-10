@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Printer, X } from 'lucide-react';
+import { ReportDocumentHeader, ItemSerialBarcodeTag } from '@/components/common/BarcodeQRVisual';
 
 interface POItem {
   id: number;
@@ -275,17 +276,18 @@ export default function ReceivingReport({ po, onClose }: ReceivingReportProps) {
           {/* Report Content */}
           <div className="receiving-report-container p-8">
             
-            {/* Header Section */}
-            <div className="mb-8">
-              <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold uppercase">RECEIVING REPORT</h1>
-                <h2 className="text-lg font-bold uppercase mt-2">ELECTION COMMISSION OF PAKISTAN</h2>
-                <p className="text-sm mt-1">Secretariat, Constitution Avenue, G-5/2, Islamabad</p>
-              </div>
+            {/* Header Section with Barcode & QR Code */}
+            <div className="mb-6">
+              <ReportDocumentHeader
+                title="RECEIVING & DELIVERY ACQUISITION REPORT"
+                docNumber={deliveries[0]?.delivery_number || po.po_number}
+                poNumber={po.po_number}
+                badgeText="STORES RECEIVING AUDIT REPORT"
+              />
 
-              <div className="grid grid-cols-2 gap-4 mb-6 border border-slate-300 p-4 rounded">
+              <div className="grid grid-cols-2 gap-4 mb-6 border border-slate-300 p-4 rounded bg-slate-50/50">
                 <div>
-                  <p className="text-sm"><strong>Purchase Order Number:</strong> {po.po_number}</p>
+                  <p className="text-sm"><strong>Purchase Order Number:</strong> <span className="font-mono font-bold text-blue-900">{po.po_number}</span></p>
                   <p className="text-sm"><strong>PO Date:</strong> {new Date(po.po_date).toLocaleDateString('en-GB')}</p>
                   <p className="text-sm"><strong>Tender:</strong> {po.tender_title}</p>
                   <p className="text-sm"><strong>Tender Type:</strong> {po.tender_type.replace('-', ' ').toUpperCase()}</p>
@@ -419,15 +421,13 @@ export default function ReceivingReport({ po, onClose }: ReceivingReportProps) {
                             <div key={itemId} className="bg-white rounded p-3 border border-blue-200">
                               <p className="font-medium text-sm text-gray-900 mb-1">{firstSerial.item_name}</p>
                               <p className="text-xs text-gray-500 mb-2">Code: {firstSerial.item_code}</p>
-                              <div className="flex flex-wrap gap-1">
-                                {itemSerials.map((sn, idx) => (
-                                  <span 
-                                    key={sn.id} 
-                                    className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono"
-                                    title={sn.notes || ''}
-                                  >
-                                    {sn.serial_number}
-                                  </span>
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                {itemSerials.map((sn) => (
+                                  <ItemSerialBarcodeTag
+                                    key={sn.id}
+                                    serialNumber={sn.serial_number}
+                                    itemCode={sn.item_code}
+                                  />
                                 ))}
                               </div>
                               <p className="text-xs text-gray-600 mt-1">{itemSerials.length} serial number(s)</p>

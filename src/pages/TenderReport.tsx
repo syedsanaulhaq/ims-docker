@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, FileText, Building, Users, Calendar, Package } from 'lucide-react';
 import { useOfficeHierarchy } from '@/hooks/useOfficeHierarchy';
 import { createNameResolver } from '@/utils/nameResolver';
+import { ReportDocumentHeader } from '@/components/common/BarcodeQRVisual';
 
 interface TenderItem {
   id: string;
@@ -240,15 +241,12 @@ const TenderReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Title Section */}
-      <div className="text-center border-b pb-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {tenderData.title || 'Tender Report'}
-        </h1>
-        <p className="text-gray-600">
-          Reference: {tenderData.reference_number || tenderData.tender_number || 'N/A'}
-        </p>
-      </div>
+      {/* Official Header Section with Barcode & QR Code */}
+      <ReportDocumentHeader
+        title={`TENDER REPORT: ${tenderData.title || 'ANNUAL PROCUREMENT TENDER'}`}
+        docNumber={tenderData.reference_number || tenderData.tender_number || 'TND-2026-REPORT'}
+        badgeText="TENDER PROCUREMENT AUDIT REPORT"
+      />
 
       {/* Basic Information */}
       <Card>
