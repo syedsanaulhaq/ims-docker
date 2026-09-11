@@ -1,5 +1,18 @@
 import { getApiBaseUrl } from './invmisApi';
 
+export interface DirectIssuanceChildItem {
+  id: string;
+  direct_issuance_id: string;
+  item_master_id: string;
+  quantity_issued: number;
+  item_status: 'pending' | 'received';
+  nomenclature?: string;
+  item_code?: string;
+  group_number?: number | null;
+  unit?: string;
+  category_name?: string;
+}
+
 export interface DirectIssuanceItem {
   id: string;
   issuance_number: string;
@@ -7,11 +20,14 @@ export interface DirectIssuanceItem {
   recipient_user_id?: string | null;
   recipient_branch_id?: string | null;
   recipient_wing_id?: number | null;
-  item_master_id: string;
+  item_master_id?: string | null;
   item_nomenclature?: string;
   item_unit?: string;
   item_group_number?: number;
-  quantity_issued: number;
+  quantity_issued?: number;
+  items_count?: number;
+  total_quantity_issued?: number;
+  items?: DirectIssuanceChildItem[];
   source_store_type: string;
   source_wing_id?: number | null;
   source_branch_id?: string | null;
@@ -60,9 +76,15 @@ export interface EmployeeUser {
   Role?: string | null;
 }
 
-export interface CreateDirectIssuancePayload {
+export interface DirectIssuancePayloadItem {
   item_master_id: string;
   quantity_issued: number;
+}
+
+export interface CreateDirectIssuancePayload {
+  items?: DirectIssuancePayloadItem[];
+  item_master_id?: string;
+  quantity_issued?: number;
   to_whom_issued_name: string;
   received_by_name: string;
   recipient_user_id?: string;

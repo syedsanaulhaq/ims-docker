@@ -1,7 +1,7 @@
 // ============================================================================
-// Direct / Without-Requisition Stock Issuance Routes
+// Direct / Without-Requisition Stock Issuance Routes (Multi-Item Supported)
 // ============================================================================
-// On-the-spot direct issuance to employees/officers with stock deduction,
+// On-the-spot multi-item direct issuance to employees/officers with stock deduction,
 // receiving slip tracking (Red/Green), and DD/DG reminder notifications.
 
 const express = require('express');
@@ -50,8 +50,8 @@ async function ensureTables(pool) {
         recipient_user_id NVARCHAR(450) NULL,
         recipient_branch_id NVARCHAR(100) NULL,
         recipient_wing_id INT NULL,
-        item_master_id UNIQUEIDENTIFIER NOT NULL,
-        quantity_issued INT NOT NULL CHECK (quantity_issued > 0),
+        item_master_id UNIQUEIDENTIFIER NULL,
+        quantity_issued INT NULL,
         source_store_type NVARCHAR(50) NOT NULL DEFAULT 'admin',
         source_wing_id INT NULL,
         source_branch_id NVARCHAR(100) NULL,
@@ -70,7 +70,33 @@ async function ensureTables(pool) {
         created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
         updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
       );
-    END
+    END;
+
+    -- Make legacy columns nullable if they were created NOT NULL previously
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('direct_stock_issuances') AND name = 'item_master_id' AND is_nullable = 0)
+    BEGIN
+      ALTER TABLE direct_stock_issuances ALTER COLUMN item_master_id UNIQUEIDENTIFIER NULL;
+    END;
+
+    IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('direct_stock_issuances') AND name = 'quantity_issued' AND is_nullable = 0)
+    BEGIN
+      ALTER TABLE direct_stock_issuances ALTER COLUMN quantity_issued INT NULL;
+    END;
+
+    -- Multi-item child table
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'direct_stock_issuance_items')
+    BEGIN
+      CREATE TABLE direct_stock_issuance_items (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        direct_issuance_id UNIQUEIDENTIFIER NOT NULL,
+        item_master_id UNIQUEIDENTIFIER NOT NULL,
+        quantity_issued INT NOT NULL CHECK (quantity_issued > 0),
+        item_status NVARCHAR(50) NOT NULL DEFAULT 'pending',
+        notes NVARCHAR(MAX) NULL,
+        created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+        updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
+      );
+    END;
   `);
 
   tablesEnsured = true;
@@ -183,7 +209,7 @@ router.get('/users', requireAuth, async (req, res) => {
 });
 
 // ============================================================================
-// GET /api/direct-issuance - List direct issuances with filtering & search
+// GET /api/direct-issuance - List direct issuances with aggregated multi-items
 // ============================================================================
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -195,12 +221,21 @@ router.get('/', requireAuth, async (req, res) => {
     let query = `
       SELECT 
         dsi.*,
-        COALESCE(im.nomenclature, 'Unknown Item') AS item_nomenclature,
+        COALESCE(im.nomenclature, 'Multi-Item Issuance') AS item_nomenclature,
         COALESCE(im.unit, 'units') AS item_unit,
         im.group_number AS item_group_number,
         COALESCE(c.category_name, 'General') AS category_name,
         COALESCE(u_issued.FullName, u_issued.UserName, dsi.issued_by_name, 'Storekeeper') AS issuer_full_name,
-        COALESCE(u_rec.FullName, u_rec.UserName, dsi.to_whom_issued_name) AS recipient_full_name
+        COALESCE(u_rec.FullName, u_rec.UserName, dsi.to_whom_issued_name) AS recipient_full_name,
+        COALESCE(
+          (SELECT COUNT(*) FROM direct_stock_issuance_items dsii WHERE dsii.direct_issuance_id = dsi.id),
+          CASE WHEN dsi.quantity_issued IS NOT NULL THEN 1 ELSE 0 END
+        ) AS items_count,
+        COALESCE(
+          (SELECT SUM(dsii.quantity_issued) FROM direct_stock_issuance_items dsii WHERE dsii.direct_issuance_id = dsi.id),
+          dsi.quantity_issued,
+          0
+        ) AS total_quantity_issued
       FROM direct_stock_issuances dsi
       LEFT JOIN item_masters im ON im.id = dsi.item_master_id
       LEFT JOIN categories c ON c.id = im.category_id
@@ -223,7 +258,13 @@ router.get('/', requireAuth, async (req, res) => {
         dsi.to_whom_issued_name LIKE @search OR
         dsi.received_by_name LIKE @search OR
         im.nomenclature LIKE @search OR
-        im.item_code LIKE @search
+        im.item_code LIKE @search OR
+        EXISTS (
+          SELECT 1 FROM direct_stock_issuance_items dsii2
+          JOIN item_masters im2 ON im2.id = dsii2.item_master_id
+          WHERE dsii2.direct_issuance_id = dsi.id
+            AND (im2.nomenclature LIKE @search OR im2.item_code LIKE @search)
+        )
       )`;
     }
 
@@ -240,11 +281,58 @@ router.get('/', requireAuth, async (req, res) => {
     query += ` ORDER BY dsi.issuance_date DESC`;
 
     const result = await request.query(query);
+    const issuances = result.recordset;
+
+    // Fetch items for each issuance
+    if (issuances.length > 0) {
+      const ids = issuances.map(i => `'${i.id}'`).join(',');
+      const itemsRes = await pool.request().query(`
+        SELECT 
+          dsii.id,
+          dsii.direct_issuance_id,
+          dsii.item_master_id,
+          dsii.quantity_issued,
+          dsii.item_status,
+          im.nomenclature,
+          im.item_code,
+          im.group_number,
+          im.unit,
+          c.category_name
+        FROM direct_stock_issuance_items dsii
+        JOIN item_masters im ON im.id = dsii.item_master_id
+        LEFT JOIN categories c ON c.id = im.category_id
+        WHERE dsii.direct_issuance_id IN (${ids})
+        ORDER BY dsii.created_at ASC
+      `);
+
+      const itemsByIssuance = {};
+      itemsRes.recordset.forEach(item => {
+        if (!itemsByIssuance[item.direct_issuance_id]) {
+          itemsByIssuance[item.direct_issuance_id] = [];
+        }
+        itemsByIssuance[item.direct_issuance_id].push(item);
+      });
+
+      issuances.forEach(iss => {
+        iss.items = itemsByIssuance[iss.id] || (iss.item_master_id ? [{
+          id: iss.id,
+          direct_issuance_id: iss.id,
+          item_master_id: iss.item_master_id,
+          nomenclature: iss.item_nomenclature,
+          item_code: iss.item_code,
+          group_number: iss.item_group_number,
+          category_name: iss.category_name,
+          unit: iss.item_unit,
+          quantity_issued: iss.quantity_issued,
+          item_status: iss.slip_status === 'slip_received' ? 'received' : 'pending'
+        }] : []);
+      });
+    }
 
     res.json({
       success: true,
-      count: result.recordset.length,
-      data: result.recordset
+      count: issuances.length,
+      data: issuances
     });
   } catch (error) {
     console.error('❌ Error listing direct issuances:', error);
@@ -253,8 +341,70 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // ============================================================================
-// POST /api/direct-issuance - Create Direct ("Without-Requisition") Issuance
-// Instantly deducts inventory stock and logs transaction audit record.
+// GET /api/direct-issuance/:id - Get Single Direct Issuance with all items
+// ============================================================================
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const pool = getPool();
+    await ensureTables(pool);
+
+    const { id } = req.params;
+
+    const issRes = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .query(`
+        SELECT 
+          dsi.*,
+          COALESCE(u_issued.FullName, u_issued.UserName, dsi.issued_by_name, 'Storekeeper') AS issuer_full_name,
+          COALESCE(u_rec.FullName, u_rec.UserName, dsi.to_whom_issued_name) AS recipient_full_name
+        FROM direct_stock_issuances dsi
+        LEFT JOIN AspNetUsers u_issued ON u_issued.Id = dsi.issued_by_user_id
+        LEFT JOIN AspNetUsers u_rec ON u_rec.Id = dsi.recipient_user_id
+        WHERE dsi.id = @id
+      `);
+
+    if (!issRes.recordset || issRes.recordset.length === 0) {
+      return res.status(404).json({ success: false, error: 'Direct issuance record not found' });
+    }
+
+    const issuance = issRes.recordset[0];
+
+    const itemsRes = await pool.request()
+      .input('directIssuanceId', sql.UniqueIdentifier, id)
+      .query(`
+        SELECT 
+          dsii.id,
+          dsii.direct_issuance_id,
+          dsii.item_master_id,
+          dsii.quantity_issued,
+          dsii.item_status,
+          im.nomenclature,
+          im.item_code,
+          im.group_number,
+          im.unit,
+          c.category_name
+        FROM direct_stock_issuance_items dsii
+        JOIN item_masters im ON im.id = dsii.item_master_id
+        LEFT JOIN categories c ON c.id = im.category_id
+        WHERE dsii.direct_issuance_id = @directIssuanceId
+        ORDER BY dsii.created_at ASC
+      `);
+
+    issuance.items = itemsRes.recordset;
+
+    res.json({
+      success: true,
+      data: issuance
+    });
+  } catch (error) {
+    console.error('❌ Error fetching direct issuance by ID:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch direct issuance detail', details: error.message });
+  }
+});
+
+// ============================================================================
+// POST /api/direct-issuance - Create Multi-Item Direct ("Without-Requisition") Issuance
+// Instantly deducts inventory stock and logs transaction audit records for each item.
 // ============================================================================
 router.post('/', requireAuth, async (req, res) => {
   try {
@@ -262,8 +412,9 @@ router.post('/', requireAuth, async (req, res) => {
     await ensureTables(pool);
 
     const {
-      item_master_id,
-      quantity_issued,
+      items, // Array of { item_master_id, quantity_issued }
+      item_master_id, // Backward compatibility for single item
+      quantity_issued, // Backward compatibility
       to_whom_issued_name,
       received_by_name,
       recipient_user_id,
@@ -277,72 +428,30 @@ router.post('/', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const userName = req.session.user?.FullName || req.session.user?.user_name || 'Storekeeper';
 
-    if (!item_master_id || !quantity_issued || Number(quantity_issued) <= 0 || !to_whom_issued_name || !received_by_name) {
-      return res.status(400).json({ success: false, error: 'Missing required issuance fields' });
+    // Normalize items array
+    let itemsToProcess = [];
+    if (Array.isArray(items) && items.length > 0) {
+      itemsToProcess = items.filter(i => i.item_master_id && Number(i.quantity_issued) > 0);
+    } else if (item_master_id && Number(quantity_issued) > 0) {
+      itemsToProcess = [{ item_master_id, quantity_issued: Number(quantity_issued) }];
     }
 
-    const qty = Number(quantity_issued);
+    if (itemsToProcess.length === 0) {
+      return res.status(400).json({ success: false, error: 'At least one item with valid quantity is required' });
+    }
+
+    if (!to_whom_issued_name || !received_by_name) {
+      return res.status(400).json({ success: false, error: 'Recipient name and Received By are required' });
+    }
+
+    const totalQty = itemsToProcess.reduce((sum, item) => sum + Number(item.quantity_issued), 0);
+    const primaryItem = itemsToProcess[0];
+
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
-      // 1. Verify item exists
-      const itemCheck = await transaction.request()
-        .input('itemMasterId', sql.UniqueIdentifier, item_master_id)
-        .query(`SELECT id, nomenclature, item_code, group_number FROM item_masters WHERE id = @itemMasterId`);
-
-      if (!itemCheck.recordset || itemCheck.recordset.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json({ success: false, error: 'Item not found in master catalog' });
-      }
-
-      // 2. Deduct from stock_admin if table exists
-      try {
-        await transaction.request()
-          .input('itemMasterId', sql.UniqueIdentifier, item_master_id)
-          .input('qty', sql.Int, qty)
-          .input('userId', sql.NVarChar(450), userId)
-          .query(`
-            IF EXISTS (SELECT 1 FROM stock_admin WHERE item_master_id = @itemMasterId)
-            BEGIN
-              UPDATE stock_admin
-              SET available_quantity = available_quantity - @qty,
-                  current_quantity = current_quantity - @qty,
-                  updated_at = GETDATE(),
-                  updated_by = @userId
-              WHERE item_master_id = @itemMasterId;
-            END
-            ELSE
-            BEGIN
-              INSERT INTO stock_admin (item_master_id, current_quantity, available_quantity, reserved_quantity, created_at, updated_at)
-              VALUES (@itemMasterId, 0 - @qty, 0 - @qty, 0, GETDATE(), GETDATE());
-            END
-          `);
-      } catch (stockAdminErr) {
-        console.warn('⚠️ stock_admin update skipped:', stockAdminErr.message);
-      }
-
-      // 3. Deduct from stock_acquisitions if present
-      try {
-        await transaction.request()
-          .input('itemMasterId', sql.UniqueIdentifier, item_master_id)
-          .input('qty', sql.Int, qty)
-          .query(`
-            WITH cte AS (
-              SELECT TOP (1) quantity_available
-              FROM stock_acquisitions
-              WHERE item_master_id = @itemMasterId
-                AND (is_deleted = 0 OR is_deleted IS NULL)
-                AND quantity_available >= @qty
-              ORDER BY created_at ASC
-            )
-            UPDATE cte SET quantity_available = quantity_available - @qty;
-          `);
-      } catch (acqErr) {
-        console.warn('⚠️ stock_acquisitions deduction skipped:', acqErr.message);
-      }
-
-      // 4. Generate issuance number
+      // 1. Generate unique issuance number
       const issNumRes = await transaction.request().query(`
         SELECT COUNT(*) AS total FROM direct_stock_issuances
       `);
@@ -350,15 +459,15 @@ router.post('/', requireAuth, async (req, res) => {
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const issuanceNumber = `DIR-ISS-${dateStr}-${String(count).padStart(4, '0')}`;
 
-      // 5. Create direct_stock_issuances record
+      // 2. Insert master direct_stock_issuances record
       const insertRes = await transaction.request()
         .input('issuanceNumber', sql.NVarChar(100), issuanceNumber)
         .input('toWhom', sql.NVarChar(250), to_whom_issued_name)
         .input('recUserId', sql.NVarChar(450), recipient_user_id || null)
         .input('recBranchId', sql.NVarChar(100), recipient_branch_id ? String(recipient_branch_id) : null)
         .input('recWingId', sql.Int, recipient_wing_id || null)
-        .input('itemMasterId', sql.UniqueIdentifier, item_master_id)
-        .input('qty', sql.Int, qty)
+        .input('primaryItemMasterId', sql.UniqueIdentifier, primaryItem.item_master_id)
+        .input('totalQty', sql.Int, totalQty)
         .input('sourceStore', sql.NVarChar(50), source_store_type)
         .input('srcWingId', sql.Int, source_wing_id || null)
         .input('receivedBy', sql.NVarChar(250), received_by_name)
@@ -374,51 +483,115 @@ router.post('/', requireAuth, async (req, res) => {
           OUTPUT INSERTED.*
           VALUES (
             @issuanceNumber, @toWhom, @recUserId, @recBranchId, @recWingId,
-            @itemMasterId, @qty, @sourceStore, @srcWingId, @receivedBy,
+            @primaryItemMasterId, @totalQty, @sourceStore, @srcWingId, @receivedBy,
             @issuedByUserId, @issuedByName, GETDATE(), 'slip_not_received', @notes
           )
         `);
 
       const createdIssuance = insertRes.recordset[0];
 
-      // 6. Create stock transaction audit trail
-      try {
+      // 3. Process each item: insert child record & deduct physical stock
+      for (const it of itemsToProcess) {
+        const itemQty = Number(it.quantity_issued);
+
+        // Insert item record into direct_stock_issuance_items
         await transaction.request()
-          .input('itemMasterId', sql.UniqueIdentifier, item_master_id)
-          .input('qty', sql.Decimal(18, 2), qty)
-          .input('refId', sql.UniqueIdentifier, createdIssuance.id)
-          .input('refNum', sql.NVarChar(100), issuanceNumber)
-          .input('createdBy', sql.UniqueIdentifier, userId)
+          .input('directIssuanceId', sql.UniqueIdentifier, createdIssuance.id)
+          .input('itemMasterId', sql.UniqueIdentifier, it.item_master_id)
+          .input('qty', sql.Int, itemQty)
           .query(`
-            INSERT INTO stock_transactions (
-              id, transaction_number, item_master_id, transaction_type, quantity,
-              unit_price, total_value, reference_type, reference_id, reference_number,
-              transaction_date, created_by, status, created_at
+            INSERT INTO direct_stock_issuance_items (
+              direct_issuance_id, item_master_id, quantity_issued, item_status, created_at, updated_at
             ) VALUES (
-              NEWID(),
-              'TXN-DIR-' + FORMAT(GETDATE(), 'yyyyMMdd-HHmmss'),
-              @itemMasterId,
-              'ISSUANCE',
-              @qty,
-              0, 0,
-              'direct_stock_issuance',
-              @refId,
-              @refNum,
-              GETDATE(),
-              @createdBy,
-              'completed',
-              GETDATE()
+              @directIssuanceId, @itemMasterId, @qty, 'pending', GETDATE(), GETDATE()
             )
           `);
-      } catch (txnErr) {
-        console.warn('⚠️ stock_transactions audit log skipped:', txnErr.message);
+
+        // Deduct from stock_admin
+        try {
+          await transaction.request()
+            .input('itemMasterId', sql.UniqueIdentifier, it.item_master_id)
+            .input('qty', sql.Int, itemQty)
+            .input('userId', sql.NVarChar(450), userId)
+            .query(`
+              IF EXISTS (SELECT 1 FROM stock_admin WHERE item_master_id = @itemMasterId)
+              BEGIN
+                UPDATE stock_admin
+                SET available_quantity = available_quantity - @qty,
+                    current_quantity = current_quantity - @qty,
+                    updated_at = GETDATE(),
+                    updated_by = @userId
+                WHERE item_master_id = @itemMasterId;
+              END
+              ELSE
+              BEGIN
+                INSERT INTO stock_admin (item_master_id, current_quantity, available_quantity, reserved_quantity, created_at, updated_at)
+                VALUES (@itemMasterId, 0 - @qty, 0 - @qty, 0, GETDATE(), GETDATE());
+              END
+            `);
+        } catch (stockAdminErr) {
+          console.warn('⚠️ stock_admin deduction warning:', stockAdminErr.message);
+        }
+
+        // Deduct from stock_acquisitions (FIFO)
+        try {
+          await transaction.request()
+            .input('itemMasterId', sql.UniqueIdentifier, it.item_master_id)
+            .input('qty', sql.Int, itemQty)
+            .query(`
+              WITH cte AS (
+                SELECT TOP (1) quantity_available
+                FROM stock_acquisitions
+                WHERE item_master_id = @itemMasterId
+                  AND (is_deleted = 0 OR is_deleted IS NULL)
+                  AND quantity_available >= @qty
+                ORDER BY created_at ASC
+              )
+              UPDATE cte SET quantity_available = quantity_available - @qty;
+            `);
+        } catch (acqErr) {
+          console.warn('⚠️ stock_acquisitions deduction warning:', acqErr.message);
+        }
+
+        // Create transaction audit trail
+        try {
+          await transaction.request()
+            .input('itemMasterId', sql.UniqueIdentifier, it.item_master_id)
+            .input('qty', sql.Decimal(18, 2), itemQty)
+            .input('refId', sql.UniqueIdentifier, createdIssuance.id)
+            .input('refNum', sql.NVarChar(100), issuanceNumber)
+            .input('createdBy', sql.UniqueIdentifier, userId)
+            .query(`
+              INSERT INTO stock_transactions (
+                id, transaction_number, item_master_id, transaction_type, quantity,
+                unit_price, total_value, reference_type, reference_id, reference_number,
+                transaction_date, created_by, status, created_at
+              ) VALUES (
+                NEWID(),
+                'TXN-DIR-' + FORMAT(GETDATE(), 'yyyyMMdd-HHmmss') + '-' + SUBSTRING(CAST(NEWID() AS VARCHAR(36)), 1, 4),
+                @itemMasterId,
+                'ISSUANCE',
+                @qty,
+                0, 0,
+                'direct_stock_issuance',
+                @refId,
+                @refNum,
+                GETDATE(),
+                @createdBy,
+                'completed',
+                GETDATE()
+              )
+            `);
+        } catch (txnErr) {
+          console.warn('⚠️ stock_transactions audit log warning:', txnErr.message);
+        }
       }
 
       await transaction.commit();
 
       res.json({
         success: true,
-        message: `Direct issuance ${issuanceNumber} recorded successfully!`,
+        message: `Direct issuance ${issuanceNumber} (${itemsToProcess.length} items, total ${totalQty} units) recorded successfully!`,
         data: createdIssuance
       });
     } catch (err) {
@@ -461,7 +634,12 @@ router.post('/:id/upload-slip', requireAuth, upload.single('slip_proof'), async 
             slip_received_by = @userId,
             updated_at = GETDATE()
         OUTPUT INSERTED.*
-        WHERE id = @id
+        WHERE id = @id;
+
+        UPDATE direct_stock_issuance_items
+        SET item_status = 'received',
+            updated_at = GETDATE()
+        WHERE direct_issuance_id = @id;
       `);
 
     if (!updateRes.recordset || updateRes.recordset.length === 0) {
@@ -481,7 +659,6 @@ router.post('/:id/upload-slip', requireAuth, upload.single('slip_proof'), async 
 
 // ============================================================================
 // POST /api/direct-issuance/:id/send-reminder - Trigger DD / DG Reminder
-// Sends reminder for pending physical receiving slips
 // ============================================================================
 router.post('/:id/send-reminder', requireAuth, async (req, res) => {
   try {
