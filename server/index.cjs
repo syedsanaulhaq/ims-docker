@@ -78,6 +78,7 @@ const requiredItemsRoutes = require('./routes/requiredItems.cjs');
 const wingInventoryRoutes = require('./routes/wingInventory.cjs');
 const branchInventoryRoutes = require('./routes/branchInventory.cjs');
 const barcodeTrackerRoutes = require('./routes/barcodeTracker.cjs');
+const directIssuanceRoutes = require('./routes/directIssuance.cjs');
 
 app.use('/api/auth', authRoutes);
 app.use('/api', authRoutes); // Legacy mount for /api/session and /api/sso-login
@@ -101,6 +102,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/inventory-stock', inventoryRoutes); // Alias for legacy frontend calls
 app.use('/inventory', inventoryRoutes); // Alias for frontend calls without /api prefix
 app.use('/api/stock-issuance', stockIssuanceRoutes);
+app.use('/api/direct-issuance', directIssuanceRoutes);
 app.use('/api/stock-acquisitions', stockAcquisitionsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api', utilsRoutes); // Single mount point for all utility routes
