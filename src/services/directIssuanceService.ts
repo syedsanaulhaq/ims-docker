@@ -20,6 +20,7 @@ export interface DirectIssuanceItem {
   issued_by_name?: string | null;
   issuer_full_name?: string | null;
   recipient_full_name?: string | null;
+  category_name?: string | null;
   issuance_date: string;
   slip_status: 'slip_not_received' | 'slip_received';
   slip_proof_url?: string | null;
@@ -31,6 +32,32 @@ export interface DirectIssuanceItem {
   notes?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CatalogItem {
+  id: string;
+  item_code: string;
+  nomenclature: string;
+  group_number: number | null;
+  unit: string;
+  category_id: string;
+  category_name: string;
+  available_quantity: number;
+}
+
+export interface EmployeeUser {
+  Id: string;
+  FullName: string;
+  UserName: string;
+  CNIC: string;
+  Email?: string | null;
+  DesignationName?: string | null;
+  WingName?: string | null;
+  DECName?: string | null;
+  OfficeName?: string | null;
+  wing_id?: number | null;
+  branch_id?: string | number | null;
+  Role?: string | null;
 }
 
 export interface CreateDirectIssuancePayload {
@@ -66,6 +93,26 @@ export const directIssuanceService = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to fetch direct issuances');
+    }
+    return res.json();
+  },
+
+  async getItemsCatalog(): Promise<{ success: boolean; data: CatalogItem[]; count: number }> {
+    const url = `${API_BASE()}/direct-issuance/items`;
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch items catalog');
+    }
+    return res.json();
+  },
+
+  async getEmployees(): Promise<{ success: boolean; data: EmployeeUser[]; count: number }> {
+    const url = `${API_BASE()}/direct-issuance/users`;
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch employees');
     }
     return res.json();
   },
