@@ -1,7 +1,8 @@
 import { ApiResponse } from './api';
 import { ItemMaster, CreateItemMasterRequest } from '@/types/tender';
+import { getApiBaseUrl } from './invmisApi';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 // Local SQL Server item master service
 export const itemMasterLocalService = {

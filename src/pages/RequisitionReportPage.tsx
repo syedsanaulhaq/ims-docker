@@ -760,12 +760,14 @@ const RequisitionReportPage: React.FC = () => {
       <Card className="requisition-print-card max-w-5xl mx-auto border-2 border-black/70 rounded-sm bg-white print:shadow-none print:border-none print:page-break-inside-avoid">
         <CardContent className="p-0 print:page-break-inside-avoid print:min-h-[9.6in] print:flex print:flex-col">
           <div className="border-b-2 border-black/70 px-6 py-4 print:py-2 print:px-4">
-            <ReportDocumentHeader
-              title="REQUISITION & STOCK ISSUANCE SLIP"
-              docNumber={report.request_number || report.id.slice(0, 12)}
-              date={todayText}
-              badgeText="DEMAND & ISSUANCE AUDIT SLIP"
-            />
+            <div className="flex justify-between items-start">
+              <div className="flex-1 text-center pr-4">
+                <p className="text-xs tracking-[0.18em] uppercase text-gray-700 font-medium">Election Commission of Pakistan</p>
+                <h1 className="text-2xl font-bold tracking-wide mt-0.5 uppercase">REQUISITION REPORT</h1>
+                <p className="text-xs mt-0.5 text-gray-700">Inventory Management System - Formal Slip</p>
+              </div>
+              <ReportDocumentHeader docNumber={report.request_number || report.id.slice(0, 12)} />
+            </div>
           </div>
 
           <div className="px-6 py-4 border-b border-black/50 print:px-4 print:py-2">

@@ -276,14 +276,16 @@ export default function ReceivingReport({ po, onClose }: ReceivingReportProps) {
           {/* Report Content */}
           <div className="receiving-report-container p-8">
             
-            {/* Header Section with Barcode & QR Code */}
+            {/* Header Section */}
             <div className="mb-6">
-              <ReportDocumentHeader
-                title="RECEIVING & DELIVERY ACQUISITION REPORT"
-                docNumber={deliveries[0]?.delivery_number || po.po_number}
-                poNumber={po.po_number}
-                badgeText="STORES RECEIVING AUDIT REPORT"
-              />
+              <div className="flex justify-between items-start mb-4 border-b pb-4">
+                <div className="flex-1 text-center pr-4">
+                  <h1 className="text-2xl font-extrabold uppercase">RECEIVING REPORT</h1>
+                  <h2 className="text-lg font-bold uppercase mt-1 text-slate-800">ELECTION COMMISSION OF PAKISTAN</h2>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">Secretariat, Constitution Avenue, G-5/2, Islamabad</p>
+                </div>
+                <ReportDocumentHeader docNumber={deliveries[0]?.delivery_number || po.po_number} />
+              </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6 border border-slate-300 p-4 rounded bg-slate-50/50">
                 <div>

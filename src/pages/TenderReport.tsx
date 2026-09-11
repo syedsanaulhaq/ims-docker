@@ -241,12 +241,18 @@ const TenderReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Official Header Section with Barcode & QR Code */}
-      <ReportDocumentHeader
-        title={`TENDER REPORT: ${tenderData.title || 'ANNUAL PROCUREMENT TENDER'}`}
-        docNumber={tenderData.reference_number || tenderData.tender_number || 'TND-2026-REPORT'}
-        badgeText="TENDER PROCUREMENT AUDIT REPORT"
-      />
+      {/* Title Section with Top-Right QR Code */}
+      <div className="flex justify-between items-start border-b pb-4">
+        <div className="flex-1 text-center pr-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">
+            {tenderData.title || 'Tender Report'}
+          </h1>
+          <p className="text-gray-600 text-sm">
+            Reference: {tenderData.reference_number || tenderData.tender_number || 'N/A'}
+          </p>
+        </div>
+        <ReportDocumentHeader docNumber={tenderData.reference_number || tenderData.tender_number} />
+      </div>
 
       {/* Basic Information */}
       <Card>

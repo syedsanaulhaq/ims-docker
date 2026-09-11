@@ -237,7 +237,7 @@ const WingDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-500" onClick={() => { window.location.href = 'http://localhost:8080/dashboard/wing-request-history'; }}>
+        <Card className="cursor-pointer hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-l-purple-500" onClick={() => navigate('/dashboard/wing-request-history')}>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-purple-700">
               <CheckCircle className="h-5 w-5" />

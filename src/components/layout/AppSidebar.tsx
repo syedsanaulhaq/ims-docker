@@ -321,6 +321,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Admin Storekeeper",
     icon: Warehouse,
     items: [
+      { title: "Direct Issuance (Express)", icon: FileText, path: "/dashboard/direct-issuance-register", permission: undefined },
       { title: "Stock Issuance", icon: Send, path: "/dashboard/stock-issuance-processing?storeType=admin", permission: 'issuance.admin.process' },
     ]
   };
@@ -387,6 +388,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     label: "Stock Issuance Menu",
     icon: Warehouse,
     items: [
+      { title: "Direct Issuance (Express)", icon: FileText, path: "/dashboard/direct-issuance-register", permission: 'issuance.dashboard.view' },
       { title: "Issuance Dashboard", icon: BarChart3, path: "/dashboard/stock-issuance-dashboard", permission: 'issuance.dashboard.view' },
       { title: "Process Issuance", icon: ArrowRightLeft, path: "/dashboard/stock-issuance-processing", permission: 'issuance.admin.process' },
       { title: "Historical Entry", icon: FileText, path: "/dashboard/historical-issuance", permission: 'issuance.historical.entry' },
@@ -412,6 +414,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     icon: Shield,
     items: [
       { title: "Admin Dashboard", icon: BarChart3, path: "/dashboard/approval-dashboard-request-based-admin", permission: 'approval.admin.approve' },
+      { title: "Direct Issuance Register", icon: FileText, path: "/dashboard/direct-issuance-register", permission: 'approval.admin.approve' },
       { title: "Personal Requests", icon: User, path: "/dashboard/approval-dashboard-request-based-admin?scope=personal", permission: 'approval.admin.approve' },
       { title: "Branch Requests", icon: Building2, path: "/dashboard/approval-dashboard-request-based-admin?scope=branch", permission: 'approval.admin.approve' },
       { title: "Wing Requests", icon: Users, path: "/dashboard/approval-dashboard-request-based-admin?scope=wing", permission: 'approval.admin.approve' },
@@ -425,6 +428,7 @@ const AppSidebar = ({ limitedMenu = false }: AppSidebarProps) => {
     icon: Shield,
     items: [
       { title: "Admin Dashboard", icon: BarChart3, path: "/dashboard", permission: 'admin.super' },
+      { title: "Direct Issuance Register", icon: FileText, path: "/dashboard/direct-issuance-register", permission: 'admin.super' },
       { title: "Workflow Config", icon: Settings, path: "/dashboard/workflow-admin", permission: 'workflow.config.manage' },
       { title: "Roles & Permissions", icon: Shield, path: "/settings/roles", permission: 'roles.manage' },
       { title: "User Management", icon: Users, path: "/settings/users", permission: 'users.assign_roles' },

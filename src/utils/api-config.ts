@@ -1,11 +1,9 @@
 /**
  * API Configuration
- * Centralized API base URL configuration
+ * Centralized API base URL configuration (delegated to invmisApi)
  */
+import { getApiBaseUrl } from '../services/invmisApi';
 
-export const getApiBaseUrl = (): string => {
-  // Use environment variable if available, otherwise default to localhost:3001
-  return import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_URL}`;
-};
-
+export { getApiBaseUrl };
 export const API_BASE_URL = getApiBaseUrl();
+

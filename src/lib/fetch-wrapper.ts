@@ -2,19 +2,18 @@
 // This automatically replaces localhost URLs with the correct production URL
 
 const getBaseUrl = () => {
-  const hostname = window.location.hostname;
-  const port = window.location.port;
-  
-  // If running on production server (not localhost)
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // On production, Nginx proxies /api requests from port 80/443 directly.
-    // So we use the website's own origin (protocol + host + port if any).
-    return `${window.location.protocol}//${hostname}${port ? ':' + port : ''}`;
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // If running on production server (not localhost)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return window.location.origin;
+    }
   }
   
   // Check for environment variable
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
   }
   
   // Default to localhost for development

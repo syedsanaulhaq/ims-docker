@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getApiBaseUrl } from '@/services/invmisApi';
 
 export interface StockTransactionItem {
   id?: string;
@@ -23,7 +24,7 @@ export class StockTransactionService {
   // Check if tender items exist in stock_transactions using HTTP API
   static async getTenderStockTransactions(tenderId: string): Promise<StockTransactionItem[]> {
     try {
-      const response = await fetch(`http://localhost:5000/api/stock-transactions?tender_id=${tenderId}`);
+      const response = await fetch(`${getApiBaseUrl()}/stock-transactions?tender_id=${tenderId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

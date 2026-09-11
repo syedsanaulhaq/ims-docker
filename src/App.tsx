@@ -50,7 +50,8 @@ import HistoricalIssuance from "./pages/HistoricalIssuance";
 import OpeningBalanceEntry from "./pages/OpeningBalanceEntry";
 import YearwiseInventoryReport from "./pages/YearwiseInventoryReport";
 import ApprovalManagement from "./pages/ApprovalManagement";
-import StockIssuanceProcessing from "./pages/StockIssuanceProcessing";
+import DirectIssuanceRegisterPage from "./pages/DirectIssuanceRegisterPage";
+import CreateDirectIssuancePage from "./pages/CreateDirectIssuancePage";
 import { StockIssuanceDashboard } from "./pages/StockIssuanceDashboard";
 import MyIssuedItems from "./pages/MyIssuedItems";
 import PersonalInventory from "./pages/PersonalInventory";
@@ -266,6 +267,9 @@ function App() {
                   <Route path="branch-storekeeper-review" element={<BranchStorekeeperReviewPage />} />
                   <Route path="workflow-admin" element={<WorkflowAdmin />} />
                   <Route path="stock-issuance-processing" element={<StockIssuanceProcessing />} />
+                  <Route path="direct-issuance-register" element={<DirectIssuanceRegisterPage />} />
+                  <Route path="direct-issuance-create" element={<CreateDirectIssuancePage />} />
+                  <Route path="direct-issuance/create" element={<CreateDirectIssuancePage />} />
                   <Route path="barcode-tracker" element={<BarcodeTrackerPage />} />
                 </Route>
 

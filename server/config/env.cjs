@@ -59,6 +59,8 @@ const config = {
   
   // CORS
   CORS_ORIGINS: [
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()) : []),
+    ...(process.env.CORS_ORIGIN ? [process.env.CORS_ORIGIN.trim()] : []),
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:8080',
