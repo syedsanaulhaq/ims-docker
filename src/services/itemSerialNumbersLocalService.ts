@@ -1,6 +1,7 @@
 import { ApiResponse } from './api';
+import { getApiBaseUrl } from './invmisApi';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 // Interface for item serial numbers
 export interface ItemSerialNumber {

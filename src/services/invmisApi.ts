@@ -6,30 +6,29 @@
 
 // Environment-based API URL configuration
 export const getApiBaseUrl = () => {
-  // Check for environment variable first
+  // Check for environment variables first
   if (import.meta.env.VITE_API_URL) {
-    return `${import.meta.env.VITE_API_URL}/api`;
+    const base = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    return base.endsWith('/api') ? base : `${base}/api`;
   }
 
-  const hostname = window.location.hostname;
-  const currentPort = window.location.port;
-  
-  // If running on production server (not localhost)
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // On production, use Nginx reverse proxy on port 80/443
-    return `${window.location.protocol}//${hostname}${currentPort ? ':' + currentPort : ''}/api`;
+  if (import.meta.env.VITE_API_BASE_URL) {
+    const base = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+    return base.endsWith('/api') ? base : `${base}/api`;
+  }
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // If running on production or staging server (not localhost)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      // Use current window origin with /api
+      return `${window.location.origin}/api`;
+    }
   }
   
-  // Check if running on staging port (8081)
-  const isStaging = currentPort === '8081' || hostname.includes('staging');
-  
-  // Environment-based URL selection
-  if (isStaging) {
-    return 'http://localhost:5001/api';  // Staging API
-  }
-  
-  // Default to our current backend server
-  return `${import.meta.env.VITE_API_URL}/api`;
+  // Default to our development backend server
+  return 'http://localhost:3001/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { invmisApi } from "@/services/invmisApi";
+import { invmisApi, getApiBaseUrl } from "@/services/invmisApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDateDMY } from '@/utils/dateUtils';
@@ -104,7 +104,7 @@ const ProcurementDetails = () => {
         if (result.success) {
           toast.success('Delivery finalized successfully');
           // Refresh deliveries data
-          const deliveriesResponse = await fetch('http://localhost:5000/api/deliveries');
+          const deliveriesResponse = await fetch(`${getApiBaseUrl()}/deliveries`);
           const deliveriesData = await deliveriesResponse.json();
           setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
         } else {

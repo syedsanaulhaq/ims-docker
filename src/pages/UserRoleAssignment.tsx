@@ -21,7 +21,9 @@ import {
 import { useIsSuperAdmin } from '../hooks/usePermission';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/services/invmisApi';
+
+const API_BASE_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 interface User {
   user_id: string;

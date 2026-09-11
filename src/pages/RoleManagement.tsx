@@ -22,7 +22,9 @@ import {
   Square
 } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { getApiBaseUrl } from '@/services/invmisApi';
+
+const API_BASE_URL = getApiBaseUrl().replace(/\/api$/, '');
 
 interface Role {
   role_id: string;

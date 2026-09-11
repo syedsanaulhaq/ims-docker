@@ -1,7 +1,8 @@
 // Stock Acquisition Service - Unified API
 // This service handles all stock acquisition operations using the unified backend API
+import { getApiBaseUrl } from '@/services/invmisApi';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = getApiBaseUrl();
 
 export interface Delivery {
   id: string;
