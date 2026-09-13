@@ -45,6 +45,7 @@ import StockIssuancePersonal from "./pages/StockIssuancePersonal";
 import ReturnedRequestEditPage from "./pages/ReturnedRequestEditPage";
 import StockIssuanceWing from "./pages/StockIssuanceWing";
 import StockIssuanceBranch from "./pages/StockIssuanceBranch";
+import StockIssuanceProcessing from "./pages/StockIssuanceProcessing";
 import StockReturn from "./pages/StockReturn";
 import HistoricalIssuance from "./pages/HistoricalIssuance";
 import OpeningBalanceEntry from "./pages/OpeningBalanceEntry";
