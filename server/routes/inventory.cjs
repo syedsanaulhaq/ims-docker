@@ -739,7 +739,7 @@ router.get('/my-forwarded-verifications', async (req, res) => {
 // ============================================================================
 router.post('/check-availability', async (req, res) => {
   try {
-    const { itemMasterId, wingId, branchId, requestedQuantity, inventoryScope } = req.body;
+    const { itemMasterId, wingId, branchId, requestedQuantity, inventoryScope, userId, requesterUserId } = req.body;
 
     if (!itemMasterId || !requestedQuantity) {
       return res.status(400).json({ error: 'Missing required fields: itemMasterId, requestedQuantity' });
@@ -759,6 +759,8 @@ router.post('/check-availability', async (req, res) => {
       ? payloadBranchId
       : (Number.isFinite(sessionBranchId) && sessionBranchId > 0 ? sessionBranchId : null);
 
+    const resolvedUserId = userId || requesterUserId || req.body?.userId || req.body?.requesterUserId || null;
+
     const pool = getPool();
 
     const result = await pool.request()
@@ -767,6 +769,7 @@ router.post('/check-availability', async (req, res) => {
       .input('InventoryScope', sql.NVarChar(20), normalizedScope)
       .input('WingId', sql.Int, resolvedWingId)
       .input('BranchId', sql.Int, resolvedBranchId)
+      .input('UserId', sql.NVarChar(450), resolvedUserId)
       .query(`
         SELECT
           CAST(im.id AS NVARCHAR(450)) as item_master_id,
@@ -776,6 +779,7 @@ router.post('/check-availability', async (req, res) => {
           ISNULL(wing_stock.wing_qty, 0) as wing_available_quantity,
           ISNULL(branch_stock.branch_qty, 0) as branch_available_quantity,
           COALESCE(main_stock.main_qty, admin_stock.admin_qty, 0) as admin_available_quantity,
+          ISNULL(individual_stock.individual_qty, 0) as individual_available_quantity,
           CASE
             WHEN @InventoryScope = 'wing' THEN ISNULL(wing_stock.wing_qty, 0)
             WHEN @InventoryScope = 'branch' THEN ISNULL(branch_stock.branch_qty, 0)
@@ -849,6 +853,31 @@ router.post('/check-availability', async (req, res) => {
             AND sii.item_master_id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
           GROUP BY sii.item_master_id
         ) branch_stock ON branch_stock.item_master_id = im.id
+        LEFT JOIN (
+          SELECT 
+            sii.item_master_id,
+            SUM(
+              COALESCE(NULLIF(sii.issued_quantity, 0), NULLIF(sii.approved_quantity, 0), sii.requested_quantity, 0)
+              - COALESCE(ret.returned_qty, 0)
+            ) as individual_qty
+          FROM stock_issuance_items sii
+          INNER JOIN stock_issuance_requests sir ON COALESCE(sii.request_id, sii.stock_issuance_id) = sir.id
+          LEFT JOIN (
+            SELECT original_issuance_item_id, SUM(returned_quantity) as returned_qty
+            FROM stock_return_items
+            GROUP BY original_issuance_item_id
+          ) ret ON ret.original_issuance_item_id = sii.id
+          WHERE UPPER(COALESCE(sir.request_type, '')) IN ('PERSONAL', 'INDIVIDUAL')
+            AND (@UserId IS NULL OR CONVERT(NVARCHAR(450), sir.requester_user_id) = @UserId)
+            AND (
+              UPPER(COALESCE(sir.request_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')
+              OR UPPER(COALESCE(sir.approval_status, '')) IN ('ISSUED', 'COMPLETED', 'DISPATCHED')
+            )
+            AND (sir.is_deleted = 0 OR sir.is_deleted IS NULL)
+            AND (sii.is_deleted = 0 OR sii.is_deleted IS NULL)
+            AND sii.item_master_id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
+          GROUP BY sii.item_master_id
+        ) individual_stock ON individual_stock.item_master_id = im.id
         WHERE im.id = TRY_CAST(@ItemMasterId AS UNIQUEIDENTIFIER)
       `);
 
@@ -863,6 +892,7 @@ router.post('/check-availability', async (req, res) => {
           wing_available_quantity: 0,
           branch_available_quantity: 0,
           admin_available_quantity: 0,
+          individual_available_quantity: 0,
           available_quantity: 0,
           is_available: false,
           availability_status: 'Item not found in inventory',

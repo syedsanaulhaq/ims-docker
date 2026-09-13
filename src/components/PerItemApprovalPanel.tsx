@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CheckCircle, AlertCircle, Package } from 'lucide-react';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import approvalService from '@/services/approvalService';
@@ -189,6 +190,10 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
   const [selectedItemForStock, setSelectedItemForStock] = useState<any>(null);
   const [stockCheckLoading, setStockCheckLoading] = useState(false);
   const [stockAvailable, setStockAvailable] = useState<number>(0);
+  const [adminStockAvailable, setAdminStockAvailable] = useState<number>(0);
+  const [branchStockAvailable, setBranchStockAvailable] = useState<number>(0);
+  const [individualStockAvailable, setIndividualStockAvailable] = useState<number>(0);
+  const [activeStockTab, setActiveStockTab] = useState<'admin' | 'branch' | 'individual'>('branch');
   const [stockScopeLabel, setStockScopeLabel] = useState<'Wing' | 'Branch' | 'Main Inventory'>('Wing');
   const [wingConfirmItem, setWingConfirmItem] = useState<any>(null);
   const [wingConfirmLoading, setWingConfirmLoading] = useState(false);
@@ -901,16 +906,17 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
   const checkStockAvailability = async (item: any) => {
     setSelectedItemForStock(item);
     setStockCheckLoading(true);
+    const initialTab = isAdminWorkflowContext ? 'admin' : 'branch';
+    setActiveStockTab(initialTab);
     try {
       const itemMasterId = item.item_master_id || item.id;
       const requestedQty = getItemQuantity(item);
-      // Admin workflow context (admin dashboard / forwarded-to-admin) always uses central/main inventory.
-      // Non-admin contexts continue to use wing/branch/personal scoped inventory as before.
       const normalizedRequestType = String(request?.request_type || '').trim().toLowerCase();
       const shouldUseAdminInventory = isAdminWorkflowContext;
       const inventoryScope = shouldUseAdminInventory ? 'admin' : (normalizedRequestType === 'branch' || normalizedRequestType === 'individual' || normalizedRequestType === 'personal' ? 'branch' : 'wing');
       const wingId = Number(request?.requester_wing_id || currentUser?.wing_id || 0) || null;
       const branchId = Number(request?.requester_branch_id || currentUser?.intBranchID || currentUser?.branch_id || 0) || null;
+      const requesterUserId = (request as any)?.submitted_by || (request as any)?.requester_user_id || (request as any)?.requester_id || null;
 
       setStockScopeLabel(shouldUseAdminInventory ? 'Main Inventory' : (inventoryScope === 'branch' ? 'Branch' : 'Wing'));
 
@@ -923,20 +929,35 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
           requestedQuantity: requestedQty,
           wingId,
           branchId,
-          inventoryScope
+          inventoryScope,
+          userId: requesterUserId
         })
       });
       
       if (response.ok) {
         const data = await response.json();
-        const available = Number(data?.data?.available_quantity ?? data?.available_quantity ?? 0);
+        const resData = data?.data || data || {};
+        const available = Number(resData?.available_quantity ?? 0);
+        const adminAvail = Number(resData?.admin_available_quantity ?? 0);
+        const branchAvail = Number(resData?.branch_available_quantity ?? resData?.wing_available_quantity ?? 0);
+        const indAvail = Number(resData?.individual_available_quantity ?? 0);
+
         setStockAvailable(available);
-        } else {
+        setAdminStockAvailable(adminAvail);
+        setBranchStockAvailable(branchAvail);
+        setIndividualStockAvailable(indAvail);
+      } else {
         setStockAvailable(0);
+        setAdminStockAvailable(0);
+        setBranchStockAvailable(0);
+        setIndividualStockAvailable(0);
       }
     } catch (err) {
       console.error('Error fetching stock:', err);
       setStockAvailable(0);
+      setAdminStockAvailable(0);
+      setBranchStockAvailable(0);
+      setIndividualStockAvailable(0);
     } finally {
       setStockCheckLoading(false);
     }
@@ -1567,14 +1588,69 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
 
       {/* Stock Details Modal */}
       <Dialog open={!!selectedItemForStock} onOpenChange={(open) => !open && setSelectedItemForStock(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Stock Availability Details</DialogTitle>
           </DialogHeader>
           
           {selectedItemForStock && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* Tabbed Navigation based on Role */}
+              <Tabs 
+                value={activeStockTab} 
+                onValueChange={(val) => setActiveStockTab(val as 'admin' | 'branch' | 'individual')} 
+                className="w-full"
+              >
+                <TabsList className={`grid w-full ${isAdminWorkflowContext ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {isAdminWorkflowContext && (
+                    <TabsTrigger value="admin" className="text-xs sm:text-sm font-medium">
+                      Admin Stock
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="branch" className="text-xs sm:text-sm font-medium">
+                    Branch Stock
+                  </TabsTrigger>
+                  <TabsTrigger value="individual" className="text-xs sm:text-sm font-medium">
+                    Individual Stock
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Stock Levels Comparison Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 bg-gray-50 border rounded-lg">
+                {isAdminWorkflowContext && (
+                  <div 
+                    onClick={() => setActiveStockTab('admin')}
+                    className={`p-2 rounded border text-center cursor-pointer transition-colors ${activeStockTab === 'admin' ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-gray-200 hover:bg-gray-100'}`}
+                  >
+                    <div className="text-[11px] text-gray-500 font-medium uppercase">Admin Stock</div>
+                    <div className={`text-base font-bold ${adminStockAvailable >= getItemQuantity(selectedItemForStock) ? 'text-green-600' : 'text-red-600'}`}>
+                      {stockCheckLoading ? '...' : `${adminStockAvailable} No(s)`}
+                    </div>
+                  </div>
+                )}
+                <div 
+                  onClick={() => setActiveStockTab('branch')}
+                  className={`p-2 rounded border text-center cursor-pointer transition-colors ${activeStockTab === 'branch' ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-gray-200 hover:bg-gray-100'}`}
+                >
+                  <div className="text-[11px] text-gray-500 font-medium uppercase">Branch Stock</div>
+                  <div className={`text-base font-bold ${branchStockAvailable >= getItemQuantity(selectedItemForStock) ? 'text-green-600' : 'text-red-600'}`}>
+                    {stockCheckLoading ? '...' : `${branchStockAvailable} No(s)`}
+                  </div>
+                </div>
+                <div 
+                  onClick={() => setActiveStockTab('individual')}
+                  className={`p-2 rounded border text-center cursor-pointer transition-colors ${activeStockTab === 'individual' ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-gray-200 hover:bg-gray-100'}`}
+                >
+                  <div className="text-[11px] text-gray-500 font-medium uppercase">Individual Stock</div>
+                  <div className={`text-base font-bold ${individualStockAvailable >= getItemQuantity(selectedItemForStock) ? 'text-green-600' : 'text-red-600'}`}>
+                    {stockCheckLoading ? '...' : `${individualStockAvailable} No(s)`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Item Details Grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm pt-1">
                 <div>
                   <div className="text-xs text-gray-600 font-medium mb-1">Item Name</div>
                   <div className="font-semibold">{getItemName(selectedItemForStock)}</div>
@@ -1589,12 +1665,18 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                   <div className="font-semibold">{getItemQuantity(selectedItemForStock)} No(s)</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-600 font-medium mb-1">{stockScopeLabel} Stock Available</div>
+                  <div className="text-xs text-gray-600 font-medium mb-1">
+                    {activeStockTab === 'admin' ? 'Admin' : activeStockTab === 'individual' ? 'Individual' : 'Branch'} Stock Available
+                  </div>
                   {stockCheckLoading ? (
                     <div className="text-xs"><LoadingSpinner size="sm" className="inline" /> Loading...</div>
                   ) : (
-                    <div className={`font-bold ${stockAvailable >= getItemQuantity(selectedItemForStock) ? 'text-green-600' : 'text-red-600'}`}>
-                      {stockAvailable} No(s)
+                    <div className={`font-bold ${
+                      (activeStockTab === 'admin' ? adminStockAvailable : activeStockTab === 'individual' ? individualStockAvailable : branchStockAvailable) >= getItemQuantity(selectedItemForStock) 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {activeStockTab === 'admin' ? adminStockAvailable : activeStockTab === 'individual' ? individualStockAvailable : branchStockAvailable} No(s)
                     </div>
                   )}
                 </div>
@@ -1623,18 +1705,27 @@ export const PerItemApprovalPanel: React.FC<PerItemApprovalPanelProps> = ({
                 <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{selectedItemForStock.item_description || 'No description'}</p>
               </div>
 
-              {/* Stock Status Badge */}
-              <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                {stockAvailable >= getItemQuantity(selectedItemForStock) ? (
-                  <div className="text-sm text-green-700">
-                    <strong>✓ Stock Available</strong> - {stockAvailable} No(s) in stock (Requested: {getItemQuantity(selectedItemForStock)} No(s))
+              {/* Active Tab Stock Status Banner */}
+              {(() => {
+                const activeVal = activeStockTab === 'admin' ? adminStockAvailable : activeStockTab === 'individual' ? individualStockAvailable : branchStockAvailable;
+                const activeLabel = activeStockTab === 'admin' ? 'Admin' : activeStockTab === 'individual' ? 'Individual' : 'Branch';
+                const requestedVal = getItemQuantity(selectedItemForStock);
+                const isSufficient = activeVal >= requestedVal;
+
+                return (
+                  <div className={`mt-4 p-3 rounded-lg border ${isSufficient ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    {isSufficient ? (
+                      <div className="text-sm text-green-700 font-medium">
+                        <strong>✓ Stock Available ({activeLabel} Stock)</strong> - {activeVal} No(s) in stock (Requested: {requestedVal} No(s))
+                      </div>
+                    ) : (
+                      <div className="text-sm text-red-700 font-medium">
+                        <strong>✗ Insufficient Stock ({activeLabel} Stock)</strong> - Only {activeVal} No(s) in stock (Requested: {requestedVal} No(s))
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-sm text-red-700">
-                    <strong>✗ Insufficient Stock</strong> - Only {stockAvailable} No(s) in stock (Requested: {getItemQuantity(selectedItemForStock)} No(s))
-                  </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
           )}
 
